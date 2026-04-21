@@ -8,8 +8,8 @@ hardware via TTNN, derived from `lerobot/pi05_base`.
 ## PCC Results
 
 PCC (Pearson Correlation Coefficient) of the TTNN implementation against the
-PyTorch reference, measured on a Tenstorrent Blackhole p300c (source-built
-tt-metal v0.65.1rc17).
+PyTorch reference, measured on a single Tenstorrent Blackhole p150a
+(source-built tt-metal v0.65.1rc17).
 
 | Metric              | Value                 |
 |---------------------|-----------------------|
@@ -18,21 +18,21 @@ tt-metal v0.65.1rc17).
 | Throughput          | 376.7 actions/sec     |
 | Denoising steps     | 10 (flow matching)    |
 | Action horizon      | 50                    |
-| Hardware            | Blackhole p300c       |
+| Hardware            | Blackhole p150a (single chip) |
 | Checkpoint          | `lerobot/pi05_base`   |
 
-Optimization trajectory (selected commits, PyTorch-reference PCC throughout):
+Optimization trajectory (PyTorch-reference PCC throughout):
 
-| Commit    | PCC    | Latency  | Throughput | Notes |
-|-----------|--------|----------|------------|-------|
-| a970af1   | 0.9977 | 183.4 ms | 272.7 a/s  | baseline, TTNN 0.67.4 wheel |
-| 994c5e0   | 0.9967 | 169.2 ms | 295.5 a/s  | bfloat8_b SigLIP + pre-baked adaRMS |
-| d5fcc13   | 0.9933 | 166.3 ms | 300.6 a/s  | source-built tt-metal v0.65.1rc17 |
-| ef27ec9   | 0.9933 | 151.4 ms | 330.3 a/s  | pre-allocated KV cache (no first-call concat) |
-| b9be784   | 0.9921 | 145.6 ms | 343.4 a/s  | KV cache in L1 (SDPA 75µs → 53µs) |
-| 105b6db   | 0.9921 | 144.6 ms | 345.5 a/s  | fused `rotary_embedding_to_cache` op |
-| fc0cbc1   | 0.9921 | 144.1 ms | 347.0 a/s  | precomputed per-step adarms_cond + cached suffix mask |
-| **2bb58cb** | **0.9921** | **132.7 ms** | **376.7 a/s** | precomputed per-(step,layer) adaRMS modulations in DRAM |
+| PCC    | Latency  | Throughput | Notes |
+|--------|----------|------------|-------|
+| 0.9977 | 183.4 ms | 272.7 a/s  | baseline, TTNN 0.67.4 wheel |
+| 0.9967 | 169.2 ms | 295.5 a/s  | bfloat8_b SigLIP + pre-baked adaRMS |
+| 0.9933 | 166.3 ms | 300.6 a/s  | source-built tt-metal v0.65.1rc17 |
+| 0.9933 | 151.4 ms | 330.3 a/s  | pre-allocated KV cache (no first-call concat) |
+| 0.9921 | 145.6 ms | 343.4 a/s  | KV cache in L1 (SDPA 75µs → 53µs) |
+| 0.9921 | 144.6 ms | 345.5 a/s  | fused `rotary_embedding_to_cache` op |
+| 0.9921 | 144.1 ms | 347.0 a/s  | precomputed per-step adarms_cond + cached suffix mask |
+| **0.9921** | **132.7 ms** | **376.7 a/s** | precomputed per-(step,layer) adaRMS modulations in DRAM |
 
 Reproduce:
 
