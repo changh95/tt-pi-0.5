@@ -1,14 +1,22 @@
-# PI0 Model for Tenstorrent
+# Pi0.5 Model for Tenstorrent
 
-PI0 (Physical Intelligence Zero) is a vision-language-action model for robotics
-that combines a vision encoder, language model, and action expert for end-to-end
-robot control.
+Pi0.5 (Physical Intelligence 0.5) is a vision-language-action (VLA) model for
+robotics that combines a vision encoder, language model, and action expert for
+end-to-end robot control. This repository is a port of Pi0.5 to Tenstorrent
+hardware via TTNN, derived from `lerobot/pi05_base`.
+
+**What makes Pi0.5 different from Pi0:**
+- **Adaptive RMSNorm (adaRMS)** in the action expert: per-layer scale/shift/gate
+  modulations are conditioned on the flow-matching timestep, replacing the
+  static RMSNorm used in Pi0.
+- Uses the `lerobot/pi05_base` HuggingFace checkpoint (not the original
+  Google-Drive `pi0_base`).
 
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                              PI0 Model                                  │
+│                             Pi0.5 Model                                 │
 ├─────────────────────────────────────────────────────────────────────────┤
 │                                                                         │
 │  ┌─────────────────────────────────────┐   ┌──────────────────────────┐│
@@ -47,12 +55,12 @@ robot control.
 │  │  ┌────────────────────────┐    ┌────────────────────────┐        │ │
 │  │  │     Gemma 2B VLM       │    │   Gemma 300M Expert    │        │ │
 │  │  │   (processes prefix)   │◄──►│  (processes suffix)    │        │ │
-│  │  │                        │    │                        │        │ │
+│  │  │                        │    │  + adaRMS(timestep)    │        │ │
 │  │  │  Q_vlm ──┐             │    │  Q_exp ──┐             │        │ │
 │  │  │  K_vlm ──┼─► SHARED ◄──┼────┼─ K_exp   │             │        │ │
 │  │  │  V_vlm ──┘   ATTN      │    │  V_exp ──┘             │        │ │
 │  │  │                        │    │                        │        │ │
-│  │  │  MLP_vlm               │    │  MLP_exp               │        │ │
+│  │  │  MLP_vlm               │    │  adaRMS · MLP_exp      │        │ │
 │  │  └────────────────────────┘    └────────────────────────┘        │ │
 │  └──────────────────────────────────────────────────────────────────┘ │
 │                                   │                                   │
@@ -76,114 +84,115 @@ robot control.
 
 **Key architectural details:**
 - **Shared Attention**: VLM and Expert share K,V tensors (concatenated), but have separate Q and MLPs
+- **Adaptive RMSNorm (Pi0.5)**: Expert RMSNorm layers take `(scale, shift, gate)` modulations derived from the flow-matching timestep embedding — enabling timestep-aware denoising.
 - **Flow Matching**: Iterative denoising from pure noise to actions over 10 steps
 - **Dual Experts**: VLM (2B) processes images+language, Expert (300M) processes actions
 
 ## Directory Structure
 
 ```
-pi0/
+tt-pi-05/
 ├── common/                     # Shared configs and utilities
-│   ├── configs.py              # Model configurations
-│   ├── weight_loader.py        # Checkpoint loading
+│   ├── configs.py              # Model configurations (GemmaConfig.use_adarms, etc.)
+│   ├── weight_loader.py        # Checkpoint loading (pi05_base)
 │   └── utils.py                # Common utilities
 ├── reference/                  # PyTorch reference implementation
-│   ├── torch_pi0_model.py      # Main PI0 model
+│   ├── torch_pi0_model.py      # Main Pi0.5 model
 │   ├── torch_paligemma.py      # PaliGemma backbone
 │   ├── torch_siglip.py         # SigLIP vision tower
-│   ├── torch_gemma.py          # Gemma attention/MLP
+│   ├── torch_gemma.py          # Gemma attention/MLP (with adaRMS)
 │   ├── torch_prefix.py         # Prefix embedding
 │   ├── torch_suffix.py         # Suffix embedding
-│   └── torch_denoise.py        # Denoising logic
+│   └── torch_denoise.py        # Flow-matching denoising logic
 ├── tt/                         # TTNN implementation
-│   ├── ttnn_pi0_model.py       # Main PI0 model (TTNN)
+│   ├── ttnn_pi0_model.py       # Main Pi0.5 model (TTNN)
 │   ├── ttnn_paligemma.py       # PaliGemma backbone (TTNN)
 │   ├── ttnn_siglip.py          # SigLIP vision tower (TTNN)
-│   ├── ttnn_gemma.py           # Gemma attention/MLP (TTNN)
+│   ├── ttnn_gemma.py           # Gemma attention/MLP + adaRMS (TTNN)
 │   ├── ttnn_prefix.py          # Prefix embedding (TTNN)
 │   ├── ttnn_suffix.py          # Suffix embedding (TTNN)
 │   └── ttnn_common.py          # Common TTNN utilities
 ├── tests/
-│   ├── pcc/                    # PCC (accuracy) tests
-│   ├── perf/                   # Performance benchmarks and e2e (2CQ + Trace)
-│   ├── demo/                   # Demo scripts with ALOHA/LIBERO datasets
+│   ├── pcc/                    # PCC (accuracy) tests, incl. test_pcc_pi05_model.py
+│   ├── perf/                   # Performance benchmarks, incl. test_perf_pi05.py
+│   ├── demo/                   # Demo scripts with ALOHA (MuJoCo) / LIBERO datasets
 │   └── download_pretrained_weights.py
-└── weights/                    # Pretrained checkpoints
-    └── pi0_base/               # Base model checkpoint
+└── weights/                    # Pretrained checkpoints (git-ignored)
+    └── pi05_base/              # Pi0.5 base checkpoint (symlink or download)
 ```
 
 ## Quick Start
 
 ### 1. Environment Setup
 
+This model targets Tenstorrent hardware and is designed to be dropped into a
+`tt-metal` checkout at `models/experimental/pi0/`.
+
 ```bash
-# Set required environment variables
+# Set required environment variables for tt-metal
 export TT_METAL_HOME=/path/to/tt-metal
 export PYTHONPATH=$TT_METAL_HOME
-export ARCH_NAME=wormhole_b0
-export WH_ARCH_YAML=wormhole_b0_80_arch_eth_dispatch.yaml
+export ARCH_NAME=blackhole          # or wormhole_b0
+export WH_ARCH_YAML=wormhole_b0_80_arch_eth_dispatch.yaml  # wormhole only
 
 # Activate virtual environment
 source $TT_METAL_HOME/python_env/bin/activate
+
+# (Optional) Select device
+export PI0_DEVICE_ID=2
 ```
 
 ### 2. Download Pretrained Weights
 
-The model requires pretrained weights to run. Download them using the provided script:
+Pi0.5 weights live on HuggingFace as `lerobot/pi05_base`.
 
 ```bash
-# Automatic download (requires gdown)
-python $TT_METAL_HOME/models/experimental/pi0/tests/download_pretrained_weights.py
+# Install huggingface CLI
+pip install -U huggingface_hub
 
-# Or with custom output directory
-python $TT_METAL_HOME/models/experimental/pi0/tests/download_pretrained_weights.py \
-    --output-dir /custom/path/weights
+# Download into the standard weights path
+huggingface-cli download lerobot/pi05_base \
+    --local-dir $TT_METAL_HOME/models/experimental/pi0/weights/pi05_base
 ```
 
-**Manual Download (if automatic download fails):**
-
-1. Open: https://drive.google.com/drive/folders/1qfY0EBGh_-6Zz-omKPQW6nBcc1Cp2_WN
-2. Download the folder
-3. Extract to: `$TT_METAL_HOME/models/experimental/pi0/weights/`
-
-**Alternative: Using command-line tools:**
+Or, symlink an existing HF cache:
 
 ```bash
-# Using gdown
-pip install gdown
-gdown --folder https://drive.google.com/drive/folders/1qfY0EBGh_-6Zz-omKPQW6nBcc1Cp2_WN \
-    -O $TT_METAL_HOME/models/experimental/pi0/weights/
-
-# Using rclone (works with private folders)
-rclone config  # Setup Google Drive remote named 'gdrive'
-rclone copy gdrive:pi0_base $TT_METAL_HOME/models/experimental/pi0/weights/pi0_base
+ln -s ~/.cache/huggingface/hub/models--lerobot--pi05_base/snapshots/<REVISION> \
+      $TT_METAL_HOME/models/experimental/pi0/weights/pi05_base
 ```
 
-After download, verify the structure:
+Verify the structure:
+
 ```
 $TT_METAL_HOME/models/experimental/pi0/weights/
-└── pi0_base/
+└── pi05_base/
     ├── model.safetensors
     └── config.json
 ```
+
+> Note: `tests/download_pretrained_weights.py` is a legacy helper for the
+> original Pi0 Google-Drive checkpoint and is **not** used for Pi0.5.
 
 ## Running Tests
 
 ### PCC Tests (Accuracy Validation)
 
-PCC (Pearson Correlation Coefficient) tests compare TTNN outputs against PyTorch reference.
+PCC (Pearson Correlation Coefficient) tests compare TTNN outputs against the
+PyTorch reference.
 
-**Full Model PCC Test:**
+**Full Pi0.5 Model PCC Test:**
 
 ```bash
-# Using pytest
-pytest models/experimental/pi0/tests/pcc/test_pcc_ttnn_pi0_model.py -v
+pytest models/experimental/pi0/tests/pcc/test_pcc_pi05_model.py -v -s
+# or direct execution
+python models/experimental/pi0/tests/pcc/test_pcc_pi05_model.py
 ```
 
 **Code Flow (what gets tested):**
 
 ```
-PI0ModelTTNN.sample_actions()
+Pi0_5ModelTTNN.sample_actions()
 │
 ├─► self.embed_prefix(images, img_masks, lang_tokens, lang_masks)
 │   └─► PrefixEmbeddingTTNN.embed_prefix()
@@ -202,19 +211,12 @@ PI0ModelTTNN.sample_actions()
 │
 ├─► self.backbone.forward_vlm(prefix_embs, use_cache=True)
 │   └─► PaliGemmaBackboneTTNN.forward_vlm()
-│       └─► GemmaBlockTTNN.forward() × 18 layers (VLM blocks)
-│           ├─► rms_norm_ttnn()
-│           ├─► GemmaAttentionTTNN.forward()
-│           │   ├─► ttnn.linear() for fused QKV
-│           │   ├─► ttnn.experimental.rotary_embedding() for RoPE
-│           │   └─► ttnn.transformer.scaled_dot_product_attention()
-│           │
-│           └─► GemmaMLPTTNN.forward()
-│               ├─► ttnn.linear() for gate_proj, up_proj
-│               ├─► ttnn.gelu()
-│               └─► ttnn.linear() for down_proj
+│       └─► GemmaBlockTTNN.forward() × 18 layers (VLM blocks, static RMSNorm)
 │
 ├─► [DENOISING LOOP × 10 steps]
+│   │
+│   ├─► precompute per-step adaRMS modulations (scale/shift/gate)
+│   │   from timestep embedding → stored in DRAM
 │   │
 │   ├─► self.embed_suffix(state, x_t, timestep)
 │   │   └─► SuffixEmbeddingTTNN.embed_suffix()
@@ -223,6 +225,12 @@ PI0ModelTTNN.sample_actions()
 │   └─► self.backbone.forward_expert(suffix_embs, past_key_values=prefix_kv_cache)
 │       └─► PaliGemmaBackboneTTNN.forward_expert()
 │           └─► GemmaBlockTTNN.forward() × 18 layers (Expert blocks)
+│               ├─► adaRMSNorm(hidden, scale, shift)
+│               ├─► GemmaAttentionTTNN.forward()
+│               │   ├─► ttnn.linear() for fused QKV
+│               │   ├─► ttnn.experimental.rotary_embedding() for RoPE
+│               │   └─► ttnn.transformer.scaled_dot_product_attention()
+│               └─► GemmaMLPTTNN.forward() + gate * residual
 │
 └─► return denoised_actions [batch=1, 50, 32]
 ```
@@ -241,50 +249,57 @@ pytest models/experimental/pi0/tests/pcc/test_pcc_siglip.py -v
 pytest models/experimental/pi0/tests/pcc/test_pcc_paligemma.py -v
 ```
 
-**Test with Random vs Pretrained Weights:**
-
-```bash
-# Run with pretrained weights only (full validation)
-pytest models/experimental/pi0/tests/pcc/test_pcc_suffix.py -v -k "pretrained_weight_true"
-
-# Run with random weights only (fast CI)
-pytest models/experimental/pi0/tests/pcc/test_pcc_suffix.py -v -k "pretrained_weight_false"
-```
-
 ### Performance Tests (Benchmarking)
 
 ```bash
-# Full model performance test
-pytest models/experimental/pi0/tests/perf/test_perf_ttnn_pi0_model.py -v -s
+# Pi0.5 performance test (action throughput / latency)
+python models/experimental/pi0/tests/perf/test_perf_pi05.py
 
-# Direct execution
-python models/experimental/pi0/tests/perf/test_perf_ttnn_pi0_model.py
+# Metal Trace variant
+python models/experimental/pi0/tests/perf/test_perf_pi05_trace.py
+
+# Profiling helper
+python models/experimental/pi0/tests/perf/profile_pi05.py
 ```
 
-### Performance Test (end-to-end (2CQ + Trace))
+### Performance Test (end-to-end 2CQ + Trace)
+
 ```bash
-# Direct execution
 pytest models/experimental/pi0/tests/perf/test_perf_e2e.py
+```
+
+Recommended invocation (Blackhole p300c, device 2, source-built tt-metal):
+
+```bash
+TT_METAL_RUNTIME_ROOT=$TT_METAL_HOME/build_Release/libexec/tt-metalium \
+PI0_DEVICE_ID=2 \
+PYTHONPATH=$TT_METAL_HOME \
+TT_METAL_HOME=$TT_METAL_HOME \
+python models/experimental/pi0/tests/perf/test_perf_pi05.py
 ```
 
 ## Demo Scripts
 
-Demo scripts visualize model inference on robotics datasets.
+Demo scripts visualize Pi0.5 inference on robotics datasets.
+
+- **ALOHA sim** uses MuJoCo-based bimanual setups.
+- **LIBERO** uses the standard LIBERO benchmark suite.
 
 **Extract Sample Images (required first):**
 
 ```bash
-# ImageIO python library plugin PyAv is needed to extract images from videos
-python -m ensurepip --upgrade && python -m pip install imageio[pyav]
+# imageio[pyav] is needed to extract frames from the dataset videos
+python -m pip install "imageio[pyav]"
 
-# Extract ALOHA simulation samples (downloads from HuggingFace)
+# Extract ALOHA (MuJoCo) samples (downloads from HuggingFace)
 python models/experimental/pi0/tests/demo/extract_aloha_samples.py
 
 # Extract LIBERO samples (downloads from HuggingFace)
 python models/experimental/pi0/tests/demo/extract_libero_samples.py
 ```
 
-This creates sample images in `tests/demo/sample_images/`:
+Output layout:
+
 ```
 sample_images/
 ├── aloha_sim/
@@ -300,7 +315,7 @@ sample_images/
 **Run Demos:**
 
 ```bash
-# ALOHA simulation demo
+# ALOHA (MuJoCo) simulation demo
 python models/experimental/pi0/tests/demo/run_aloha_sim_demo.py
 
 # LIBERO demo
@@ -314,9 +329,11 @@ python models/experimental/pi0/tests/demo/visualize_demo.py
 
 ### `Checkpoint not found`
 
-Download weights using the script:
+Ensure `pi05_base` is at `$TT_METAL_HOME/models/experimental/pi0/weights/pi05_base/`:
+
 ```bash
-python models/experimental/pi0/tests/download_pretrained_weights.py
+huggingface-cli download lerobot/pi05_base \
+    --local-dir $TT_METAL_HOME/models/experimental/pi0/weights/pi05_base
 ```
 
 ## Model Specifications
@@ -324,11 +341,13 @@ python models/experimental/pi0/tests/download_pretrained_weights.py
 | Component | Details |
 |-----------|---------|
 | Vision Encoder | SigLIP (27 transformer blocks, 1152 hidden dim) |
-| VLM Backbone | Gemma 2B (18 transformer blocks) |
-| Action Expert | Gemma 300M (18 transformer blocks) |
+| VLM Backbone | Gemma 2B (18 transformer blocks, static RMSNorm) |
+| Action Expert | Gemma 300M (18 transformer blocks, **adaRMS**) |
 | Image Size | 224×224 |
 | Action Dimension | 32 |
 | Action Horizon | 50 |
+| Denoising Steps | 10 (flow matching) |
+| HF Checkpoint | `lerobot/pi05_base` |
 
 ## License
 
