@@ -1,92 +1,48 @@
-# Pi0.5 Model for Tenstorrent
+# π0.5 Model for Tenstorrent
 
-Pi0.5 (Physical Intelligence 0.5) is a vision-language-action (VLA) model for
+π0.5 (Physical Intelligence 0.5) is a vision-language-action (VLA) model for
 robotics that combines a vision encoder, language model, and action expert for
-end-to-end robot control. This repository is a port of Pi0.5 to Tenstorrent
+end-to-end robot control. This repository is a port of π0.5 to Tenstorrent
 hardware via TTNN, derived from `lerobot/pi05_base`.
 
-**What makes Pi0.5 different from Pi0:**
-- **Adaptive RMSNorm (adaRMS)** in the action expert: per-layer scale/shift/gate
-  modulations are conditioned on the flow-matching timestep, replacing the
-  static RMSNorm used in Pi0.
-- Uses the `lerobot/pi05_base` HuggingFace checkpoint (not the original
-  Google-Drive `pi0_base`).
+## PCC Results
 
-## Architecture
+PCC (Pearson Correlation Coefficient) of the TTNN implementation against the
+PyTorch reference, measured on a Tenstorrent Blackhole p300c (source-built
+tt-metal v0.65.1rc17).
 
+| Metric              | Value                 |
+|---------------------|-----------------------|
+| PCC (vs. reference) | **0.9921**            |
+| Latency             | 132.7 ms / action batch |
+| Throughput          | 376.7 actions/sec     |
+| Denoising steps     | 10 (flow matching)    |
+| Action horizon      | 50                    |
+| Hardware            | Blackhole p300c       |
+| Checkpoint          | `lerobot/pi05_base`   |
+
+Optimization trajectory (selected commits, PyTorch-reference PCC throughout):
+
+| Commit    | PCC    | Latency  | Throughput | Notes |
+|-----------|--------|----------|------------|-------|
+| a970af1   | 0.9977 | 183.4 ms | 272.7 a/s  | baseline, TTNN 0.67.4 wheel |
+| 994c5e0   | 0.9967 | 169.2 ms | 295.5 a/s  | bfloat8_b SigLIP + pre-baked adaRMS |
+| d5fcc13   | 0.9933 | 166.3 ms | 300.6 a/s  | source-built tt-metal v0.65.1rc17 |
+| ef27ec9   | 0.9933 | 151.4 ms | 330.3 a/s  | pre-allocated KV cache (no first-call concat) |
+| b9be784   | 0.9921 | 145.6 ms | 343.4 a/s  | KV cache in L1 (SDPA 75µs → 53µs) |
+| 105b6db   | 0.9921 | 144.6 ms | 345.5 a/s  | fused `rotary_embedding_to_cache` op |
+| fc0cbc1   | 0.9921 | 144.1 ms | 347.0 a/s  | precomputed per-step adarms_cond + cached suffix mask |
+| **2bb58cb** | **0.9921** | **132.7 ms** | **376.7 a/s** | precomputed per-(step,layer) adaRMS modulations in DRAM |
+
+Reproduce:
+
+```bash
+# PCC (accuracy)
+python tests/pcc/test_pcc_pi05_model.py
+
+# Performance (latency / throughput)
+python tests/perf/test_perf_pi05.py
 ```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                             Pi0.5 Model                                 │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                         │
-│  ┌─────────────────────────────────────┐   ┌──────────────────────────┐│
-│  │         PREFIX EMBEDDING            │   │    SUFFIX EMBEDDING      ││
-│  │                                     │   │                          ││
-│  │  ┌───────────┐   ┌───────────────┐  │   │  ┌────────┐  ┌────────┐ ││
-│  │  │  Images   │   │ Language      │  │   │  │ State  │  │ Noisy  │ ││
-│  │  │  (224x224)│   │ Tokens        │  │   │  │ (32)   │  │Actions │ ││
-│  │  └─────┬─────┘   └───────┬───────┘  │   │  └───┬────┘  └───┬────┘ ││
-│  │        │                 │          │   │      │           │      ││
-│  │        ▼                 │          │   │      └─────┬─────┘      ││
-│  │  ┌───────────┐           │          │   │            │            ││
-│  │  │  SigLIP   │           │          │   │   ┌────────▼─────────┐  ││
-│  │  │  Vision   │           │          │   │   │ Action+Time MLP  │  ││
-│  │  │  Tower    │           │          │   │   │ (fuse_action_    │  ││
-│  │  │(27 blocks)│           │          │   │   │  time)           │  ││
-│  │  └─────┬─────┘           │          │   │   └────────┬─────────┘  ││
-│  │        │                 │          │   │            │            ││
-│  │        ▼                 │          │   └────────────┼────────────┘│
-│  │  ┌───────────┐           │          │                │             │
-│  │  │Projector  │           │          │                │             │
-│  │  │(1152→2048)│           │          │                │             │
-│  │  └─────┬─────┘           │          │                │             │
-│  │        │                 │          │                │             │
-│  │        ▼                 ▼          │                │             │
-│  │  ┌───────────────────────────────┐  │                │             │
-│  │  │  Image Embeds + Lang Embeds   │  │                │             │
-│  │  │  (Gemma 2B embedding)         │  │                │             │
-│  │  └───────────────┬───────────────┘  │                │             │
-│  │                  │                  │                │             │
-│  └──────────────────┼──────────────────┘                │             │
-│                     │                                   │             │
-│                     ▼                                   ▼             │
-│  ┌──────────────────────────────────────────────────────────────────┐ │
-│  │               DUAL-EXPERT TRANSFORMER (18 layers)                │ │
-│  │  ┌────────────────────────┐    ┌────────────────────────┐        │ │
-│  │  │     Gemma 2B VLM       │    │   Gemma 300M Expert    │        │ │
-│  │  │   (processes prefix)   │◄──►│  (processes suffix)    │        │ │
-│  │  │                        │    │  + adaRMS(timestep)    │        │ │
-│  │  │  Q_vlm ──┐             │    │  Q_exp ──┐             │        │ │
-│  │  │  K_vlm ──┼─► SHARED ◄──┼────┼─ K_exp   │             │        │ │
-│  │  │  V_vlm ──┘   ATTN      │    │  V_exp ──┘             │        │ │
-│  │  │                        │    │                        │        │ │
-│  │  │  MLP_vlm               │    │  adaRMS · MLP_exp      │        │ │
-│  │  └────────────────────────┘    └────────────────────────┘        │ │
-│  └──────────────────────────────────────────────────────────────────┘ │
-│                                   │                                   │
-│                                   ▼                                   │
-│                    ┌──────────────────────────────┐                   │
-│                    │     FLOW MATCHING DENOISER   │                   │
-│                    │     (10 denoising steps)     │                   │
-│                    │                              │                   │
-│                    │  for t in [1.0 → 0.0]:       │                   │
-│                    │    noise_pred = expert_out   │                   │
-│                    │    actions = euler_step()    │                   │
-│                    └──────────────┬───────────────┘                   │
-│                                   │                                   │
-│                                   ▼                                   │
-│                         ┌───────────────────┐                         │
-│                         │   Action Output   │                         │
-│                         │ [batch=1, 50, 32] │                         │
-│                         └───────────────────┘                         │
-└─────────────────────────────────────────────────────────────────────────┘
-```
-
-**Key architectural details:**
-- **Shared Attention**: VLM and Expert share K,V tensors (concatenated), but have separate Q and MLPs
-- **Adaptive RMSNorm (Pi0.5)**: Expert RMSNorm layers take `(scale, shift, gate)` modulations derived from the flow-matching timestep embedding — enabling timestep-aware denoising.
-- **Flow Matching**: Iterative denoising from pure noise to actions over 10 steps
-- **Dual Experts**: VLM (2B) processes images+language, Expert (300M) processes actions
 
 ## Directory Structure
 
@@ -97,7 +53,7 @@ tt-pi-05/
 │   ├── weight_loader.py        # Checkpoint loading (pi05_base)
 │   └── utils.py                # Common utilities
 ├── reference/                  # PyTorch reference implementation
-│   ├── torch_pi0_model.py      # Main Pi0.5 model
+│   ├── torch_pi0_model.py      # Main π0.5 model
 │   ├── torch_paligemma.py      # PaliGemma backbone
 │   ├── torch_siglip.py         # SigLIP vision tower
 │   ├── torch_gemma.py          # Gemma attention/MLP (with adaRMS)
@@ -105,7 +61,7 @@ tt-pi-05/
 │   ├── torch_suffix.py         # Suffix embedding
 │   └── torch_denoise.py        # Flow-matching denoising logic
 ├── tt/                         # TTNN implementation
-│   ├── ttnn_pi0_model.py       # Main Pi0.5 model (TTNN)
+│   ├── ttnn_pi0_model.py       # Main π0.5 model (TTNN)
 │   ├── ttnn_paligemma.py       # PaliGemma backbone (TTNN)
 │   ├── ttnn_siglip.py          # SigLIP vision tower (TTNN)
 │   ├── ttnn_gemma.py           # Gemma attention/MLP + adaRMS (TTNN)
@@ -118,7 +74,7 @@ tt-pi-05/
 │   ├── demo/                   # Demo scripts with ALOHA (MuJoCo) / LIBERO datasets
 │   └── download_pretrained_weights.py
 └── weights/                    # Pretrained checkpoints (git-ignored)
-    └── pi05_base/              # Pi0.5 base checkpoint (symlink or download)
+    └── pi05_base/              # π0.5 base checkpoint (symlink or download)
 ```
 
 ## Quick Start
@@ -144,7 +100,7 @@ export PI0_DEVICE_ID=2
 
 ### 2. Download Pretrained Weights
 
-Pi0.5 weights live on HuggingFace as `lerobot/pi05_base`.
+π0.5 weights live on HuggingFace as `lerobot/pi05_base`.
 
 ```bash
 # Install huggingface CLI
@@ -172,7 +128,7 @@ $TT_METAL_HOME/models/experimental/pi0/weights/
 ```
 
 > Note: `tests/download_pretrained_weights.py` is a legacy helper for the
-> original Pi0 Google-Drive checkpoint and is **not** used for Pi0.5.
+> original π0 Google-Drive checkpoint and is **not** used for π0.5.
 
 ## Running Tests
 
@@ -181,58 +137,12 @@ $TT_METAL_HOME/models/experimental/pi0/weights/
 PCC (Pearson Correlation Coefficient) tests compare TTNN outputs against the
 PyTorch reference.
 
-**Full Pi0.5 Model PCC Test:**
+**Full π0.5 Model PCC Test:**
 
 ```bash
 pytest models/experimental/pi0/tests/pcc/test_pcc_pi05_model.py -v -s
 # or direct execution
 python models/experimental/pi0/tests/pcc/test_pcc_pi05_model.py
-```
-
-**Code Flow (what gets tested):**
-
-```
-Pi0_5ModelTTNN.sample_actions()
-│
-├─► self.embed_prefix(images, img_masks, lang_tokens, lang_masks)
-│   └─► PrefixEmbeddingTTNN.embed_prefix()
-│       │
-│       ├─► self.embed_image_fn(img)  [backbone.embed_image]
-│       │   └─► PaliGemmaBackboneTTNN.embed_image()
-│       │       ├─► SigLIPVisionTowerTTNN.forward()
-│       │       │   └─► SigLIPBlockTTNN.forward() × 27 layers
-│       │       │       ├─► SigLIPAttentionTTNN.forward()
-│       │       │       └─► SigLIPMLPTTNN.forward()
-│       │       │
-│       │       └─► MultiModalProjectorTTNN.forward() [1152 → 2048]
-│       │
-│       └─► self.embed_language_fn(tokens)  [backbone.embed_language_tokens]
-│           └─► ttnn.embedding(tokens, vlm_embed_tokens)
-│
-├─► self.backbone.forward_vlm(prefix_embs, use_cache=True)
-│   └─► PaliGemmaBackboneTTNN.forward_vlm()
-│       └─► GemmaBlockTTNN.forward() × 18 layers (VLM blocks, static RMSNorm)
-│
-├─► [DENOISING LOOP × 10 steps]
-│   │
-│   ├─► precompute per-step adaRMS modulations (scale/shift/gate)
-│   │   from timestep embedding → stored in DRAM
-│   │
-│   ├─► self.embed_suffix(state, x_t, timestep)
-│   │   └─► SuffixEmbeddingTTNN.embed_suffix()
-│   │       └─► fuse_action_time MLP + action_embed + state_embed
-│   │
-│   └─► self.backbone.forward_expert(suffix_embs, past_key_values=prefix_kv_cache)
-│       └─► PaliGemmaBackboneTTNN.forward_expert()
-│           └─► GemmaBlockTTNN.forward() × 18 layers (Expert blocks)
-│               ├─► adaRMSNorm(hidden, scale, shift)
-│               ├─► GemmaAttentionTTNN.forward()
-│               │   ├─► ttnn.linear() for fused QKV
-│               │   ├─► ttnn.experimental.rotary_embedding() for RoPE
-│               │   └─► ttnn.transformer.scaled_dot_product_attention()
-│               └─► GemmaMLPTTNN.forward() + gate * residual
-│
-└─► return denoised_actions [batch=1, 50, 32]
 ```
 
 **Component PCC Tests:**
@@ -252,7 +162,7 @@ pytest models/experimental/pi0/tests/pcc/test_pcc_paligemma.py -v
 ### Performance Tests (Benchmarking)
 
 ```bash
-# Pi0.5 performance test (action throughput / latency)
+# π0.5 performance test (action throughput / latency)
 python models/experimental/pi0/tests/perf/test_perf_pi05.py
 
 # Metal Trace variant
@@ -280,7 +190,7 @@ python models/experimental/pi0/tests/perf/test_perf_pi05.py
 
 ## Demo Scripts
 
-Demo scripts visualize Pi0.5 inference on robotics datasets.
+Demo scripts visualize π0.5 inference on robotics datasets.
 
 - **ALOHA sim** uses MuJoCo-based bimanual setups.
 - **LIBERO** uses the standard LIBERO benchmark suite.
@@ -348,8 +258,3 @@ huggingface-cli download lerobot/pi05_base \
 | Action Horizon | 50 |
 | Denoising Steps | 10 (flow matching) |
 | HF Checkpoint | `lerobot/pi05_base` |
-
-## License
-
-SPDX-FileCopyrightText: © 2025 Tenstorrent AI ULC
-SPDX-License-Identifier: Apache-2.0
