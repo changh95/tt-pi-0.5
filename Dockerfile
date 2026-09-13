@@ -4,7 +4,7 @@
 # Pi0.5 on Tenstorrent Blackhole - Docker Recipe
 #
 # Build:
-#   docker build -t pi05-blackhole -f models/experimental/pi0/Dockerfile .
+#   docker build -t pi05-blackhole -f models/experimental/pi0_5/Dockerfile .
 #
 # Run (bind device 2):
 #   docker run --rm -it --device /dev/tenstorrent/2 pi05-blackhole
@@ -42,7 +42,7 @@ RUN pip3 install --break-system-packages \
     transformers safetensors huggingface_hub "numpy<2,>=1.24.4"
 
 # Copy model code only (not the full tt-metal source)
-COPY models/experimental/pi0 /workspace/models/experimental/pi0
+COPY models/experimental/pi0_5 /workspace/models/experimental/pi0_5
 
 # Download Pi0.5 weights at build time (optional - can also mount at runtime)
 # Uncomment the following to bake weights into the image:
@@ -52,4 +52,4 @@ COPY models/experimental/pi0 /workspace/models/experimental/pi0
 RUN python3 -c "import ttnn; import torch; print('Imports OK')" 2>/dev/null || true
 
 # Default entrypoint: run PCC test
-CMD ["python3", "-c", "print('Pi0.5 on Blackhole ready. Run tests with: python3 models/experimental/pi0/tests/pcc/test_pcc_pi05_model.py')"]
+CMD ["python3", "-c", "print('Pi0.5 on Blackhole ready. Run tests with: python3 models/experimental/pi0_5/tests/pcc/test_pcc_pi05_model.py')"]
