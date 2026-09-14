@@ -402,3 +402,20 @@ Seen with `PI05_DIT_BLOCKS=op` (the fused op's own 8x8x8 blocks). Keep the defau
 | Action Horizon | 50 |
 | Denoising Steps | 10 (flow matching) |
 | HF Checkpoint | `lerobot/pi05_base` |
+
+## Comparison with an RTX 5090 (same host, 2026-09-14)
+
+action chunk 50×32, 2×224×224 + 224 tokens, 10 denoising steps; ratio = p150a ms / GPU ms.
+
+| setting | ms | vs p150a |
+|---|---:|---|
+| p150a, bf16 fused trace (served `timing_ms.inference`) | 125.8 | — |
+| RTX 5090 fp32 strict | 144.1 | p150a 1.15× faster |
+| RTX 5090 bf16 autocast | 121.5 | parity |
+| RTX 5090 fp16 autocast | 123.7 | parity |
+| RTX 5090 bf16 weights resident (eager) | 99.9 | GPU 1.3× |
+| RTX 5090 bf16 weights + whole-request `torch.compile` | 46.6 | GPU 2.7× |
+
+The p150a beats fp32-strict eager GPU and matches bf16 autocast; the GPU needs resident bf16 weights and a compiled whole-request graph for its 2.7×.
+
+Methodology: same host, this repo's torch reference (same weights and preprocessing as the served p150a path) run eagerly in PyTorch 2.11 cu128 (fp32 weights + `torch.autocast` unless stated; no TensorRT), batch 1, medians of 50 iterations after warm-up, H2D/D2H included; GPU fp32 output matches the CPU fp32 reference (PCC 1.0). p150a rows are the served bf16 fused path incl. upload/readback. p150a power was not measured, so no efficiency comparison is made. Full per-precision table, power and memory: [`GPU_COMPARISON.md`](GPU_COMPARISON.md).
