@@ -1,5 +1,11 @@
 # DEVICE_VALIDATION -- pi05-base-p150, branch `opt/pi05-base-p150-megakernel`
 
+> **Historical record (superseded).** This is the 2026-09-13 hardware pass of the first fused graph, on the
+> `changh95/pi05` fork @ `4c9fbfcceb9`. That graph attended the right-padded prompt tokens and rotated the action
+> tokens at the wrong positions (fixed 2026-09-29), and the unfused path it was compared against has since been
+> removed, so its commands no longer run. Current code, numbers and tree: the repo `README.md` and
+> `docs/FUSED_FIX_2026-09-29.md`.
+
 Hardware pass plan for the fused / traced graph implemented behind `TT_FUSED=1` (BRIEF §4
 deliverable 4). Written 2026-09-13 from a HOST-ONLY pass: **nothing below was run on a device**;
 every number marked "est." is an estimate with its arithmetic. Evaluation:

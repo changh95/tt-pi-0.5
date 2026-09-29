@@ -1,10 +1,15 @@
 # SPDX-FileCopyrightText: © 2025 Tenstorrent AI ULC
 # SPDX-License-Identifier: Apache-2.0
 
-# Pi0.5 on Tenstorrent Blackhole - Docker Recipe
+# Pi0.5 on Tenstorrent Blackhole - Docker Recipe (minimal, for experiments)
 #
-# Build:
-#   docker build -t pi05-blackhole -f models/experimental/pi0_5/Dockerfile .
+# The supported, validated container is the tt-model-manager package on Hugging Face
+# (changh95/pi05-base-p150: tt-metal 668c2907575 built from source + this port + the HTTP server).
+# This recipe installs a ttnn wheel instead; the port's generic_op kernels need the compute API of
+# tt-metal >= 668c2907575, so the wheel must be at least that version.
+#
+# Build (from the repo root):
+#   docker build -t pi05-blackhole -f Dockerfile .
 #
 # Run (bind device 2):
 #   docker run --rm -it --device /dev/tenstorrent/2 pi05-blackhole

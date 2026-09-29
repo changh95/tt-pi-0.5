@@ -1,5 +1,9 @@
 # v2 step 3 — an expert megakernel for pi0.5 (design notes, in progress)
 
+> **Historical design notes (p300, before the 2026-09-29 fix).** The expert-attention program and the adaRMS fold
+> described here are in `tt/ttnn_fused_attn.py` / `tt/ttnn_fused_norm.py`; the timings below were measured on one
+> p300 chip and on the 1x4 mesh, not on the p150a. Current numbers: the repo `README.md`.
+
 ## Why
 The Gemma-300M action expert runs 18 blocks x 10 denoising steps on a 64-row suffix (one request). Measured on one
 Blackhole p300 chip, in-trace, per block (B = 1):
