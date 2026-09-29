@@ -25,7 +25,7 @@ concat run on tiles (no ROW_MAJOR round trips).
 """
 
 import math
-from typing import List, Optional, Tuple
+from typing import List, Tuple
 
 import torch
 import ttnn
@@ -217,9 +217,10 @@ class PrefixEmbeddingTTNN:
         ``[1, 256, 608]`` per camera in legacy order) and the ``[1, L]`` uint32 token ids. No masks."""
         if self.embed_images_fused_fn is None or self.embed_language_fused_fn is None:
             raise RuntimeError("fused embedding functions not set")
-        embs = [self.embed_images_fused_fn(x) for x in im2col_inputs]
+        batch = int(lang_tokens.shape[0])  # requests sharing the trace
+        embs = [self.embed_images_fused_fn(x, batch) for x in im2col_inputs]  # each [B, n*256, D]
 
-        lang_emb = self.embed_language_fused_fn(lang_tokens)  # [1, L, D] TILE
+        lang_emb = self.embed_language_fused_fn(lang_tokens)  # [B, L, D] TILE
         scale = math.sqrt(lang_emb.shape[-1])
         lang_scaled = ttnn.mul(lang_emb, scale, memory_config=ttnn.L1_MEMORY_CONFIG)
         ttnn.deallocate(lang_emb)

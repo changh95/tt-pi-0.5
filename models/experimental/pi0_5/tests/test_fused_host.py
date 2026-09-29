@@ -73,7 +73,9 @@ def test_knob_default_on_and_zero_selects_legacy():
 def test_knob_on_defaults_match_the_evaluation_recipe():
     cfg = FusedConfig.from_env({"TT_FUSED": "1"})
     assert cfg.enabled and cfg.trace and cfg.trace_region_size == 160_000_000
-    assert cfg.residual == "bf16" and cfg.mlp_chunk == 256 and cfg.vlm_down_pc == "mcast2d" and cfg.vlm_gateup_pc == "auto"
+    assert (
+        cfg.residual == "bf16" and cfg.mlp_chunk == 256 and cfg.vlm_down_pc == "mcast2d" and cfg.vlm_gateup_pc == "auto"
+    )
     assert FusedConfig.from_env({"TT_FUSED": "1", "PI05_MLP_CHUNK": "0"}).mlp_chunk == 0
     assert cfg.siglip_batched and cfg.skip_vlm_tail
     assert cfg.sdpa_vlm is None and cfg.sdpa_expert is None and cfg.sdpa_siglip is None  # legacy SDPA configs
@@ -107,7 +109,9 @@ def test_knob_sub_modes_and_parsing():
     cfg = FusedConfig.from_env(env)
     assert cfg.trace is False and cfg.trace_region_size == 95_000_000
     assert cfg.residual == "mixed" and cfg.expert_mlp_act_dtype() == "bfloat8_b"
-    assert cfg.expert_residual_weight_dtype() == "bfloat16"  # mixed still needs bf16 weights (residual == weight format)
+    assert (
+        cfg.expert_residual_weight_dtype() == "bfloat16"
+    )  # mixed still needs bf16 weights (residual == weight format)
     assert cfg.mlp_chunk == 0 and cfg.siglip_batched is False and cfg.skip_vlm_tail is False
     assert cfg.sdpa_vlm == (128, 256) and cfg.sdpa_expert == (64, 256) and cfg.sdpa_siglip == (64, 256)
     assert cfg.dit_blocks == (4, 4, 4, 2, 2, 0, 0)  # 5 values -> full device grid
@@ -135,14 +139,21 @@ def test_knob_legacy_sample_actions_availability():
     assert FusedConfig.legacy().legacy_sample_actions_available is True
     assert FusedConfig.from_env({"TT_FUSED": "0"}).legacy_sample_actions_available is True
     assert FusedConfig.from_env({}).legacy_sample_actions_available is False  # default = fused, bf16 expert weights
-    assert FusedConfig.from_env({"TT_FUSED": "1", "PI05_FUSED_RESIDUAL": "legacy"}).legacy_sample_actions_available is True
+    assert (
+        FusedConfig.from_env({"TT_FUSED": "1", "PI05_FUSED_RESIDUAL": "legacy"}).legacy_sample_actions_available is True
+    )
     for mode in ("bf16", "mixed"):
         cfg = FusedConfig.from_env({"TT_FUSED": "1", "PI05_FUSED_RESIDUAL": mode})
         assert cfg.expert_residual_weight_dtype() == "bfloat16"
         assert cfg.legacy_sample_actions_available is False
     assert FusedConfig.from_env({"TT_FUSED": "1"}).legacy_sample_actions_available is False  # default bf16
     # invariant the guard relies on: availability <=> bf8 expert residual weights
-    for env in ({"TT_FUSED": "0"}, {"TT_FUSED": "1"}, {"TT_FUSED": "1", "PI05_FUSED_RESIDUAL": "mixed"}, {"TT_FUSED": "1", "PI05_FUSED_RESIDUAL": "legacy"}):
+    for env in (
+        {"TT_FUSED": "0"},
+        {"TT_FUSED": "1"},
+        {"TT_FUSED": "1", "PI05_FUSED_RESIDUAL": "mixed"},
+        {"TT_FUSED": "1", "PI05_FUSED_RESIDUAL": "legacy"},
+    ):
         cfg = FusedConfig.from_env(env)
         assert cfg.legacy_sample_actions_available == (cfg.expert_residual_weight_dtype() == "bfloat8_b")
     for bad in (
@@ -256,7 +267,9 @@ def _tiny_siglip_weights(cfg: SigLIPConfig, g: torch.Generator) -> dict:
 
 def test_siglip_batched_equals_per_image():
     """Batching the two cameras is per-row identical math (every op is row-/batch-independent)."""
-    cfg = SigLIPConfig(hidden_size=32, num_hidden_layers=2, num_attention_heads=2, image_size=28, patch_size=14, intermediate_size=64)
+    cfg = SigLIPConfig(
+        hidden_size=32, num_hidden_layers=2, num_attention_heads=2, image_size=28, patch_size=14, intermediate_size=64
+    )
     g = torch.Generator().manual_seed(1)
     tower = SigLIPVisionTower(cfg, _tiny_siglip_weights(cfg, g))
     x = torch.randn(2, 3, 28, 28, generator=g, dtype=F64)
@@ -352,6 +365,7 @@ def test_gate_up_split_equals_fused_gate_up():
 def test_kv_cache_plan_and_constraints():
     plan = fh.kv_cache_plan(736, 50)
     assert plan == {
+        "batch": 1,
         "prefix_len": 736,
         "action_horizon": 50,
         "logical_len": 786,
@@ -405,7 +419,9 @@ def test_kv_hoist_cache_equals_concat_and_refreshes_per_call():
 
 
 def _tiny_expert_cfg() -> GemmaConfig:
-    return GemmaConfig(width=64, depth=2, mlp_dim=128, num_heads=2, num_kv_heads=1, head_dim=32, use_adarms=True, adarms_cond_dim=64)
+    return GemmaConfig(
+        width=64, depth=2, mlp_dim=128, num_heads=2, num_kv_heads=1, head_dim=32, use_adarms=True, adarms_cond_dim=64
+    )
 
 
 def _tiny_vlm_cfg() -> GemmaConfig:
@@ -457,7 +473,10 @@ def test_64_row_suffix_matches_50_rows_on_rows_0_49():
     cos, sin = precompute_freqs_cis(cfg.head_dim, 512, dtype=F64)
     P, H = 96, 50
     plan = fh.kv_cache_plan(P, H)
-    prefix = [(torch.randn(1, 1, P, 32, generator=g, dtype=F64), torch.randn(1, 1, P, 32, generator=g, dtype=F64)) for _ in blocks]
+    prefix = [
+        (torch.randn(1, 1, P, 32, generator=g, dtype=F64), torch.randn(1, 1, P, 32, generator=g, dtype=F64))
+        for _ in blocks
+    ]
     cond = torch.randn(1, cfg.adarms_cond_dim, generator=g, dtype=F64)
     x50 = torch.randn(1, H, cfg.width, generator=g, dtype=F64)
     x64 = fh.pad_rows(x50, plan["suffix_rows"])
@@ -505,7 +524,13 @@ def test_vlm_tail_skip_leaves_the_kv_cache_unchanged():
     out_ref, caches_ref = run(weights, final_norm_w)
     perturbed = [dict(w) for w in weights]
     last = perturbed[-1]
-    for k in ("self_attn.o_proj.weight", "mlp.gate_proj.weight", "mlp.up_proj.weight", "mlp.down_proj.weight", "post_attention_layernorm.weight"):
+    for k in (
+        "self_attn.o_proj.weight",
+        "mlp.gate_proj.weight",
+        "mlp.up_proj.weight",
+        "mlp.down_proj.weight",
+        "post_attention_layernorm.weight",
+    ):
         last[k] = last[k] + torch.randn_like(last[k])
     out_p, caches_p = run(perturbed, final_norm_w + 1.0)
     assert not torch.equal(out_p, out_ref)  # the (unused) VLM output did change ...

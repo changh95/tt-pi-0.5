@@ -22,7 +22,6 @@ modes is the TT_FUSED-unset run (DEVICE_VALIDATION.md step 0).
 """
 
 import os
-from pathlib import Path
 
 import pytest
 import torch
@@ -46,7 +45,12 @@ RESPONSE_RATIO_MIN = 0.6
 def create_pi05_config() -> PI0ModelConfig:
     config = PI0ModelConfig(action_dim=32, action_horizon=50, state_dim=32, pi05=True)
     config.siglip_config = SigLIPConfig(
-        hidden_size=1152, intermediate_size=4304, num_hidden_layers=27, num_attention_heads=16, image_size=224, patch_size=14
+        hidden_size=1152,
+        intermediate_size=4304,
+        num_hidden_layers=27,
+        num_attention_heads=16,
+        image_size=224,
+        patch_size=14,
     )
     return config
 
@@ -69,14 +73,18 @@ def make_inputs(seed: int):
 
 def run_legacy(model: PI0ModelTTNN, device, images, tokens, noise):
     images_ttnn = [
-        ttnn.from_torch(im, dtype=ttnn.bfloat16, layout=ttnn.TILE_LAYOUT, device=device, memory_config=ttnn.DRAM_MEMORY_CONFIG)
+        ttnn.from_torch(
+            im, dtype=ttnn.bfloat16, layout=ttnn.TILE_LAYOUT, device=device, memory_config=ttnn.DRAM_MEMORY_CONFIG
+        )
         for im in images
     ]
     masks = [torch.ones(1, dtype=torch.bool) for _ in images]
     tok = ttnn.from_torch(tokens, dtype=ttnn.uint32, layout=ttnn.ROW_MAJOR_LAYOUT, device=device)
     lm = ttnn.from_torch(torch.ones(1, TOKEN_LEN), dtype=ttnn.bfloat16, layout=ttnn.TILE_LAYOUT, device=device)
     st = ttnn.from_torch(torch.zeros(1, 32), dtype=ttnn.bfloat16, layout=ttnn.TILE_LAYOUT, device=device)
-    out = model.sample_actions(images=images_ttnn, img_masks=masks, lang_tokens=tok, lang_masks=lm, state=st, noise=noise)
+    out = model.sample_actions(
+        images=images_ttnn, img_masks=masks, lang_tokens=tok, lang_masks=lm, state=st, noise=noise
+    )
     return ttnn.to_torch(out).float()
 
 

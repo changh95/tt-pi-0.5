@@ -31,8 +31,12 @@ host im2col input and the language embedding is emitted in TILE layout.
 
 from typing import Dict, List, Optional, Tuple
 
+import os
 import torch
 import ttnn
+from dataclasses import replace as _dc_replace
+from .ttnn_ccl import shard_cols as _shard_cols, shard_rows as _shard_rows, per_chip_cols as _per_chip_cols
+
 
 from models.experimental.pi0_5.common.configs import PaliGemmaConfig
 from models.experimental.pi0_5.common.fused_config import FusedConfig
@@ -77,6 +81,8 @@ class PaliGemmaBackboneTTNN:
         self.device = device
         self.fused_cfg = fused_cfg
         self._fused = fused_cfg is not None and fused_cfg.enabled
+        # Tensor-parallel degree of the SigLIP tower / VLM prefill (1 = full weights on every chip)
+        self.tp = fused_cfg.tp if self._fused else 1
         # Fused residual op: residual (bf16 hidden) format must equal the weight format -> expert
         # o_proj / down_proj in bf16 (PI05_FUSED_RESIDUAL != legacy). Legacy: None -> bf8 as shipped.
         self._expert_residual_weight_dtype = (
@@ -164,11 +170,18 @@ class PaliGemmaBackboneTTNN:
         # Pre-slice RoPE for known prefix_len: 2 images × 256 patches + 32 lang = 544 tokens
         vlm_seq_len = 2 * config.siglip_config.num_patches + 32  # 544
         self.vlm_blocks = []
+        # TP: each chip runs num_heads / tp query heads (the single MQA K/V head is replicated), so the
+        # block sees a config with the LOCAL head count; width / head_dim / kv heads are unchanged.
+        vlm_block_config = config.vlm_config
+        if self.tp > 1:
+            assert config.vlm_config.num_heads % self.tp == 0, (config.vlm_config.num_heads, self.tp)
+            assert config.vlm_config.num_kv_heads == 1, "TP sharding assumes the MQA VLM (1 KV head)"
+            vlm_block_config = _dc_replace(config.vlm_config, num_heads=config.vlm_config.num_heads // self.tp)
         for i in range(config.vlm_config.depth):
             block_weights = self._get_vlm_block_weights_ttnn(weights["vlm_language"], i)
             self.vlm_blocks.append(
                 GemmaBlockTTNN(
-                    config.vlm_config,
+                    vlm_block_config,
                     block_weights,
                     i,
                     device,
@@ -206,16 +219,30 @@ class PaliGemmaBackboneTTNN:
         weights: Dict[str, torch.Tensor],
         layer_idx: int,
     ) -> Dict[str, ttnn.Tensor]:
-        """Extract VLM block weights and convert to TTNN with fused QKV optimization."""
+        """Extract VLM block weights and convert to TTNN with fused QKV optimization.
+
+        TP (``self.tp`` > 1): chip i holds ``[wq heads i*H/tp..(i+1)*H/tp-1 | wk | wv]`` (K/V of the single
+        MQA head replicated, so every chip fills the full KV cache), the row block of o_proj matching its
+        heads, the column block of gate / up and the row block of down; the block all-reduces the two
+        row-parallel partials. Norm weights are replicated.
+        """
         prefix = f"model.layers.{layer_idx}."
         block_weights = {}
+        tp = self.tp
 
         # OPTIMIZATION: Create fused QKV weight for single linear call
         q_key = f"{prefix}self_attn.q_proj.weight"
         k_key = f"{prefix}self_attn.k_proj.weight"
         v_key = f"{prefix}self_attn.v_proj.weight"
 
-        if q_key in weights and k_key in weights and v_key in weights:
+        if tp > 1 and q_key in weights and k_key in weights and v_key in weights:
+            vlm_weight_dtype = ttnn.bfloat8_b
+            cfg = self.config.vlm_config
+            hl = cfg.num_heads // tp * cfg.head_dim  # local q columns per chip
+            wq_t, wk_t, wv_t = weights[q_key].T, weights[k_key].T, weights[v_key].T  # [D, H*dh], [D, dh], [D, dh]
+            chunks = [torch.cat([wq_t[:, i * hl : (i + 1) * hl], wk_t, wv_t], dim=-1) for i in range(tp)]
+            block_weights["self_attn.wqkv"] = _per_chip_cols(self.device, chunks, vlm_weight_dtype)
+        elif q_key in weights and k_key in weights and v_key in weights:
             # Get Q, K, V weights, transpose for TTNN linear, and convert to TTNN
             # Use bfloat8_b for VLM weights too — reduces bandwidth
             vlm_weight_dtype = ttnn.bfloat8_b
@@ -272,17 +299,19 @@ class PaliGemmaBackboneTTNN:
                 if len(value.shape) == 1:
                     block_weights[new_key] = tensor_1d_to_2d_ttnn(value, self.device, dtype=ttnn.bfloat16)
                 else:
-                    w_dtype = (
-                        vlm_weight_dtype
-                        if ("weight" in new_key and "norm" not in new_key and "layernorm" not in new_key)
-                        else ttnn.bfloat16
-                    )
-                    block_weights[new_key] = ttnn.from_torch(
-                        value,
-                        dtype=w_dtype,
-                        layout=layout,
-                        device=self.device,
-                    )
+                    is_proj = "weight" in new_key and "norm" not in new_key and "layernorm" not in new_key
+                    w_dtype = vlm_weight_dtype if is_proj else ttnn.bfloat16
+                    if tp > 1 and new_key in ("mlp.gate_proj.weight", "mlp.up_proj.weight"):
+                        block_weights[new_key] = _shard_cols(self.device, value, tp, w_dtype)  # [D, mlp/tp]
+                    elif tp > 1 and new_key in ("mlp.down_proj.weight", "self_attn.o_proj.weight"):
+                        block_weights[new_key] = _shard_rows(self.device, value, tp, w_dtype)  # [mlp/tp | H*dh/tp, D]
+                    else:
+                        block_weights[new_key] = ttnn.from_torch(
+                            value,
+                            dtype=w_dtype,
+                            layout=layout,
+                            device=self.device,
+                        )
         return block_weights
 
     def _get_expert_block_weights_ttnn(
@@ -296,6 +325,20 @@ class PaliGemmaBackboneTTNN:
 
         # Use bfloat8_b for expert weights to reduce memory bandwidth
         expert_weight_dtype = ttnn.bfloat8_b
+
+        # PI05_EXPERT_GEGLU: one [width, 2*mlp] matmul + ttnn.geglu (= first half * gelu(second half)),
+        # so the fused weight is [up | gate] along the output dim.
+        if self._fused and self.fused_cfg.expert_geglu:
+            g_key, u_key = f"{prefix}mlp.gate_proj.weight", f"{prefix}mlp.up_proj.weight"
+            if g_key in weights and u_key in weights:
+                fused_ug = torch.cat([weights[u_key], weights[g_key]], dim=0).T.contiguous()  # [width, 2*mlp]
+                block_weights["mlp.fused_gate_up"] = ttnn.from_torch(
+                    fused_ug,
+                    dtype=expert_weight_dtype,
+                    layout=ttnn.TILE_LAYOUT,
+                    device=self.device,
+                    memory_config=ttnn.DRAM_MEMORY_CONFIG,
+                )
 
         # OPTIMIZATION: Create fused QKV weight for single linear call
         q_key = f"{prefix}self_attn.q_proj.weight"
@@ -332,6 +375,15 @@ class PaliGemmaBackboneTTNN:
             ttnn.deallocate(wq_ttnn)
             ttnn.deallocate(wk_ttnn)
             ttnn.deallocate(wv_ttnn)
+            if self._fused and getattr(self.fused_cfg, "expert_norm_fold", False):
+                # torch originals for the per-step adaRMS folding (tt/ttnn_fused_norm.py); freed after folding
+                if os.environ.get("PI05_EXPERT_NORM_FOLD_ATTN", "0") == "1":
+                    block_weights["_torch_wqkv"] = torch.cat(
+                        [weights[q_key].T, weights[k_key].T, weights[v_key].T], dim=-1
+                    ).contiguous()
+                gk, uk = f"{prefix}mlp.gate_proj.weight", f"{prefix}mlp.up_proj.weight"
+                if gk in weights and uk in weights:
+                    block_weights["_torch_fused_ug"] = torch.cat([weights[uk], weights[gk]], dim=0).T.contiguous()
 
         for key, value in weights.items():
             if key.startswith(prefix):
@@ -437,48 +489,67 @@ class PaliGemmaBackboneTTNN:
         Same bf16 values as the legacy row-major gather (exact)."""
         return ttnn.embedding(token_ids, self.vlm_embed_tokens, layout=ttnn.TILE_LAYOUT)
 
-    def embed_images_fused(self, im2col_dev: ttnn.Tensor) -> ttnn.Tensor:
-        """Host im2col ``[B, 256, 608]`` bf16 ROW_MAJOR (persistent trace input) -> ``[1, B*256, 2048]``
-        image tokens in the legacy concat order (camera 0 rows, then camera 1 rows; tile-aligned reshape)."""
+    def embed_images_fused(self, im2col_dev: ttnn.Tensor, batch: int = 1) -> ttnn.Tensor:
+        """Host im2col ``[B*N, 256, 608]`` bf16 ROW_MAJOR (persistent trace input; request-major camera
+        order) -> ``[B, N*256, 2048]`` image tokens per request in the legacy concat order (camera 0 rows,
+        then camera 1 rows; tile-aligned reshape = a free view)."""
         vision_features = self.vision_tower.forward_fused(im2col_dev)
         proj = self.mm_projector.forward(vision_features)
         ttnn.deallocate(vision_features)
-        b, p, d = proj.shape[0], proj.shape[1], proj.shape[2]
-        if b == 1:
+        bn, p, d = proj.shape[0], proj.shape[1], proj.shape[2]
+        if bn == batch:
             return proj
-        return ttnn.reshape(proj, (1, b * p, d))
+        assert bn % batch == 0, (bn, batch)
+        return ttnn.reshape(proj, (batch, (bn // batch) * p, d))
 
-    def allocate_kv_caches(self, prefix_len: int, action_horizon: int) -> Dict[str, int]:
-        """(Re)allocate the 18 backbone-owned expert KV caches for this serving shape. Called on the
-        compile pass (before trace capture); a no-op while the shape is unchanged. Geometry and the
-        rotary_embedding_to_cache / fill_cache tile constraints come from ``fused_host.kv_cache_plan``."""
-        plan = kv_cache_plan(prefix_len, action_horizon)
+    def allocate_kv_caches(self, prefix_len: int, action_horizon: int, batch: int = 1) -> Dict[str, int]:
+        """(Re)allocate the 18 backbone-owned expert KV caches for this serving shape (``batch`` requests,
+        one cache entry each). Called on the compile pass (before trace capture); a no-op while the shape is
+        unchanged. Geometry and the rotary_embedding_to_cache / fill_cache tile constraints come from
+        ``fused_host.kv_cache_plan``."""
+        plan = kv_cache_plan(prefix_len, action_horizon, batch=batch)
         if self.kv_caches is not None and self.kv_cache_plan == plan:
             return plan
-        if self.kv_caches is not None:
-            for k, v in self.kv_caches:
+        # Cache SETS are kept per batch size so a server can hold one trace per batch size and switch between
+        # them (the trace is bound to its caches' addresses); a set is only rebuilt when its plan changes.
+        sets = self.__dict__.setdefault("_kv_sets", {})
+        prev = sets.get(plan["batch"])
+        if prev is not None and prev[1] == plan:
+            self.kv_caches, self.kv_cache_plan = prev
+            return plan
+        if prev is not None:
+            for k, v in prev[0]:
                 ttnn.deallocate(k)
                 ttnn.deallocate(v)
+            del sets[plan["batch"]]
         cfg = self.config.expert_config
         self.kv_caches = []
+        # == the qkv linear output dtype of both VLM and expert (PI05_KV_DTYPE; fill_cache needs equal dtypes)
+        kv_dtype = ttnn.bfloat16 if (self._fused and self.fused_cfg.kv_dtype == "bf16") else ttnn.bfloat8_b
+        # L1 for one or two requests (the reference's SDPA 75 -> 53 us win); DRAM for larger batches: at
+        # batch 4 the 36 caches are ~30 MB of L1 and the VLM prefill's static circular buffers clashed with
+        # the L1 buffers (dataflow_buffer.cpp "clash with L1 buffers", 2026-09-17). With several sets alive
+        # (multi-shape serving) only the batch-1 set stays in L1.
+        kv_mem = ttnn.L1_MEMORY_CONFIG if (plan["batch"] == 1 or (plan["batch"] <= 2 and not sets)) else ttnn.DRAM_MEMORY_CONFIG
         for _ in self.expert_blocks:
-            shape = [1, cfg.num_kv_heads, plan["logical_len"], cfg.head_dim]
+            shape = [plan["batch"], cfg.num_kv_heads, plan["logical_len"], cfg.head_dim]
             k = ttnn.zeros(
                 shape,
-                dtype=ttnn.bfloat8_b,  # == the qkv linear output dtype of both VLM and expert
+                dtype=kv_dtype,
                 layout=ttnn.TILE_LAYOUT,
                 device=self.device,
-                memory_config=ttnn.L1_MEMORY_CONFIG,
+                memory_config=kv_mem,
             )
             v = ttnn.zeros(
                 shape,
-                dtype=ttnn.bfloat8_b,
+                dtype=kv_dtype,
                 layout=ttnn.TILE_LAYOUT,
                 device=self.device,
-                memory_config=ttnn.L1_MEMORY_CONFIG,
+                memory_config=kv_mem,
             )
             self.kv_caches.append((k, v))
         self.kv_cache_plan = plan
+        sets[plan["batch"]] = (self.kv_caches, plan)
         return plan
 
     def forward_vlm_fused(self, prefix_embs: ttnn.Tensor) -> None:
@@ -505,11 +576,26 @@ class PaliGemmaBackboneTTNN:
         ttnn.deallocate(final)
         return None
 
+    def fold_expert_norms(self, block_mods_per_step: List[List[Tuple]]) -> None:
+        """Build every expert block's per-step folded qkv / up|gate weights from the precomputed adaRMS mods
+        (``block_mods_per_step[step][layer]``) and drop the torch originals."""
+        from .ttnn_fused_norm import FoldedExpertNorms
+
+        for i, block in enumerate(self.expert_blocks):
+            if block._torch_fused_ug is None:
+                raise RuntimeError("expert_norm_fold needs the torch up|gate weights (expert_geglu must be on)")
+            mods = [block_mods_per_step[s][i] for s in range(len(block_mods_per_step))]
+            block.set_folded(FoldedExpertNorms(self.device, block._torch_wqkv, block._torch_fused_ug, mods,
+                                               fold_attn=block._torch_wqkv is not None))
+            block._torch_wqkv = None
+            block._torch_fused_ug = None
+
     def forward_expert_fused(
         self,
         hidden_states: ttnn.Tensor,
         precomputed_block_mods: List[Tuple],
         precomputed_final_mod: Tuple,
+        step: Optional[int] = None,
     ) -> ttnn.Tensor:
         """Expert on the 64-row suffix reading the backbone-owned caches; consumes ``hidden_states`` and
         returns the final adaRMS-normed hidden ``[1, 64, width]`` bf16 (L1)."""
@@ -517,7 +603,7 @@ class PaliGemmaBackboneTTNN:
         for i, block in enumerate(self.expert_blocks):
             cache_k, cache_v = self.kv_caches[i]
             hidden_states = block.forward_fused_expert(
-                hidden_states, precomputed_block_mods[i], cache_k, cache_v, prefix_len
+                hidden_states, precomputed_block_mods[i], cache_k, cache_v, prefix_len, step=step
             )
         scale_f, shift_f = precomputed_final_mod[0], precomputed_final_mod[1]
         out = adarms_norm_precomputed(hidden_states, scale_f, shift_f, self.config.expert_config.rms_norm_eps)

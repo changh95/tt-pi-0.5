@@ -41,10 +41,43 @@ legacy ``forward`` methods are untouched):
 """
 
 import math
+import os
+
+_FA_CHECKS = [0]  # debug counter for PI05_FUSED_ATTN_CHECK (compile pass only)
 from typing import Dict, Optional, Tuple
 
 import torch
 import ttnn
+from .ttnn_ccl import tp_all_reduce as _tp_all_reduce
+
+
+def _fill_cache_batched(cache, src, update_idx):
+    """``fill_cache`` of ``src [B, KVH, S, dh]`` into rows ``update_idx..`` of every batch entry of
+    ``cache [B, KVH, L, dh]`` (fill_cache writes one batch entry per launch: B launches, B-1 slices)."""
+    b = int(src.shape[0])
+    if b == 1:
+        ttnn.fill_cache(cache, src, 0, update_idx=update_idx)
+        return
+    kvh, s, dh = int(src.shape[1]), int(src.shape[2]), int(src.shape[3])
+    for i in range(b):
+        piece = ttnn.slice(src, [i, 0, 0, 0], [i + 1, kvh, s, dh])
+        ttnn.fill_cache(cache, piece, i, update_idx=update_idx)
+        ttnn.deallocate(piece)
+
+
+def rotary_embedding_to_cache(k, cos, sin, cache, update_idx):
+    """Rotate ``k`` and write it into ``cache`` rows ``update_idx..``: the fork's fused op when the
+    running tt-metal has it, else rotary_embedding + fill_cache (2 launches, identical values)."""
+    fused = getattr(ttnn.experimental, "rotary_embedding_to_cache", None)
+    if os.environ.get("PI05_NO_FUSED_ROTARY", "").strip() in ("1", "true", "yes"):
+        fused = None  # measure / serve exactly what an unmodified tt-metal runs
+    if fused is not None:
+        return fused(k, cos, sin, cache, update_idx)
+    k_rope = ttnn.experimental.rotary_embedding(k, cos, sin)
+    ttnn.fill_cache(cache, k_rope, 0, update_idx=update_idx)
+    ttnn.deallocate(k_rope)
+    return cache
+
 
 from models.experimental.pi0_5.common.configs import GemmaConfig
 from models.experimental.pi0_5.common.fused_config import FusedConfig
@@ -409,28 +442,41 @@ class GemmaAttentionTTNN:
         self.device = device
         self.fused_cfg = fused_cfg
         self.role = role
+        self._fused_attn = None  # PI05_EXPERT_ATTN=fused (expert role): tt/ttnn_fused_attn.FusedExpertAttention
         # Fused path: cos/sin slices cached per seq_len (built on the compile pass, outside the trace)
         self._rope_cache: Dict[int, Tuple[ttnn.Tensor, ttnn.Tensor]] = {}
         self._sdpa_config_fused = None
         self._mm_config_fused = None  # PI05_EXPERT_MM=minimal: minimal_matmul config for the expert qkv projection
         self._qkv_program_config = None  # PI05_EXPERT_MM=mcast1d: explicit ttnn.linear program config
+        self._qkv_pc_by_rows: Dict[int, object] = {}  # rows (batch * seq) -> mcast1d program config
         if fused_cfg is not None and fused_cfg.enabled:
             chunks = fused_cfg.sdpa_expert if role == "expert" else fused_cfg.sdpa_vlm
             self._sdpa_config_fused = sdpa_program_config_from_chunks(device, chunks)
             if role == "expert" and fused_cfg.expert_mm == "minimal":
                 self._mm_config_fused = dit_config_from_blocks(device, fused_cfg.expert_mm_blocks)
         self._want_qkv_mcast1d = (
-            fused_cfg is not None and fused_cfg.enabled and role == "expert" and fused_cfg.expert_mm in ("mcast1d", "mcast1d_fp32")
+            fused_cfg is not None
+            and fused_cfg.enabled
+            and role == "expert"
+            and fused_cfg.expert_mm in ("mcast1d", "mcast1d_fp32")
         )  # the config needs self.wqkv (assigned below): built lazily in _qkv_heads
         # PI05_VLM_ATTN_PC=mcast2d[_fp32]: explicit 2D multicast configs for the VLM qkv / o_proj linears
         # (probe 2026-09-13: [736,2048]x[2048,2560] 0.387 -> 0.035 ms, [736,2048]x[2048,2048] 0.405 -> 0.029 ms)
         self._want_vlm_mcast2d = (
-            fused_cfg is not None and fused_cfg.enabled and role == "vlm" and fused_cfg.vlm_attn_pc in ("mcast2d", "mcast2d_fp32")
+            fused_cfg is not None
+            and fused_cfg.enabled
+            and role == "vlm"
+            and fused_cfg.vlm_attn_pc in ("mcast2d", "mcast2d_fp32")
         )
         self._vlm_pc_cache: Dict[Tuple[str, int], object] = {}
         # fp32 destination accumulation for the explicit-program linears (mcast1d_fp32 / mcast2d_fp32)
-        self._pc_fp32 = fused_cfg is not None and fused_cfg.enabled and (
-            (role == "expert" and fused_cfg.expert_mm == "mcast1d_fp32") or (role == "vlm" and fused_cfg.vlm_attn_pc == "mcast2d_fp32")
+        self._pc_fp32 = (
+            fused_cfg is not None
+            and fused_cfg.enabled
+            and (
+                (role == "expert" and fused_cfg.expert_mm == "mcast1d_fp32")
+                or (role == "vlm" and fused_cfg.vlm_attn_pc == "mcast2d_fp32")
+            )
         )
 
         # OPTIMIZATION: Use fused QKV weight (single linear instead of 3)
@@ -442,6 +488,18 @@ class GemmaAttentionTTNN:
         self.head_dim = config.head_dim
         self.hidden_size = config.width
         self.scale = 1.0 / math.sqrt(self.head_dim)
+        if (
+            fused_cfg is not None
+            and fused_cfg.enabled
+            and role == "expert"
+            and getattr(fused_cfg, "expert_attn", "ttnn") == "fused"
+            and expected_seq_len is not None
+        ):
+            from .ttnn_fused_attn import FusedExpertAttention
+
+            self._fused_attn = FusedExpertAttention(
+                device, self.num_heads, self.num_kv_heads, self.head_dim, int(expected_seq_len)
+            )
 
         # Store meta format cos/sin for native TTNN RoPE (split-half pattern)
         self.cos_meta = cos_meta
@@ -589,7 +647,7 @@ class GemmaAttentionTTNN:
             if v.dtype != self._kv_concat_v.dtype:
                 v = ttnn.typecast(v, self._kv_concat_v.dtype)
             # FUSED: rotate K and write directly to cache at prefix_len offset
-            ttnn.experimental.rotary_embedding_to_cache(k, cos_sliced, sin_sliced, self._kv_concat_k, prefix_len)
+            rotary_embedding_to_cache(k, cos_sliced, sin_sliced, self._kv_concat_k, prefix_len)
             # V: no rotation, regular fill_cache
             ttnn.fill_cache(self._kv_concat_v, v, 0, update_idx=prefix_len)
             k_rope = self._kv_concat_k
@@ -658,36 +716,55 @@ class GemmaAttentionTTNN:
             )
         return self._vlm_pc_cache[key]
 
-    def _qkv_heads(self, hidden_states: ttnn.Tensor):
-        """normed [B, S, D] -> (q [B, H, S, dh], k [B, KVH, S, dh], v [B, KVH, S, dh]) bf8 in L1 (legacy ops)."""
+    def _qkv_proj(self, hidden_states: ttnn.Tensor, weight: Optional[ttnn.Tensor] = None) -> ttnn.Tensor:
+        """normed [B, S, D] -> xqkv [B, 1, S, (H + 2 KVH) dh] (q heads | k | v) in L1, the qkv dtype.
+        ``weight`` overrides ``self.wqkv`` (the per-step scale-folded copy of PI05_EXPERT_NORM_FOLD)."""
+        wqkv = self.wqkv if weight is None else weight
         batch_size, seq_len = hidden_states.shape[0], hidden_states.shape[1]
         x4 = ttnn.reshape(hidden_states, (batch_size, 1, seq_len, -1))
+        # PI05_KV_DTYPE=bf16: bf16 q/k/v (K/V go into bf16 caches, the SDPA output is bf16)
+        qkv_dtype = (
+            ttnn.bfloat16
+            if (self.fused_cfg is not None and self.fused_cfg.enabled and self.fused_cfg.kv_dtype == "bf16")
+            else ttnn.bfloat8_b
+        )
         if self._mm_config_fused is not None:
             xqkv = ttnn.experimental.minimal_matmul(
                 x4,
-                self.wqkv,
+                wqkv,
                 config=self._mm_config_fused,
                 memory_config=ttnn.L1_MEMORY_CONFIG,
-                dtype=ttnn.bfloat8_b,
+                dtype=qkv_dtype,
                 compute_kernel_config=self.compute_kernel_config_hifi2,
             )
         else:
-            if self._want_qkv_mcast1d and self._qkv_program_config is None:
-                self._qkv_program_config = mcast1d_program_config(self.device, int(self.wqkv.shape[-1]))
-            pc = self._qkv_program_config
+            pc = None
+            if self._want_qkv_mcast1d:
+                # 1D multicast: every core computes ALL rows (batch * seq) for its N slice -> per_core_M = rows / 32
+                rows = int(batch_size) * int(seq_len)
+                pc = self._qkv_pc_by_rows.get(rows)
+                if pc is None:
+                    pc = mcast1d_program_config(self.device, int(wqkv.shape[-1]), per_core_m=max(1, rows // 32))
+                    self._qkv_pc_by_rows[rows] = pc
+                self._qkv_program_config = pc
             if self._want_vlm_mcast2d:
-                pc = self._vlm_pc("qkv", seq_len, self.wqkv)
+                pc = self._vlm_pc("qkv", int(batch_size) * int(seq_len), wqkv)  # 2D mcast folds the batch into M
             ckc = self.compute_kernel_config_hifi2
             if pc is not None and self._pc_fp32:
                 ckc = with_fp32_acc(ckc)
             xqkv = ttnn.linear(
                 x4,
-                self.wqkv,
-                dtype=ttnn.bfloat8_b,
+                wqkv,
+                dtype=qkv_dtype,
                 memory_config=ttnn.L1_MEMORY_CONFIG,
                 compute_kernel_config=ckc,
                 program_config=pc,
             )
+        return xqkv
+
+    def _qkv_heads(self, hidden_states: ttnn.Tensor):
+        """normed [B, S, D] -> (q [B, H, S, dh], k [B, KVH, S, dh], v [B, KVH, S, dh]) bf8 in L1 (legacy ops)."""
+        xqkv = self._qkv_proj(hidden_states)
         q, k, v = ttnn.experimental.nlp_create_qkv_heads(
             xqkv,
             num_heads=self.num_heads,
@@ -720,8 +797,8 @@ class GemmaAttentionTTNN:
         ttnn.deallocate(k)
         if k_rope.shape[2] != seq_len:  # only when seq_len % 32 != 0 (never for the served shapes)
             k_rope = ttnn.slice(k_rope, [0, 0, 0, 0], [batch_size, self.num_kv_heads, seq_len, self.head_dim])
-        ttnn.fill_cache(cache_k, k_rope, 0, update_idx=0)
-        ttnn.fill_cache(cache_v, v, 0, update_idx=0)
+        _fill_cache_batched(cache_k, k_rope, 0)
+        _fill_cache_batched(cache_v, v, 0)
 
         if not need_output:
             ttnn.deallocate(q)
@@ -749,13 +826,18 @@ class GemmaAttentionTTNN:
 
         attn_concat = ttnn.experimental.nlp_concat_heads(attn_output, memory_config=ttnn.L1_MEMORY_CONFIG)
         ttnn.deallocate(attn_output)
+        # TP: the row-parallel partial is emitted in bf16 (its all-reduce sums bf16 and the residual add
+        # consumes it), so the sum is rounded once instead of once per chip's bf8 partial.
+        tp = self.fused_cfg.tp if self.fused_cfg is not None else 1
         output = ttnn.linear(
             attn_concat,
             self.o_proj,
-            dtype=ttnn.bfloat8_b,
+            dtype=ttnn.bfloat16 if tp > 1 else ttnn.bfloat8_b,
             memory_config=ttnn.L1_MEMORY_CONFIG,
-            compute_kernel_config=with_fp32_acc(self.compute_kernel_config_hifi4) if (self._want_vlm_mcast2d and self._pc_fp32) else self.compute_kernel_config_hifi4,
-            program_config=self._vlm_pc("o", seq_len, self.o_proj) if self._want_vlm_mcast2d else None,
+            compute_kernel_config=with_fp32_acc(self.compute_kernel_config_hifi4)
+            if (self._want_vlm_mcast2d and self._pc_fp32)
+            else self.compute_kernel_config_hifi4,
+            program_config=self._vlm_pc("o", int(batch_size) * int(seq_len), self.o_proj) if self._want_vlm_mcast2d else None,
         )
         ttnn.deallocate(attn_concat)
         return ttnn.reshape(output, (batch_size, seq_len, self.hidden_size))
@@ -778,13 +860,64 @@ class GemmaAttentionTTNN:
         Returns the head-concatenated context ``[B, 1, S, H*dh]`` bf8 (L1); the caller owns the o_proj.
         """
         seq_len = hidden_states.shape[1]
-        q, k, v = self._qkv_heads(hidden_states)
         cos_sliced, sin_sliced = self._rope(seq_len)
+        if self._fused_attn is not None:
+            # PI05_EXPERT_ATTN=fused: one generic_op program for the whole batch (RoPE + masked attention over the
+            # cache prefix + local suffix + head concat); the suffix K/V are never written to the cache.
+            xqkv = self._qkv_proj(hidden_states)
+            ctx = self._fused_attn(xqkv, cache_k, cache_v, prefix_len, cos_sliced, sin_sliced)
+            if os.environ.get("PI05_FUSED_ATTN_CHECK") and getattr(self, "_fa_checks", 0) < 1 and _FA_CHECKS[0] < 18:
+                _FA_CHECKS[0] += 1
+                # debug (eager compile pass only): PCC of the fused program vs the ttnn ops on the same inputs
+                self._fa_checks = getattr(self, "_fa_checks", 0) + 1
+                from .ttnn_fused_attn import _to_torch_any
+
+                q, k, v = ttnn.experimental.nlp_create_qkv_heads(
+                    xqkv, num_heads=self.num_heads, num_kv_heads=self.num_kv_heads, transpose_k_heads=False,
+                    memory_config=ttnn.L1_MEMORY_CONFIG)
+                q_rope = ttnn.experimental.rotary_embedding(q, cos_sliced, sin_sliced)
+                rotary_embedding_to_cache(k, cos_sliced, sin_sliced, cache_k, prefix_len)
+                _fill_cache_batched(cache_v, v, prefix_len)
+                ref = ttnn.transformer.scaled_dot_product_attention(
+                    q_rope, cache_k, cache_v, attn_mask=None, is_causal=False, scale=self.scale,
+                    program_config=self._sdpa_config_fused)
+                ref = ttnn.experimental.nlp_concat_heads(ref, memory_config=ttnn.L1_MEMORY_CONFIG)
+                a = _to_torch_any(ctx).float().flatten(); b = _to_torch_any(ref).float().flatten()
+                pcc = (torch.mean((a - a.mean()) * (b - b.mean())) / (a.std() * b.std())).item()
+                # second run of the fused program on the same operands: transient (race) or deterministic?
+                ctx_again = self._fused_attn(xqkv, cache_k, cache_v, prefix_len, cos_sliced, sin_sliced)
+                a2 = _to_torch_any(ctx_again).float().flatten(); ttnn.deallocate(ctx_again)
+                pcc2 = (torch.mean((a2 - a2.mean()) * (b - b.mean())) / (a2.std() * b.std())).item()
+                a_r = a.reshape(-1, 2048)[:64]; b_r = b.reshape(-1, 2048)[:64]
+                def _p(x, y): return (torch.mean((x - x.mean()) * (y - y.mean())) / (x.std() * y.std())).item()
+                print("[fused-attn check] second run PCC %.5f | rows 0-31 PCC %.5f rows 32-63 PCC %.5f | non-finite run1 %d run2 %d" % (
+                    pcc2, _p(a_r[:32].flatten(), b_r[:32].flatten()), _p(a_r[32:].flatten(), b_r[32:].flatten()),
+                    (~torch.isfinite(a)).sum().item(), (~torch.isfinite(a2)).sum().item()), flush=True)
+                print("[fused-attn check %2d] prefix_len=%d xqkv %s %s cache %s %s %s cos %s | PCC vs ttnn path %.5f  max|diff| %.4f |ref| %.4f" % (
+                    self._fa_checks, prefix_len, tuple(xqkv.shape), xqkv.dtype, tuple(cache_k.shape), tuple(cache_k.padded_shape), cache_k.dtype,
+                    tuple(cos_sliced.shape), pcc, (a - b).abs().max().item(), b.abs().mean().item()), flush=True)
+                dump = os.environ.get("PI05_FUSED_ATTN_DUMP")
+                if dump and self._fa_checks == 1:
+                    torch.save({"xqkv": _to_torch_any(xqkv).float(), "cos": _to_torch_any(cos_sliced).float(),
+                                "sin": _to_torch_any(sin_sliced).float(), "cache_k": _to_torch_any(cache_k).float(),
+                                "cache_v": _to_torch_any(cache_v).float(), "ref": _to_torch_any(ref).float(),
+                                "ctx": _to_torch_any(ctx).float(), "prefix_len": prefix_len, "scale": self.scale}, dump)
+                    print("[fused-attn check] dumped layer-0 operands to", dump, flush=True)
+                for t in (q, k, v, q_rope, ref):
+                    ttnn.deallocate(t)
+            ttnn.deallocate(xqkv)
+            return ctx
+        q, k, v = self._qkv_heads(hidden_states)
 
         q_rope = ttnn.experimental.rotary_embedding(q, cos_sliced, sin_sliced)
         ttnn.deallocate(q)
-        ttnn.experimental.rotary_embedding_to_cache(k, cos_sliced, sin_sliced, cache_k, prefix_len)
-        ttnn.fill_cache(cache_v, v, 0, update_idx=prefix_len)
+        if int(k.shape[0]) == 1:
+            rotary_embedding_to_cache(k, cos_sliced, sin_sliced, cache_k, prefix_len)
+        else:  # B requests: rotate once, then one fill per request (fill_cache writes one batch entry)
+            k_rope = ttnn.experimental.rotary_embedding(k, cos_sliced, sin_sliced)
+            _fill_cache_batched(cache_k, k_rope, prefix_len)
+            ttnn.deallocate(k_rope)
+        _fill_cache_batched(cache_v, v, prefix_len)
         ttnn.deallocate(k)
         ttnn.deallocate(v)
 
@@ -847,9 +980,18 @@ class GemmaMLPTTNN:
         self._up_program_config = None  # PI05_EXPERT_MM=mcast1d: explicit ttnn.linear program config for up_proj
         if fused_cfg is not None and fused_cfg.enabled and role == "expert" and fused_cfg.expert_mm == "minimal":
             self._mm_config_fused = dit_config_from_blocks(device, fused_cfg.expert_mm_blocks)
-        self._want_mcast1d = fused_cfg is not None and fused_cfg.enabled and role == "expert" and fused_cfg.expert_mm in ("mcast1d", "mcast1d_fp32")
-        self._mcast1d_fp32 = fused_cfg is not None and fused_cfg.enabled and role == "expert" and fused_cfg.expert_mm == "mcast1d_fp32"
-        self._down_pc_cache: Dict[int, object] = {}  # PI05_VLM_DOWN_PC=mcast2d: unchunked down-proj program config per seq_len
+        self._want_mcast1d = (
+            fused_cfg is not None
+            and fused_cfg.enabled
+            and role == "expert"
+            and fused_cfg.expert_mm in ("mcast1d", "mcast1d_fp32")
+        )
+        self._mcast1d_fp32 = (
+            fused_cfg is not None and fused_cfg.enabled and role == "expert" and fused_cfg.expert_mm == "mcast1d_fp32"
+        )
+        self._down_pc_cache: Dict[
+            int, object
+        ] = {}  # PI05_VLM_DOWN_PC=mcast2d: unchunked down-proj program config per seq_len
         self._gateup_pc_cache: Dict[int, Tuple[object, object]] = {}  # PI05_VLM_GATEUP_PC=mcast2d
 
         # WormholeComputeKernelConfig for MLP — LoFi is 18% faster than HiFi2 for large matmuls
@@ -891,6 +1033,18 @@ class GemmaMLPTTNN:
         self.up_proj = to_ttnn(up_w)
         self.down_proj = to_ttnn(weights["mlp.down_proj.weight"])
         self.mlp_dim = config.mlp_dim
+        # PI05_EXPERT_GEGLU: the backbone ships a prebuilt [width, 2*mlp] = [up | gate] weight
+        self._use_geglu = (
+            fused_cfg is not None
+            and fused_cfg.enabled
+            and fused_cfg.expert_geglu
+            and role == "expert"
+            and "mlp.fused_gate_up" in weights
+        )
+        self.fused_up_gate = weights.get("mlp.fused_gate_up") if self._use_geglu else None
+        self._up_gate_program_config = None
+        self._upgate_pc_by_rows: Dict[int, object] = {}
+        self._up_pc_by_rows: Dict[int, object] = {}
 
         # Chunk size must be tile-aligned (multiple of 32)
         # 256 is optimal: smaller chunks have lower per-op time but the slice/concat
@@ -909,12 +1063,38 @@ class GemmaMLPTTNN:
 
     # ------------------------------------------------------------------ fused graph
 
+    def up_gate_linear(self, x: ttnn.Tensor, act_dtype: ttnn.DataType, weight: Optional[ttnn.Tensor] = None) -> ttnn.Tensor:
+        """one matmul [S, width] x [width, 2*mlp] (1D multicast program as the up-proj); ``weight`` overrides the
+        fused up|gate weight (the per-step scale-folded copy of PI05_EXPERT_NORM_FOLD)."""
+        w = self.fused_up_gate if weight is None else weight
+        mlp_ckc = self.compute_kernel_config_hifi2
+        if self._want_mcast1d:
+            self._up_gate_program_config = self._mcast1d_pc(self._upgate_pc_by_rows, x, int(w.shape[-1]))
+        return ttnn.linear(
+            x,
+            w,
+            dtype=act_dtype,
+            memory_config=ttnn.L1_MEMORY_CONFIG,
+            compute_kernel_config=with_fp32_acc(mlp_ckc)
+            if (self._up_gate_program_config is not None and self._mcast1d_fp32)
+            else mlp_ckc,
+            program_config=self._up_gate_program_config,
+        )
+
     def forward_fused_pre_down(self, x: ttnn.Tensor, act_dtype: ttnn.DataType) -> ttnn.Tensor:
         """GeGLU without the separate gelu launch: ``gelu(x @ Wg) * (x @ Wu)`` as gate linear with
         ``activation="gelu"`` (UnaryOpType.GELU, approx=False == ``ttnn.gelu`` default) + up linear +
         multiply. ``act_dtype`` is the dtype of the intermediates (bf16 for the fused bf16 residual,
         bf8 for the legacy-numerics residual). Output ``[.., mlp_dim]`` in L1."""
         mlp_ckc = self.compute_kernel_config_hifi2
+        if self._use_geglu:
+            ug = self.up_gate_linear(x, act_dtype)
+            # ttnn.geglu indexes the split dim as 3 -> rank-4 view (free reshapes of a tile-aligned tensor)
+            b, s_rows, two_mlp = ug.shape[0], ug.shape[1], ug.shape[2]
+            ug4 = ttnn.reshape(ug, (b, 1, s_rows, two_mlp))
+            hidden_out = ttnn.geglu(ug4, -1, memory_config=ttnn.L1_MEMORY_CONFIG)
+            ttnn.deallocate(ug)
+            return ttnn.reshape(hidden_out, (b, s_rows, two_mlp // 2))
         if self._mm_config_fused is not None:
             gate = ttnn.experimental.minimal_matmul(
                 x,
@@ -942,20 +1122,39 @@ class GemmaMLPTTNN:
                 activation="gelu",
                 compute_kernel_config=mlp_ckc,
             )
-            if self._want_mcast1d and self._up_program_config is None:
-                self._up_program_config = mcast1d_program_config(self.device, int(self.up_proj.shape[-1]))
+            if self._want_mcast1d:
+                self._up_program_config = self._mcast1d_pc(self._up_pc_by_rows, x, int(self.up_proj.shape[-1]))
             up = ttnn.linear(
                 x,
                 self.up_proj,
                 dtype=act_dtype,
                 memory_config=ttnn.L1_MEMORY_CONFIG,
-                compute_kernel_config=with_fp32_acc(mlp_ckc) if (self._up_program_config is not None and self._mcast1d_fp32) else mlp_ckc,
+                compute_kernel_config=with_fp32_acc(mlp_ckc)
+                if (self._up_program_config is not None and self._mcast1d_fp32)
+                else mlp_ckc,
                 program_config=self._up_program_config,
             )
         hidden_out = ttnn.multiply(gate, up)
         ttnn.deallocate(gate)
         ttnn.deallocate(up)
         return hidden_out
+
+    def _mcast1d_pc(self, cache: Dict[int, object], x: ttnn.Tensor, n: int):
+        """1D-multicast program config for ``x [B, S, K] @ [K, n]`` keyed by the row count (per_core_M = rows / 32)."""
+        rows = 1
+        for d in tuple(x.shape)[:-1]:
+            rows *= int(d)
+        pc = cache.get(rows)
+        if pc is None:
+            pc = mcast1d_program_config(self.device, n, per_core_m=max(1, rows // 32))
+            cache[rows] = pc
+        return pc
+
+    def _down_out_dtype(self):
+        """VLM down-proj output: bf8 on one chip (as shipped); bf16 for the TP partial that is all-reduced
+        (one rounding of the full sum instead of one per chip)."""
+        tp = self.fused_cfg.tp if self.fused_cfg is not None else 1
+        return ttnn.bfloat16 if tp > 1 else ttnn.bfloat8_b
 
     def _gateup_program_configs(self, seq_len: int):
         """PI05_VLM_GATEUP_PC=mcast2d: explicit 2D multicast configs for the unchunked gate (+GELU) / up
@@ -994,6 +1193,24 @@ class GemmaMLPTTNN:
         batch_size, seq_len, hidden = x.shape[0], x.shape[1], x.shape[2]
         chunk = self.chunk_size_fused
 
+        if chunk == 0 and int(batch_size) > 1:
+            # B requests: the MLP is row-independent, so fold the batch into rows (free view) when the
+            # per-chip gate/up intermediates still fit L1, else run the unchunked path per request.
+            rows = int(batch_size) * int(seq_len)
+            if rows <= 1536:
+                x_rows = ttnn.reshape(x, (1, rows, hidden))
+                out_rows = self.forward_fused_vlm(x_rows)
+                return ttnn.reshape(out_rows, (batch_size, seq_len, hidden))
+            outs = []
+            for b in range(int(batch_size)):
+                xb = ttnn.slice(x, [b, 0, 0], [b + 1, seq_len, hidden])
+                outs.append(self.forward_fused_vlm(xb))
+                ttnn.deallocate(xb)
+            out = ttnn.concat(outs, dim=0, memory_config=ttnn.L1_MEMORY_CONFIG)
+            for o in outs:
+                ttnn.deallocate(o)
+            return out
+
         if chunk == 0 or seq_len <= chunk:
             # Unchunked (PI05_MLP_CHUNK=0): the weights are read once. gate / up through the auto
             # program (0.40 ms each for 736 rows, L1 out); the down projection needs an explicit 2D
@@ -1003,18 +1220,32 @@ class GemmaMLPTTNN:
             mem = ttnn.L1_MEMORY_CONFIG
             gate_pc, up_pc = self._gateup_program_configs(seq_len)
             gate = ttnn.linear(
-                x, self.gate_proj, dtype=ttnn.bfloat8_b, memory_config=mem,
+                x,
+                self.gate_proj,
+                dtype=ttnn.bfloat8_b,
+                memory_config=mem,
                 activation=None if gate_pc is not None else "gelu",  # with a program config the GELU is inside it
-                compute_kernel_config=mlp_ckc, program_config=gate_pc,
+                compute_kernel_config=mlp_ckc,
+                program_config=gate_pc,
             )
-            up = ttnn.linear(x, self.up_proj, dtype=ttnn.bfloat8_b, memory_config=mem, compute_kernel_config=mlp_ckc,
-                             program_config=up_pc)
+            up = ttnn.linear(
+                x,
+                self.up_proj,
+                dtype=ttnn.bfloat8_b,
+                memory_config=mem,
+                compute_kernel_config=mlp_ckc,
+                program_config=up_pc,
+            )
             hidden_out = ttnn.multiply(gate, up, memory_config=mem)
             ttnn.deallocate(gate)
             ttnn.deallocate(up)
             output = ttnn.linear(
-                hidden_out, self.down_proj, dtype=ttnn.bfloat8_b, memory_config=ttnn.L1_MEMORY_CONFIG,
-                compute_kernel_config=mlp_ckc, program_config=self._down_program_config(seq_len),
+                hidden_out,
+                self.down_proj,
+                dtype=self._down_out_dtype(),
+                memory_config=ttnn.L1_MEMORY_CONFIG,
+                compute_kernel_config=mlp_ckc,
+                program_config=self._down_program_config(seq_len),
             )
             ttnn.deallocate(hidden_out)
             return output
@@ -1035,11 +1266,18 @@ class GemmaMLPTTNN:
                 x_chunk = ttnn.pad(x_chunk, padding=((0, 0), (0, 0), (0, padded - actual), (0, 0)), value=0.0)
 
             gate = ttnn.linear(
-                x_chunk, self.gate_proj, dtype=ttnn.bfloat8_b, memory_config=ttnn.L1_MEMORY_CONFIG,
-                activation="gelu", compute_kernel_config=mlp_ckc,
+                x_chunk,
+                self.gate_proj,
+                dtype=ttnn.bfloat8_b,
+                memory_config=ttnn.L1_MEMORY_CONFIG,
+                activation="gelu",
+                compute_kernel_config=mlp_ckc,
             )
             up = ttnn.linear(
-                x_chunk, self.up_proj, dtype=ttnn.bfloat8_b, memory_config=ttnn.L1_MEMORY_CONFIG,
+                x_chunk,
+                self.up_proj,
+                dtype=ttnn.bfloat8_b,
+                memory_config=ttnn.L1_MEMORY_CONFIG,
                 compute_kernel_config=mlp_ckc,
             )
             ttnn.deallocate(x_chunk)
@@ -1047,7 +1285,10 @@ class GemmaMLPTTNN:
             ttnn.deallocate(gate)
             ttnn.deallocate(up)
             out_chunk = ttnn.linear(
-                hidden_out, self.down_proj, dtype=ttnn.bfloat8_b, memory_config=ttnn.L1_MEMORY_CONFIG,
+                hidden_out,
+                self.down_proj,
+                dtype=self._down_out_dtype(),
+                memory_config=ttnn.L1_MEMORY_CONFIG,
                 compute_kernel_config=mlp_ckc,
             )
             ttnn.deallocate(hidden_out)
@@ -1331,6 +1572,7 @@ class GemmaBlockTTNN:
         self.fused_cfg = fused_cfg
         self.role = role
         self._dit_config = None
+        self._dit_config_by_rows: Dict[int, object] = {}
         if fused_cfg is not None and fused_cfg.enabled:
             self._dit_config = dit_config_from_blocks(device, fused_cfg.dit_blocks)
 
@@ -1347,6 +1589,13 @@ class GemmaBlockTTNN:
             self.input_layernorm_weight = weights["input_layernorm.weight"]
             self.post_attention_layernorm_weight = weights["post_attention_layernorm.weight"]
 
+        # PI05_EXPERT_NORM_FOLD: torch originals of the qkv / up|gate weights (set by the backbone loader) and the
+        # per-step folded weights (set by backbone.fold_expert_norms after the adaRMS mods exist)
+        self._torch_wqkv = weights.get("_torch_wqkv")
+        self._torch_fused_ug = weights.get("_torch_fused_ug")
+        self._folded = None
+        self._row_rsqrt = None
+        self._geglu_rc = None
         self.attention = GemmaAttentionTTNN(
             config, weights, layer_idx, device, cos_meta, sin_meta, expected_seq_len, fused_cfg=fused_cfg, role=role
         )
@@ -1367,17 +1616,22 @@ class GemmaBlockTTNN:
         ``fill_cache`` writes; ``kv_only=True`` (last layer, PI05_SKIP_VLM_TAIL) computes only what the
         expert consumes. The caller owns / frees ``hidden_states``.
         """
+        tp = self.fused_cfg.tp if self.fused_cfg is not None else 1
         normed = rms_norm_ttnn(hidden_states, self.input_layernorm_weight, self.config.rms_norm_eps)
         attn_output = self.attention.forward_fused_vlm(normed, cache_k, cache_v, need_output=not kv_only)
         ttnn.deallocate(normed)
         if kv_only:
             return None
+        if tp > 1:  # o_proj is row-parallel: sum the per-chip partials (full [B, S, D] on every chip)
+            attn_output = _tp_all_reduce(attn_output, self.fused_cfg)
         hidden_mid = ttnn.add(hidden_states, attn_output)  # legacy gated_residual_ttnn(gate=None)
         ttnn.deallocate(attn_output)
 
         normed = rms_norm_ttnn(hidden_mid, self.post_attention_layernorm_weight, self.config.rms_norm_eps)
         mlp_output = self.mlp.forward_fused_vlm(normed)
         ttnn.deallocate(normed)
+        if tp > 1:  # down_proj is row-parallel
+            mlp_output = _tp_all_reduce(mlp_output, self.fused_cfg)
         out = ttnn.add(hidden_mid, mlp_output)
         ttnn.deallocate(mlp_output)
         ttnn.deallocate(hidden_mid)
@@ -1390,6 +1644,7 @@ class GemmaBlockTTNN:
         cache_k: ttnn.Tensor,
         cache_v: ttnn.Tensor,
         prefix_len: int,
+        step: Optional[int] = None,
     ) -> ttnn.Tensor:
         """Expert block on the 64-row suffix with precomputed adaRMS modulations (owned by the model).
 
@@ -1402,6 +1657,8 @@ class GemmaBlockTTNN:
           legacy -> linear(o) + mac, and typecast x3 + bf8 dit for the down-proj: the shipped numerics.
         Consumes (frees) ``hidden_states``; returns the new hidden ``[B, S, D]`` bf16.
         """
+        if self._folded is not None and step is not None and self.attention._fused_attn is not None and self.fused_cfg.residual != "legacy":
+            return self._forward_fused_expert_folded(hidden_states, precomputed_mod, cache_k, cache_v, prefix_len, step)
         scale_in, shift_in, attn_gate, scale_post, shift_post, mlp_gate = precomputed_mod
         eps = self.config.rms_norm_eps
         mode = self.fused_cfg.residual
@@ -1424,20 +1681,11 @@ class GemmaBlockTTNN:
             new_hidden = ttnn.mac(attn_gate, attn_output, hidden_states)
             ttnn.deallocate(attn_output)
         else:
-            if mode == "bf16":
+            if mode == "bf16" and attn_concat.dtype != ttnn.bfloat16:
                 ctx = ttnn.typecast(attn_concat, ttnn.bfloat16)
                 ttnn.deallocate(attn_concat)
                 attn_concat = ctx
-            new_hidden = ttnn.experimental.dit_minimal_matmul_addcmul_fused(
-                attn_concat,
-                self.attention.o_proj,
-                1.0,
-                hidden_states,
-                attn_gate,
-                config=self._dit_config,
-                memory_config=ttnn.DRAM_MEMORY_CONFIG,
-                dtype=ttnn.bfloat16,
-            )
+            new_hidden = self._dit_residual(attn_concat, self.attention.o_proj, hidden_states, attn_gate)
             ttnn.deallocate(attn_concat)
         ttnn.deallocate(hidden_states)
         hidden_states = new_hidden
@@ -1464,19 +1712,86 @@ class GemmaBlockTTNN:
             new_hidden = ttnn.typecast(fused, ttnn.bfloat16)
             ttnn.deallocate(fused)
         else:
-            new_hidden = ttnn.experimental.dit_minimal_matmul_addcmul_fused(
-                hidden_out,
-                self.mlp.down_proj,
-                1.0,
-                hidden_states,
-                mlp_gate,
-                config=self._dit_config,
-                memory_config=ttnn.DRAM_MEMORY_CONFIG,
-                dtype=ttnn.bfloat16,
-            )
+            new_hidden = self._dit_residual(hidden_out, self.mlp.down_proj, hidden_states, mlp_gate)
             ttnn.deallocate(hidden_out)
             ttnn.deallocate(hidden_states)
         return new_hidden
+
+    def set_folded(self, folded) -> None:
+        """Install the per-step folded qkv / up|gate weights (``ttnn_fused_norm.FoldedExpertNorms``)."""
+        from .ttnn_fused_norm import GegluRC, RowRsqrt
+
+        self._folded = folded
+        self._row_rsqrt = RowRsqrt(self.device, self.config.width, self.config.rms_norm_eps)
+        self._geglu_rc = GegluRC(self.device, self.config.mlp_dim)
+
+    def _forward_fused_expert_folded(
+        self, hidden_states: ttnn.Tensor, precomputed_mod: Tuple, cache_k: ttnn.Tensor, cache_v: ttnn.Tensor, prefix_len: int, step: int
+    ) -> ttnn.Tensor:
+        """Expert block with both adaRMS norms folded into the step's qkv / up|gate weights:
+        [adaRMS_in -> qkv linear -> fused attention] -> o_proj gated residual ->
+        row_rsqrt -> up|gate linear (W') -> fused GeGLU (applies r, c) -> down gated residual: 7 launches
+        (the attention-side fold, PI05_EXPERT_NORM_FOLD_ATTN=1, replaces the first bracket by row_rsqrt -> qkv linear (W')
+        -> fused attention with r/c prologue: 6 launches, measured no faster)."""
+        scale_in, shift_in, attn_gate, _s_post, _h_post, mlp_gate = precomputed_mod
+        mode = self.fused_cfg.residual
+        batch_size, seq_len = hidden_states.shape[0], hidden_states.shape[1]
+        attn = self.attention
+
+        if self._folded.fold_attn:
+            cos_sliced, sin_sliced = attn._rope(seq_len)
+            r_in = self._row_rsqrt(hidden_states)
+            xqkv = attn._qkv_proj(hidden_states, weight=self._folded.wqkv[step])
+            ctx = attn._fused_attn(xqkv, cache_k, cache_v, prefix_len, cos_sliced, sin_sliced, r=r_in, c=self._folded.cqkv[step])
+            ttnn.deallocate(xqkv)
+            ttnn.deallocate(r_in)
+        else:
+            normed = adarms_norm_precomputed(hidden_states, scale_in, shift_in, self.config.rms_norm_eps)
+            ctx = attn.forward_fused_expert(normed, cache_k, cache_v, prefix_len)
+            ttnn.deallocate(normed)
+        ctx = ttnn.reshape(ctx, (batch_size, seq_len, ctx.shape[-1]))
+        if mode == "bf16" and ctx.dtype != ttnn.bfloat16:
+            ctx16 = ttnn.typecast(ctx, ttnn.bfloat16)
+            ttnn.deallocate(ctx)
+            ctx = ctx16
+        hidden_mid = self._dit_residual(ctx, attn.o_proj, hidden_states, attn_gate)
+        ttnn.deallocate(ctx)
+        ttnn.deallocate(hidden_states)
+
+        r_post = self._row_rsqrt(hidden_mid)
+        ug = self.mlp.up_gate_linear(hidden_mid, ttnn.bfloat16, weight=self._folded.wug[step])
+        h = self._geglu_rc(ug, r_post, self._folded.cug[step])
+        ttnn.deallocate(ug)
+        ttnn.deallocate(r_post)
+        h = ttnn.reshape(h, (batch_size, seq_len, h.shape[-1]))
+        new_hidden = self._dit_residual(h, self.mlp.down_proj, hidden_mid, mlp_gate)
+        ttnn.deallocate(h)
+        ttnn.deallocate(hidden_mid)
+        return new_hidden
+
+    def _dit_residual(self, x: ttnn.Tensor, weight: ttnn.Tensor, hidden: ttnn.Tensor, gate: ttnn.Tensor) -> ttnn.Tensor:
+        """``hidden + (x @ weight) * gate`` in one launch. One request (64 rows): the tuned PI05_DIT_BLOCKS
+        config on ``[1, 64, K]``. B requests: the batch is folded into rows (free views) and the M block
+        covers all rows (probe 2026-09-17: o_proj at B=4 76 us with the B=1 blocks vs 43.5 us with M_block=2B)."""
+        b, s = int(x.shape[0]), int(x.shape[1])
+        if b == 1:
+            return ttnn.experimental.dit_minimal_matmul_addcmul_fused(
+                x, weight, 1.0, hidden, gate, config=self._dit_config, memory_config=ttnn.DRAM_MEMORY_CONFIG, dtype=ttnn.bfloat16
+            )
+        rows = b * s
+        cfg = self._dit_config_by_rows.get(rows)
+        if cfg is None:
+            blocks = self.fused_cfg.dit_blocks
+            if blocks is not None:
+                blocks = (max(1, rows // 32),) + tuple(blocks[1:])
+            cfg = dit_config_from_blocks(self.device, blocks)
+            self._dit_config_by_rows[rows] = cfg
+        x_rows = ttnn.reshape(x, (1, rows, int(x.shape[-1])))
+        h_rows = ttnn.reshape(hidden, (1, rows, int(hidden.shape[-1])))
+        out = ttnn.experimental.dit_minimal_matmul_addcmul_fused(
+            x_rows, weight, 1.0, h_rows, gate, config=cfg, memory_config=ttnn.DRAM_MEMORY_CONFIG, dtype=ttnn.bfloat16
+        )
+        return ttnn.reshape(out, (b, s, int(hidden.shape[-1])))
 
     def forward(
         self,

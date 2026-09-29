@@ -39,6 +39,7 @@ in bf16, which the legacy block's bf8 residual cannot feed into ``dit_minimal_ma
 from pathlib import Path
 from typing import List, Optional, Tuple, Union
 
+import os
 import torch
 import ttnn
 
@@ -62,6 +63,7 @@ from models.experimental.pi0_5.common.weight_loader import PI0WeightLoader
 from .ttnn_prefix import PrefixEmbeddingTTNN
 from .ttnn_suffix import SuffixEmbeddingTTNN, convert_suffix_weights_to_ttnn
 from .ttnn_paligemma import PaliGemmaBackboneTTNN
+from .ttnn_ccl import num_devices as _mesh_num_devices, is_mesh as _is_mesh, chip0 as _chip0
 
 
 class PI0ModelTTNN:
@@ -93,6 +95,8 @@ class PI0ModelTTNN:
         self.weight_loader = weight_loader
         self.device = device
         self.fused_cfg = FusedConfig.from_env() if fused is None else fused
+        # Multi-chip: PI05_TP=0 (auto) -> the mesh size; single chip -> 1 (see tt/ttnn_ccl.py)
+        self.fused_cfg = self.fused_cfg.resolved(_mesh_num_devices(device))
         self.fused = self.fused_cfg.enabled
         if self.fused and not config.pi05:
             raise RuntimeError("TT_FUSED=1 supports the pi0.5 (adaRMS) expert only")
@@ -227,6 +231,12 @@ class PI0ModelTTNN:
                 ttnn.deallocate(mod_final)
                 ttnn.deallocate(gate_f_unused)
                 self._precomputed_final_mod.append((scale_f, shift_f))
+            if self.fused_cfg is not None and self.fused_cfg.enabled and getattr(self.fused_cfg, "expert_norm_fold", False):
+                import time as _time
+
+                t_fold = _time.perf_counter()
+                self.backbone.fold_expert_norms(self._precomputed_block_mods)
+                print(f"[pi0.5] expert adaRMS norms folded into per-step weights in {_time.perf_counter() - t_fold:.1f}s", flush=True)
 
         # Prefix embedding with backbone functions
         prefix_config = PrefixConfig(
@@ -581,34 +591,60 @@ class PI0ModelTTNN:
     ) -> Tuple[List[ttnn.Tensor], ttnn.Tensor, ttnn.Tensor]:
         """torch request data -> HOST ttnn tensors with the persistent inputs' shape / dtype / layout.
 
-        images: N x [1, 3, 224, 224] float in [-1, 1] (the server's preprocessing); the host im2col
-        is the exact permutation the legacy device unfold performed, rounded to bf16 by the upload
-        (the legacy path rounded the same pixels to bf16 before its unfold). One im2col tensor
-        [N, 256, 608] when the cameras are batched (PI05_SIGLIP_BATCHED=1), else one per camera.
-        lang_tokens: [1, L] int ids -> uint32 ROW_MAJOR (same conversion as the legacy upload).
-        noise: [1, 50, 32] float or None (-> the model's seeded default) -> zero-padded to 64 rows.
+        images: B*N x [1, 3, 224, 224] float in [-1, 1] (the server's preprocessing), request-major
+        (request 0's N cameras, then request 1's, ...; a list of per-request lists is accepted too).
+        B = lang_tokens.shape[0] requests share the trace. The host im2col is the exact permutation the
+        legacy device unfold performed, rounded to bf16 by the upload. One im2col tensor [B*N, 256, 608]
+        when the cameras are batched (PI05_SIGLIP_BATCHED=1), else one per camera.
+        lang_tokens: [B, L] int ids -> uint32 ROW_MAJOR (same conversion as the legacy upload).
+        noise: [B, 50, 32] float (a [1, 50, 32] noise is repeated over B) or None (-> the model's seeded
+        default) -> zero-padded to 64 rows.
         """
         if not images:
             raise ValueError("at least one image is required")
+        if isinstance(images[0], (list, tuple)):
+            images = [img for req in images for img in req]
         if any(isinstance(img, ttnn.Tensor) for img in images) or isinstance(lang_tokens, ttnn.Tensor):
             raise TypeError("sample_actions_fused takes torch inputs (the host builds the trace inputs)")
+        batch = int(lang_tokens.shape[0]) if lang_tokens.dim() > 1 else 1
+        if len(images) % batch != 0:
+            raise ValueError(f"{len(images)} images do not split over {batch} requests")
         pixels = torch.cat([img.reshape(1, *img.shape[-3:]).float() for img in images], dim=0)
         patch = self.config.siglip_config.patch_size
         pad_to = self.backbone.vision_tower.patch_embed.in_features_padded
         im2col = im2col_patches(pixels, patch, pad_to=pad_to)  # [N, 256, 608] fp32
+        # On a MeshDevice every persistent input is replicated (identical on all chips); the
+        # multi-device HOST tensors are built here so copy_host_to_device_tensor / to_device can
+        # write all shards. Single chip: plain host tensors (mesh_mapper=None), as before.
+        mapper = ttnn.ReplicateTensorToMesh(self.device) if _is_mesh(self.device) else None
         if self.fused_cfg.siglip_batched:
-            im2col_hosts = [ttnn.from_torch(im2col, dtype=ttnn.bfloat16, layout=ttnn.ROW_MAJOR_LAYOUT)]
+            im2col_hosts = [
+                ttnn.from_torch(im2col, dtype=ttnn.bfloat16, layout=ttnn.ROW_MAJOR_LAYOUT, mesh_mapper=mapper)
+            ]
         else:
             im2col_hosts = [
-                ttnn.from_torch(im2col[i : i + 1].contiguous(), dtype=ttnn.bfloat16, layout=ttnn.ROW_MAJOR_LAYOUT)
+                ttnn.from_torch(
+                    im2col[i : i + 1].contiguous(),
+                    dtype=ttnn.bfloat16,
+                    layout=ttnn.ROW_MAJOR_LAYOUT,
+                    mesh_mapper=mapper,
+                )
                 for i in range(im2col.shape[0])
             ]
-        tokens_host = ttnn.from_torch(lang_tokens.reshape(1, -1), dtype=ttnn.uint32, layout=ttnn.ROW_MAJOR_LAYOUT)
+        tokens_host = ttnn.from_torch(
+            lang_tokens.reshape(batch, -1), dtype=ttnn.uint32, layout=ttnn.ROW_MAJOR_LAYOUT, mesh_mapper=mapper
+        )
         noise_t = self._default_noise_torch if noise is None else noise
         if isinstance(noise_t, ttnn.Tensor):
             raise TypeError("sample_actions_fused needs the noise as a torch tensor")
-        noise_t = noise_t.reshape(1, self.config.action_horizon, self.config.action_dim).float()
-        noise_host = ttnn.from_torch(pad_rows(noise_t, self._suffix_rows), dtype=ttnn.bfloat16, layout=ttnn.TILE_LAYOUT)
+        noise_t = noise_t.reshape(-1, self.config.action_horizon, self.config.action_dim).float()
+        if noise_t.shape[0] == 1 and batch > 1:
+            noise_t = noise_t.expand(batch, -1, -1).contiguous()
+        if noise_t.shape[0] != batch:
+            raise ValueError(f"noise batch {noise_t.shape[0]} != {batch} requests")
+        noise_host = ttnn.from_torch(
+            pad_rows(noise_t, self._suffix_rows), dtype=ttnn.bfloat16, layout=ttnn.TILE_LAYOUT, mesh_mapper=mapper
+        )
         return im2col_hosts, tokens_host, noise_host
 
     @staticmethod
@@ -636,33 +672,45 @@ class PI0ModelTTNN:
         tables built outside the trace), then capture the trace (PI05_TRACE=1). Returns True when it
         prepared (inputs already hold this call's data), False when nothing had to be done."""
         key = self._shape_key(im2col_hosts, tokens_host, noise_host)
+        if self._fused_shape_key is not None and key == self._fused_shape_key:
+            return False
+        shapes = self.__dict__.setdefault("_fused_shapes", {})
         if self._fused_shape_key is not None:
-            if key == self._fused_shape_key:
+            # park the active shape (inputs, caches, trace, output) and switch: one prepared entry per shape,
+            # e.g. one trace per batch size for a server that batches requests
+            shapes[self._fused_shape_key] = dict(
+                im2col=self._fused_in_im2col, tokens=self._fused_in_tokens, noise=self._fused_in_noise,
+                trace_id=self._fused_trace_id, out=self._fused_out, plan=self.backbone.kv_cache_plan)
+            entry = shapes.get(key)
+            if entry is not None:
+                self._fused_in_im2col, self._fused_in_tokens, self._fused_in_noise = entry["im2col"], entry["tokens"], entry["noise"]
+                self._fused_trace_id, self._fused_out, self._fused_shape_key = entry["trace_id"], entry["out"], key
+                plan = entry["plan"]
+                self.backbone.allocate_kv_caches(plan["prefix_len"], self.config.action_horizon, batch=plan["batch"])
                 return False
-            if self._fused_trace_id is not None:
-                raise RuntimeError(
-                    f"the fused trace was captured for inputs {self._fused_shape_key} but got {key}: the traced "
-                    "graph is shape-bound (PI05_NUM_IMAGES / PI05_TOKEN_LEN are fixed at startup)"
-                )
-            self._fused_release_inputs()
+            self._fused_in_im2col, self._fused_in_tokens, self._fused_in_noise = [], None, None
+            self._fused_trace_id, self._fused_out, self._fused_shape_key = None, None, None
 
-        num_images = sum(k[0] for k in key[0])
+        batch = key[1][0]
+        num_images = sum(k[0] for k in key[0]) // batch  # cameras per request
         token_len = key[1][-1]
-        plan = check_fused_shape_contract(num_images, token_len, self.config.action_horizon)
+        plan = check_fused_shape_contract(num_images, token_len, self.config.action_horizon, batch=batch)
 
         device = self.device
-        self._fused_in_im2col = [
-            ttnn.to_device(t, device, memory_config=ttnn.DRAM_MEMORY_CONFIG) for t in im2col_hosts
-        ]
+        self._fused_in_im2col = [ttnn.to_device(t, device, memory_config=ttnn.DRAM_MEMORY_CONFIG) for t in im2col_hosts]
         self._fused_in_tokens = ttnn.to_device(tokens_host, device, memory_config=ttnn.DRAM_MEMORY_CONFIG)
         self._fused_in_noise = ttnn.to_device(noise_host, device, memory_config=ttnn.L1_MEMORY_CONFIG)
-        self.backbone.allocate_kv_caches(plan["prefix_len"], self.config.action_horizon)
+        self.backbone.allocate_kv_caches(plan["prefix_len"], self.config.action_horizon, batch=batch)
         self._fused_shape_key = key
 
         # Compile pass (eager): program cache, cos/sin slices, SigLIP pos table -- all outside the trace
-        out = self._fused_device_graph()
-        ttnn.synchronize_device(device)
-        ttnn.deallocate(out)
+        # Two eager passes with the folded expert: with one pass the capture found a VLM matmul program missing from
+        # the program cache ("Cannot load new binaries during trace capture", 1x4 mesh, batch 1, 2026-09-17).
+        default_passes = "2" if getattr(self.fused_cfg, "expert_norm_fold", False) else "1"
+        for _ in range(max(1, int(os.environ.get("PI05_FUSED_COMPILE_PASSES", default_passes)))):
+            out = self._fused_device_graph()
+            ttnn.synchronize_device(device)
+            ttnn.deallocate(out)
 
         if self.fused_cfg.trace:
             trace_id = ttnn.begin_trace_capture(device, cq_id=0)
@@ -700,7 +748,7 @@ class PI0ModelTTNN:
         for i in range(num_steps):
             suffix_embs = self.suffix_embedding.embed_actions_fused(x_t)  # [1, 64, width] bf16 DRAM
             expert_out = self.backbone.forward_expert_fused(
-                suffix_embs, self._precomputed_block_mods[i], self._precomputed_final_mod[i]
+                suffix_embs, self._precomputed_block_mods[i], self._precomputed_final_mod[i], step=i
             )  # consumes suffix_embs
             x_next = self.suffix_embedding.euler_step_fused(expert_out, x_t, dts[i])
             ttnn.deallocate(expert_out)
@@ -728,10 +776,10 @@ class PI0ModelTTNN:
 
         if self._fused_trace_id is not None:
             ttnn.execute_trace(self.device, self._fused_trace_id, cq_id=0, blocking=True)
-            actions = ttnn.to_torch(self._fused_out)
+            actions = ttnn.to_torch(_chip0(self._fused_out))  # expert replicated: every chip holds x_T
         else:
             out = self._fused_device_graph()
-            actions = ttnn.to_torch(out)
+            actions = ttnn.to_torch(_chip0(out))
             ttnn.deallocate(out)
         return unpad_rows(actions.float(), self.config.action_horizon)
 

@@ -22,7 +22,7 @@ Contents
 
 from __future__ import annotations
 
-from typing import Dict, List, Optional, Sequence
+from typing import Dict, List, Optional
 
 import torch
 
@@ -155,8 +155,8 @@ def euler_step_reference(h: torch.Tensor, w_out: torch.Tensor, b_out: torch.Tens
 # ----------------------------------------------------------------------------------------
 
 
-def kv_cache_plan(prefix_len: int, action_horizon: int, tile: int = TILE) -> Dict[str, int]:
-    """Cache ``[1, 1, logical_len, head_dim]`` with ``logical_len = prefix_len + action_horizon``
+def kv_cache_plan(prefix_len: int, action_horizon: int, tile: int = TILE, batch: int = 1) -> Dict[str, int]:
+    """Cache ``[batch, 1, logical_len, head_dim]`` with ``logical_len = prefix_len + action_horizon``
     (SDPA masks keys >= logical_len exactly as the legacy concat buffer did), padded to a tile
     multiple. The expert writes ``suffix_rows = round_up(action_horizon)`` rows at
     ``update_idx = prefix_len``. Raises when the fused ops' tile constraints do not hold."""
@@ -175,7 +175,10 @@ def kv_cache_plan(prefix_len: int, action_horizon: int, tile: int = TILE) -> Dic
             f"prefix_len + suffix_rows = {prefix_len + suffix_rows} > padded cache {padded_len}: the expert's tile-padded "
             "suffix would not fit (fill_cache: update_idx + input height <= cache height)"
         )
+    if batch < 1:
+        raise ValueError("batch must be >= 1")
     return {
+        "batch": batch,
         "prefix_len": prefix_len,
         "action_horizon": action_horizon,
         "logical_len": logical_len,
@@ -242,14 +245,15 @@ def persistent_input_specs(
     }
 
 
-def check_fused_shape_contract(num_images: int, token_len: int, action_horizon: int) -> Dict[str, int]:
-    """Everything the fused graph assumes about the serving shape, as plain arithmetic."""
+def check_fused_shape_contract(num_images: int, token_len: int, action_horizon: int, batch: int = 1) -> Dict[str, int]:
+    """Everything the fused graph assumes about the serving shape, as plain arithmetic. ``num_images`` is
+    the camera count PER request; ``batch`` requests share one trace (same shapes)."""
     if token_len <= 0 or token_len % TILE != 0:
         raise ValueError(f"PI05_TOKEN_LEN={token_len} must be a positive multiple of 32 for the fused graph")
     if num_images < 1:
         raise ValueError("at least one image")
     prefix_len = num_images * 256 + token_len
-    return kv_cache_plan(prefix_len, action_horizon)
+    return kv_cache_plan(prefix_len, action_horizon, batch=batch)
 
 
 __all__ = [

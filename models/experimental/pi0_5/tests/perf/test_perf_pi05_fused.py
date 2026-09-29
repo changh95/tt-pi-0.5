@@ -39,7 +39,12 @@ NUM_IMAGES = int(os.environ.get("PI05_NUM_IMAGES", "2"))
 def create_pi05_config():
     config = PI0ModelConfig(action_dim=32, action_horizon=50, state_dim=32, pi05=True)
     config.siglip_config = SigLIPConfig(
-        hidden_size=1152, intermediate_size=4304, num_hidden_layers=27, num_attention_heads=16, image_size=224, patch_size=14
+        hidden_size=1152,
+        intermediate_size=4304,
+        num_hidden_layers=27,
+        num_attention_heads=16,
+        image_size=224,
+        patch_size=14,
     )
     return config
 
@@ -101,20 +106,35 @@ def main():
         if run_legacy and not fused_cfg.legacy_sample_actions_available:
             print(
                 "legacy untraced   skipped: PI05_FUSED_RESIDUAL=%s stores bf16 expert o_proj / down_proj, the legacy "
-                "block cannot run on them; time tests/perf/test_perf_pi05.py with TT_FUSED unset instead" % fused_cfg.residual
+                "block cannot run on them; time tests/perf/test_perf_pi05.py with TT_FUSED unset instead"
+                % fused_cfg.residual
             )
             run_legacy = False
         if run_legacy:
+
             def legacy():
                 imgs = [
-                    ttnn.from_torch(im, dtype=ttnn.bfloat16, layout=ttnn.TILE_LAYOUT, device=device, memory_config=ttnn.DRAM_MEMORY_CONFIG)
+                    ttnn.from_torch(
+                        im,
+                        dtype=ttnn.bfloat16,
+                        layout=ttnn.TILE_LAYOUT,
+                        device=device,
+                        memory_config=ttnn.DRAM_MEMORY_CONFIG,
+                    )
                     for im in images
                 ]
                 tok = ttnn.from_torch(tokens, dtype=ttnn.uint32, layout=ttnn.ROW_MAJOR_LAYOUT, device=device)
-                lm = ttnn.from_torch(torch.ones(1, TOKEN_LEN), dtype=ttnn.bfloat16, layout=ttnn.TILE_LAYOUT, device=device)
+                lm = ttnn.from_torch(
+                    torch.ones(1, TOKEN_LEN), dtype=ttnn.bfloat16, layout=ttnn.TILE_LAYOUT, device=device
+                )
                 st = ttnn.from_torch(torch.zeros(1, 32), dtype=ttnn.bfloat16, layout=ttnn.TILE_LAYOUT, device=device)
-                out = model.sample_actions(images=imgs, img_masks=[torch.ones(1, dtype=torch.bool)] * NUM_IMAGES,
-                                           lang_tokens=tok, lang_masks=lm, state=st)
+                out = model.sample_actions(
+                    images=imgs,
+                    img_masks=[torch.ones(1, dtype=torch.bool)] * NUM_IMAGES,
+                    lang_tokens=tok,
+                    lang_masks=lm,
+                    state=st,
+                )
                 return ttnn.to_torch(out)
 
             legacy()  # compile
@@ -122,10 +142,16 @@ def main():
 
         t0 = time.perf_counter()
         model.sample_actions_fused(images, tokens)  # allocate + compile + capture
-        print("fused first call (compile%s): %.0f ms" % (" + trace capture" if fused_cfg.trace else "", (time.perf_counter() - t0) * 1000))
+        print(
+            "fused first call (compile%s): %.0f ms"
+            % (" + trace capture" if fused_cfg.trace else "", (time.perf_counter() - t0) * 1000)
+        )
         print_memory_headroom(device)
         label = "fused traced" if model._fused_trace_id is not None else "fused eager "
-        print("%s      min/med/max ms: %.1f / %.1f / %.1f" % ((label,) + timeit(lambda: model.sample_actions_fused(images, tokens), args.runs)))
+        print(
+            "%s      min/med/max ms: %.1f / %.1f / %.1f"
+            % ((label,) + timeit(lambda: model.sample_actions_fused(images, tokens), args.runs))
+        )
         model.release_trace()
     finally:
         ttnn.close_device(device)
