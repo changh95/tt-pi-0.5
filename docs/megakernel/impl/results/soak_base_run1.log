@@ -1,0 +1,60 @@
+[2026-09-30 02:53:01] run 1 start
+RESULT {"shape": "base", "backend": "expert", "calls": 31, "all_equal": true, "digest": "7f070cd96b1e0d17", "wall_s": 39.2, "time": "2026-09-30 02:53:42"}
+[2026-09-30 02:53:43] run 1 end rc=0
+[2026-09-30 02:53:43] run 2 start
+RESULT {"shape": "base", "backend": "expert", "calls": 31, "all_equal": true, "digest": "7f070cd96b1e0d17", "wall_s": 47.4, "time": "2026-09-30 02:54:32"}
+[2026-09-30 02:54:35] run 2 end rc=0
+[2026-09-30 02:54:35] run 3 start
+RESULT {"shape": "base", "backend": "expert", "calls": 31, "all_equal": true, "digest": "7f070cd96b1e0d17", "wall_s": 61.2, "time": "2026-09-30 02:55:39"}
+[2026-09-30 02:55:42] run 3 end rc=0
+[2026-09-30 02:55:42] run 4 start
+RESULT {"shape": "base", "backend": "expert", "calls": 31, "all_equal": true, "digest": "7f070cd96b1e0d17", "wall_s": 39.2, "time": "2026-09-30 02:56:23"}
+[2026-09-30 02:56:25] run 4 end rc=0
+[2026-09-30 02:56:25] run 5 start
+RESULT {"shape": "base", "backend": "expert", "calls": 31, "all_equal": true, "digest": "7f070cd96b1e0d17", "wall_s": 36.5, "time": "2026-09-30 02:57:03"}
+[2026-09-30 02:57:04] run 5 end rc=0
+[2026-09-30 02:57:04] run 6 start
+RESULT {"shape": "base", "backend": "expert", "calls": 31, "all_equal": true, "digest": "41ed0707c8702edd", "wall_s": 39.5, "time": "2026-09-30 02:57:45"}
+[2026-09-30 02:57:46] run 6 end rc=0
+[2026-09-30 02:57:46] run 7 start
+RESULT {"shape": "base", "backend": "expert", "calls": 31, "all_equal": true, "digest": "7f070cd96b1e0d17", "wall_s": 39.8, "time": "2026-09-30 02:58:28"}
+[2026-09-30 02:58:29] run 7 end rc=0
+[2026-09-30 02:58:29] run 8 start
+RESULT {"shape": "base", "backend": "expert", "calls": 31, "all_equal": true, "digest": "7f070cd96b1e0d17", "wall_s": 39.1, "time": "2026-09-30 02:59:10"}
+[2026-09-30 02:59:11] run 8 end rc=0
+[2026-09-30 02:59:11] run 9 start
+RESULT {"shape": "base", "backend": "expert", "calls": 31, "all_equal": true, "digest": "7f070cd96b1e0d17", "wall_s": 38.9, "time": "2026-09-30 02:59:51"}
+[2026-09-30 02:59:53] run 9 end rc=0
+[2026-09-30 02:59:53] run 10 start
+RESULT {"shape": "base", "backend": "expert", "calls": 31, "all_equal": true, "digest": "7f070cd96b1e0d17", "wall_s": 36.8, "time": "2026-09-30 03:00:31"}
+[2026-09-30 03:00:32] run 10 end rc=0
+[2026-09-30 03:00:32] run 11 start
+RESULT {"shape": "base", "backend": "expert", "calls": 31, "all_equal": true, "digest": "7f070cd96b1e0d17", "wall_s": 39.1, "time": "2026-09-30 03:01:13"}
+[2026-09-30 03:01:14] run 11 end rc=0
+[2026-09-30 03:01:14] run 12 start
+RESULT {"shape": "base", "backend": "expert", "calls": 31, "all_equal": true, "digest": "7f070cd96b1e0d17", "wall_s": 39.8, "time": "2026-09-30 03:01:56"}
+[2026-09-30 03:01:57] run 12 end rc=0
+[2026-09-30 03:01:57] run 13 start
+RESULT {"shape": "base", "backend": "expert", "calls": 31, "all_equal": true, "digest": "7f070cd96b1e0d17", "wall_s": 39.5, "time": "2026-09-30 03:02:38"}
+[2026-09-30 03:02:39] run 13 end rc=0
+[2026-09-30 03:02:39] run 14 start
+RESULT {"shape": "base", "backend": "expert", "calls": 31, "all_equal": true, "digest": "7f070cd96b1e0d17", "wall_s": 39.5, "time": "2026-09-30 03:03:20"}
+[2026-09-30 03:03:21] run 14 end rc=0
+[2026-09-30 03:03:21] run 15 start
+RESULT {"shape": "base", "backend": "expert", "calls": 31, "all_equal": true, "digest": "7f070cd96b1e0d17", "wall_s": 36.6, "time": "2026-09-30 03:04:00"}
+[2026-09-30 03:04:01] run 15 end rc=0
+[2026-09-30 03:04:01] run 16 start
+RESULT {"shape": "base", "backend": "expert", "calls": 31, "all_equal": true, "digest": "7f070cd96b1e0d17", "wall_s": 38.6, "time": "2026-09-30 03:04:41"}
+[2026-09-30 03:04:42] run 16 end rc=0
+[2026-09-30 03:04:42] run 17 start
+RESULT {"shape": "base", "backend": "expert", "calls": 31, "all_equal": true, "digest": "7f070cd96b1e0d17", "wall_s": 39.4, "time": "2026-09-30 03:05:23"}
+[2026-09-30 03:05:24] run 17 end rc=0
+[2026-09-30 03:05:24] run 18 start
+RESULT {"shape": "base", "backend": "expert", "calls": 31, "all_equal": true, "digest": "7f070cd96b1e0d17", "wall_s": 36.1, "time": "2026-09-30 03:06:02"}
+[2026-09-30 03:06:03] run 18 end rc=0
+[2026-09-30 03:06:03] run 19 start
+RESULT {"shape": "base", "backend": "expert", "calls": 31, "all_equal": true, "digest": "7f070cd96b1e0d17", "wall_s": 36.3, "time": "2026-09-30 03:06:41"}
+[2026-09-30 03:06:42] run 19 end rc=0
+[2026-09-30 03:06:42] run 20 start
+RESULT {"shape": "base", "backend": "expert", "calls": 31, "all_equal": true, "digest": "7f070cd96b1e0d17", "wall_s": 38.2, "time": "2026-09-30 03:07:22"}
+[2026-09-30 03:07:24] run 20 end rc=0

@@ -150,3 +150,64 @@ Mock-cluster compile (size_check.py, private TT_METAL_CACHE): base 69,992 B, LIB
 (brisc 18,192, ncrisc 2,224, trisc0 21,568, trisc1 18,384, trisc2 7,424) vs the 128 KB gate -> docs/megakernel/impl/
 size_check_v1_*.json. CB union per core (geometry.cb_union_bytes): base 1,156,768 B, LIBERO 851,616 B (to be checked against measured free L1).
 Next: first device bring-up (debug stop after 1 generation, watcher on), then 18, then 180 generations.
+
+## 2026-09-30 02:56:10 KST -- phase 1 on the device: bring-up, integration, gates (session mk1-r0-s0)
+
+Results dir: docs/megakernel/impl/results/ (copies of the scratchpad JSONs named below).
+
+Bring-up (tests/megakernel/mk_bringup.py: megakernel alone, real pi05_base expert weights, synthetic bf8 prefix K/V,
+the fused graph's real mask / RoPE inputs, host oracle = host_model.loop_decomposed on the device's exact inputs):
+- b1 (01:56, 1 generation, watcher): HUNG 900 s, killed + reset. Signature (watcher dumps #16..#713, identical): every
+  compute core BRISC at XFLG (waiting for H0's x flag); H0 BRISC CWFW (cb_wait_front CB_ROUT), H0 TRISC0 UPAD,
+  TRISC1 MWDD, TRISC2 K. DPRINT trace (b2, PI05_MK_TRACE=1, TT_METAL_DPRINT_CORES=(10,9)): H0 NCRISC had delivered 8
+  pages; H0 math and pack reached "inproj_nb 0", the unpacker never did -> it waited on CB_SCR16, which the BRISC had
+  produced once (noise) and the TRISC packer then produced: the TRISC pack side keeps a LOCAL copy of the CB's
+  received count, so its push rewrote the shared count to a value the unpacker had already consumed. Rule adopted:
+  every CB has ONE producer RISC and ONE consumer RISC per core (H0's noise -> CB_Q; H0's x_new -> CB_PART / CB_HG,
+  which the BRISC copies into its own CB_IN0); pinned by test_cpu_one_producer_per_cb_on_h0.
+- b3 (1 generation): x after layer 0 vs host fp32 PCC 0.99992 (every owner column >= 0.99985), finite, 1760 ms first
+  launch (compile). b4 (18 generations = step 0 + tail): x_t PCC 0.999992. b5 (180): runs 18.36 / 18.11 ms untraced
+  wall, 3 launches bit-identical; x_t PCC 0.981 vs the fp32 host on SYNTHETIC random K/V (chaotic amplification; the
+  real-input gates below are the measure).
+
+Integration (PI05_MEGAKERNEL=expert; common/device_open.py opens with worker_l1_size 1,395,712; the model builds the
+host params from the checkpoint, one ExpertMegakernel per shape sharing the 4.6 GB of weight arenas; the traced graph
+is the ttnn prefix + ONE generic_op). All with bfp8 matmuls at LoFi unless noted; HiFi2 became the default at 02:38.
+- LIBERO golden (L1.json, LoFi): PCC7 mean 0.99988, min 0.99978 (gate >= 0.9995 / 0.999: PASS); traced; ten replays
+  bit-identical; call 65.59 ms median / replay 64.36 (shipped 76.77 / 75.64): PASS < 76.77.
+- base padded prompts (B1.json LoFi, B2.json HiFi2) vs the fixed torch reference, seeds of test_pcc_pi05_fused.py
+  (n_real 40, 97, 12, 150, 201, 224): shipped (B0.json, same session) 0.99843 0.98397 0.93811 0.99549 0.98017 0.98793;
+  megakernel LoFi 0.99814 0.97545 0.93818 0.99843 0.98777 0.98659; HiFi2 0.99917 0.97190 0.94833 0.99850 0.99356
+  0.98810. Gate "per seed within 0.005 of the current path": FAILS on seed 2 (n_real 97) in both arms (-0.0085 LoFi,
+  -0.0121 HiFi2); all other seeds pass. Mask live (PCC -0.68 vs unmasked), pad ids invisible bit-identical, default
+  mask bit-identical, ten replays bit-identical; call 70.66 ms (LoFi) / 70.75 (HiFi2) vs shipped 84.18: PASS < 84.2.
+- V1.json (both paths in ONE process under the cut, 18 seeds, HiFi2): mean PCC vs reference megakernel 0.98253,
+  shipped 0.97956; megakernel better on 14/18 seeds, worse by > 0.005 on seed 2 (-0.0121) and seed 109 (-0.0062);
+  megakernel vs shipped device outputs 0.9924..0.9997. The shipped path under the 64 KiB cut: identical per-seed
+  values to B0 and call 83.75 ms (P1-0 gate <= 84.2 + 1 %: PASS).
+- Structural gate (profiler op lists, structural_{base,libero}.json, 4 replays each): 892 ops per replay (shipped
+  2551); the ONLY op after the VLM's last K/V-cache update is the megakernel GenericOp (mk_trisc.cpp) on 110 cores,
+  0 ops after it: PASS. Its device kernel time: base 17.48-17.51 ms (gate < 31.26: PASS), LIBERO 16.05-16.10 ms
+  (gate < 27.85: PASS). Kernel-config footprint 70.7 KB (gate <= 128 KB: PASS).
+- Alternating prompts / shape switch (tests/megakernel/verify_alternating.py, alternating_A1.json): every call
+  bit-identical to its fresh-model reference at both shapes, shape switch clean, golden PCC7 mean 0.999884: PASS.
+- CPU: tests/megakernel/test_cpu_mk.py 10 passed; tests/test_fused_host.py 23 passed;
+  tests/pcc/test_reference_vs_openpi.py 1 passed.
+Decision: PI05_MK_FID8 default hifi2 (bfp8 matmuls at HiFi2): no measurable time cost (70.75 vs 70.66 ms), mean PCC up.
+- 03:17 soak 1 (soak_base_run1.log): 20 consecutive base processes (build + warm-up + capture + 31 calls, timeout
+  600 s each), 0 hangs, every process's 31 calls identical; 19 share digest 7f070cd96b1e0d17; run 6 (02:57:45) has
+  41ed0707c8702edd because I edited kernels/** at 02:57 while the soak held the card (a process-rule violation: its JIT
+  compiled the half-edited fp32-score variant). The soak is therefore NOT a clean 20 and must be redone on the final
+  kernel; the edit was reverted at 02:57:35 and later reapplied off-card as the A/B below.
+- fp32 attention scores A/B (V2.json, L2.json; S kept fp32, exact SFPU S - m, fp32 m): base mean vs reference
+  0.98247 (HiFi2 without: 0.98253), seed 2 0.97366; LIBERO PCC7 0.999886 / 0.999777; +0.55 ms (71.30 vs 70.75).
+  No measurable gain -> REVERTED (kernels back to d82788e + HiFi2 default).
+- Expert-only oracle (O1.json, tests/megakernel/mk_expert_oracle.py): host_model.loop_reference (fp32 checkpoint
+  weights) fed with the DEVICE's prefix K/V caches, mask, RoPE tables and noise of the shipped run (the ttnn prefix
+  is shared and deterministic), 18 seeds. vs this oracle: megakernel mean 0.99983 (min 0.99941), shipped 0.99737
+  (min 0.98843); the megakernel is closer on 18/18 seeds (seed 2: 0.99978 vs 0.99810). The oracle itself vs the fp32
+  torch reference: seed 2 0.97553 (shipped 0.98397, megakernel 0.97190), seed 3 0.95243, seed 109 0.97855.
+  => The "per seed within 0.005 of the current path vs the torch reference" gate fails on seed 2 for the megakernel
+  AND would fail for a perfect fp32 expert (-0.0084): the reference distance on those seeds is set by the device
+  prefix (SigLIP / VLM / bf8 caches); the shipped expert's own error happens to offset it on seed 2. I do not
+  redefine the gate; it is reported as failing with this evidence (needs the user's ruling).
