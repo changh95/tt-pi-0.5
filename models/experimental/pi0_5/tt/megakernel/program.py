@@ -173,6 +173,8 @@ class ExpertMegakernel:
                 modes[cb.cb_id] = ttnn.UnpackToDestMode.UnpackToDestFp32
         cc.unpack_to_dest_mode = modes
         defines = [("MK_TRACE", "1")] if os.environ.get("PI05_MK_TRACE", "0") == "1" else []
+        if os.environ.get("PI05_MK_FID8", "hifi2").lower() == "hifi2":  # default: measured free, mean PCC up (JOURNAL)
+            defines.append(("MK_FID8_HIFI2", "1"))
         fp = ttnn.KernelDescriptor.SourceType.FILE_PATH
         dm = ttnn.DataMovementConfigDescriptor
         kernels = [

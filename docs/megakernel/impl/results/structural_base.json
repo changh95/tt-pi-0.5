@@ -1,0 +1,133 @@
+{
+ "csv": "prof_base/reports/2026_09_30_02_44_37/ops_perf_results_2026_09_30_02_44_37.csv",
+ "replays": [
+  {
+   "session": "1",
+   "ops": 892,
+   "mk_index": 891,
+   "mk_count": 1,
+   "ops_after_mk": 0,
+   "mk_kernel_ns": 17496466,
+   "mk_fw_ns": 17499815,
+   "mk_core_count": "110",
+   "tail": [
+    [
+     "RotaryEmbeddingDeviceOperation",
+     "rotary_embedding.cpp']",
+     "13196"
+    ],
+    [
+     "UpdateKVCacheOperation",
+     "[]",
+     "3608"
+    ],
+    [
+     "UpdateKVCacheOperation",
+     "[]",
+     "3529"
+    ],
+    [
+     "GenericOpDeviceOperation",
+     "mk_trisc.cpp']",
+     "17496466"
+    ]
+   ]
+  },
+  {
+   "session": "2",
+   "ops": 892,
+   "mk_index": 891,
+   "mk_count": 1,
+   "ops_after_mk": 0,
+   "mk_kernel_ns": 17476927,
+   "mk_fw_ns": 17480319,
+   "mk_core_count": "110",
+   "tail": [
+    [
+     "RotaryEmbeddingDeviceOperation",
+     "rotary_embedding.cpp']",
+     "13207"
+    ],
+    [
+     "UpdateKVCacheOperation",
+     "[]",
+     "3652"
+    ],
+    [
+     "UpdateKVCacheOperation",
+     "[]",
+     "3584"
+    ],
+    [
+     "GenericOpDeviceOperation",
+     "mk_trisc.cpp']",
+     "17476927"
+    ]
+   ]
+  },
+  {
+   "session": "3",
+   "ops": 892,
+   "mk_index": 891,
+   "mk_count": 1,
+   "ops_after_mk": 0,
+   "mk_kernel_ns": 17502197,
+   "mk_fw_ns": 17505561,
+   "mk_core_count": "110",
+   "tail": [
+    [
+     "RotaryEmbeddingDeviceOperation",
+     "rotary_embedding.cpp']",
+     "13150"
+    ],
+    [
+     "UpdateKVCacheOperation",
+     "[]",
+     "3672"
+    ],
+    [
+     "UpdateKVCacheOperation",
+     "[]",
+     "3622"
+    ],
+    [
+     "GenericOpDeviceOperation",
+     "mk_trisc.cpp']",
+     "17502197"
+    ]
+   ]
+  },
+  {
+   "session": "4",
+   "ops": 892,
+   "mk_index": 891,
+   "mk_count": 1,
+   "ops_after_mk": 0,
+   "mk_kernel_ns": 17509409,
+   "mk_fw_ns": 17512832,
+   "mk_core_count": "110",
+   "tail": [
+    [
+     "RotaryEmbeddingDeviceOperation",
+     "rotary_embedding.cpp']",
+     "13168"
+    ],
+    [
+     "UpdateKVCacheOperation",
+     "[]",
+     "3656"
+    ],
+    [
+     "UpdateKVCacheOperation",
+     "[]",
+     "3596"
+    ],
+    [
+     "GenericOpDeviceOperation",
+     "mk_trisc.cpp']",
+     "17509409"
+    ]
+   ]
+  }
+ ]
+}

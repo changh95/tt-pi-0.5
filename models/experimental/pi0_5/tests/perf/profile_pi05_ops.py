@@ -57,11 +57,10 @@ def open_device():
     import ttnn
     from models.experimental.pi0_5.common.fused_config import FusedConfig
 
+    from models.experimental.pi0_5.common.device_open import device_kwargs
+
     fused = FusedConfig.from_env()
-    kwargs = dict(device_id=int(os.environ.get("PI0_DEVICE_ID", "0")), l1_small_size=24576)
-    if fused.trace:
-        kwargs["trace_region_size"] = fused.trace_region_size
-    dev = ttnn.open_device(**kwargs)
+    dev = ttnn.open_device(**device_kwargs(fused, device_id=int(os.environ.get("PI0_DEVICE_ID", "0"))))
     dev.enable_program_cache()
     return dev, fused
 
@@ -161,6 +160,8 @@ def install_labels(model) -> Labeller:
     lab.wrap(bb.mm_projector, "forward", "projector")
     lab.wrap(bb, "embed_language_tokens_fused", "lang_embed")
     lab.wrap(bb, "forward_vlm_fused", "vlm")
+    for mk in getattr(model, "_mk", {}).values():
+        lab.wrap(mk, "run", "megakernel")
     for i, blk in enumerate(bb.vlm_blocks):
         lab.wrap(blk, "forward_fused_vlm", f"L{i:02d}")
         lab.wrap(blk.attention, "forward_fused_vlm", "attn")

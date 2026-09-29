@@ -64,7 +64,11 @@ constexpr uint32_t EPS_BITS = get_compile_time_arg_val(CT_EPS_BITS);
 constexpr uint32_t IN0_PAGES = 64 * RT;
 constexpr uint32_t X_TILES = 32 * RT;
 
+#ifdef MK_FID8_HIFI2
+constexpr MathFidelity LOFI = MathFidelity::HiFi2;  // precision A/B knob (PI05_MK_FID8=hifi2) for the bfp8 matmuls
+#else
 constexpr MathFidelity LOFI = MathFidelity::LoFi;
+#endif
 constexpr MathFidelity HIFI2 = MathFidelity::HiFi2;
 constexpr MathFidelity HIFI4 = MathFidelity::HiFi4;
 
