@@ -685,6 +685,18 @@ async def lifespan(_app: FastAPI):
     STATE["fused"] = fused_cfg.describe()
     if cfg.layout == "dp" and mesh == (1, 1):
         raise RuntimeError("PI05_LAYOUT=dp needs a multi-chip mesh (TT_MESH_SHAPE)")
+    if fused_cfg.megakernel != "off":
+        # docs/megakernel/DESIGN.md §4.12 refusals: the megakernel is single-chip, batch 1, one prepared shape
+        why = None
+        if mesh != (1, 1):
+            why = f"TT_MESH_SHAPE={mesh[0]}x{mesh[1]} (the megakernel is single-chip: use 1x1)"
+        elif cfg.layout != "mesh":
+            why = f"PI05_LAYOUT={cfg.layout} (single-chip megakernel: use mesh on a 1x1 device)"
+        elif cfg.batch_sizes != (1,):
+            why = f"PI05_BATCH_SIZES={','.join(map(str, cfg.batch_sizes))} (the megakernel serves batch 1 only)"
+        if why is not None:
+            LOG.error("PI05_MEGAKERNEL=%s refused at startup: %s", fused_cfg.megakernel, why)
+            raise RuntimeError(f"PI05_MEGAKERNEL={fused_cfg.megakernel} refused: {why}")
     if mesh != (1, 1):
         # Multi-chip (2x p300 = 1x4 Ethernet ring): fabric + MeshDevice; the SigLIP tower and the VLM
         # prefill are tensor-parallel over the chips, the expert replicated (tt/ttnn_ccl.py).
@@ -693,9 +705,10 @@ async def lifespan(_app: FastAPI):
         LOG.info("Opening mesh %sx%s (fabric %s) fused=%s", *mesh, fused_cfg.ccl_topology, fused_cfg.describe())
         device = ttnn_ccl.open_mesh(fused_cfg, mesh, l1_small_size=cfg.l1_small_size)
     else:
-        open_kwargs: Dict[str, Any] = {"device_id": cfg.device_id, "l1_small_size": cfg.l1_small_size}
-        if fused_cfg.trace:
-            open_kwargs["trace_region_size"] = fused_cfg.trace_region_size
+        from models.experimental.pi0_5.common.device_open import device_kwargs
+
+        # the one device-open helper: adds the megakernel's 64 KiB worker-L1 cut when PI05_MEGAKERNEL != off
+        open_kwargs: Dict[str, Any] = device_kwargs(fused_cfg, device_id=cfg.device_id, l1_small_size=cfg.l1_small_size)
         LOG.info("Opening device %s%s", open_kwargs, f" fused={fused_cfg.describe()}")
         device = ttnn.open_device(**open_kwargs)
     STATE["device"] = device
@@ -773,6 +786,8 @@ async def lifespan(_app: FastAPI):
             if fused_cfg.trace and getattr(model, "_fused_trace_id", None) is None:
                 raise RuntimeError("PI05_TRACE=1 but no trace was captured during warm-up")
             STATE["traced"] = getattr(model, "_fused_trace_id", None) is not None
+            STATE["megakernel"] = {"backend": getattr(model, "megakernel_backend", "off"),
+                                   "program": getattr(model, "megakernel_program", None)}
             STATE["batcher"] = _Batcher(model, cfg.batch_sizes, cfg.batch_window_ms / 1000.0)
             STATE["ready"] = True
             LOG.info(
@@ -925,6 +940,10 @@ def _graph_string(cfg: Optional[ServerConfig], traced: bool) -> str:
         return "fused prefix and expert graphs" + (", one Metal trace per stage per batch size" if traced else ", eager")
     if layout == "dp":
         return "fused whole-graph sample_actions_fused per group" + (", one Metal trace per group per batch size" if traced else ", eager")
+    mk = (STATE.get("megakernel") or {}).get("backend", "off")
+    if mk == "expert":
+        return ("fused whole-graph sample_actions_fused: ttnn SigLIP / VLM prefix + ONE megakernel generic_op for the "
+                "whole 10-step action expert loop" + (", one Metal trace" if traced else ", eager"))
     return "fused whole-graph sample_actions_fused" + (", one Metal trace per batch size" if traced else ", eager")
 
 
@@ -944,6 +963,7 @@ def info() -> dict:
         )
         + _graph_string(cfg, bool(STATE.get("traced"))),
         "fused": STATE.get("fused"),
+        "megakernel": STATE.get("megakernel"),
         "mesh_shape": STATE.get("mesh_shape"),
         "weights": STATE.get("weights")
         or {

@@ -37,13 +37,23 @@ def device_inputs(m):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--seeds", type=int, default=18)
+    ap.add_argument("--shape", default="base", choices=["base", "libero"])
+    ap.add_argument("--n-real", default=None, help="comma list of prompt lengths (seeds 11, 12, ...)")
     ap.add_argument("--out", default=None)
     a = ap.parse_args()
-    loader = PI0WeightLoader(BASE_WEIGHTS)
-    extra = [(100 + i, n) for i, n in enumerate([40, 97, 12, 150, 201, 224] * 4)][: max(0, a.seeds - len(N_REAL))]
-    spec = [(i + 1, n) for i, n in enumerate(N_REAL)] + extra
-    obs = [prompt(sd, n, 224, 50) for sd, n in spec]
-    ref = PI0ModelTorch(base_config(), loader)
+    if a.shape == "base":
+        loader, mcfg, tok_len, H = PI0WeightLoader(BASE_WEIGHTS), base_config, 224, 50
+    else:
+        from models.experimental.pi0_5.tests.pcc.golden_openpi import LIBERO_WEIGHTS, libero_config
+
+        loader, mcfg, tok_len, H = PI0WeightLoader(LIBERO_WEIGHTS), libero_config, 32, 10
+    if a.n_real:
+        spec = [(11 + i, int(n)) for i, n in enumerate(a.n_real.split(","))]
+    else:
+        extra = [(100 + i, n) for i, n in enumerate([40, 97, 12, 150, 201, 224] * 4)][: max(0, a.seeds - len(N_REAL))]
+        spec = [(i + 1, n) for i, n in enumerate(N_REAL)] + extra
+    obs = [prompt(sd, n, tok_len, H) for sd, n in spec]
+    ref = PI0ModelTorch(mcfg(), loader)
     refs = []
     for images, tokens, noise, mask in obs:
         ref.denoising.sample_noise = lambda *x, _n=noise, **k: _n.clone()
@@ -54,19 +64,19 @@ def main():
     params = hm.expert_params(cw["action_expert"], cw["pi0_projections"])
     env = FusedConfig.from_env()
     dev = open_pi05_device(dataclasses.replace(env, megakernel="expert"))
-    res = {"time": time.strftime("%F %T"), "obs": spec}
+    res = {"time": time.strftime("%F %T"), "shape": a.shape, "obs": spec}
     try:
         outs, oracle = {}, []
         for name in ("off", "expert"):
             torch.manual_seed(42)
-            m = PI0ModelTTNN(base_config(), loader, dev, fused=dataclasses.replace(env, megakernel=name))
+            m = PI0ModelTTNN(mcfg(), loader, dev, fused=dataclasses.replace(env, megakernel=name))
             outs[name] = []
             for i, (im, t, n, k) in enumerate(obs):
                 outs[name].append(m.sample_actions_fused(im, t, n, lang_masks=k))
                 if name == "off":
                     kv, ai, nz = device_inputs(m)
                     with torch.no_grad():
-                        oracle.append(hm.loop_reference(params, kv, ai, nz)[:50][None])
+                        oracle.append(hm.loop_reference(params, kv, ai, nz)[:H][None])
             m.release_trace()
             del m
         for name in ("off", "expert"):

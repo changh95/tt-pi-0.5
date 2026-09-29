@@ -1,0 +1,3 @@
+2026-09-30 03:23:50,986 ERROR pi05.server: PI05_MEGAKERNEL=expert refused at startup: PI05_BATCH_SIZES=1,2 (the megakernel serves batch 1 only)
+2026-09-30 03:23:57,231 ERROR pi05.server: PI05_MEGAKERNEL=expert refused at startup: TT_MESH_SHAPE=1x4 (the megakernel is single-chip: use 1x1)
+2026-09-30 03:24:03,525 ERROR pi05.server: PI05_MEGAKERNEL=expert refused at startup: TT_MESH_SHAPE=1x4 (the megakernel is single-chip: use 1x1)
