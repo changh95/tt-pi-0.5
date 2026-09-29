@@ -140,6 +140,8 @@ class PI0ModelTTNN:
         self.megakernel_program = None
         self._mk: Dict[str, object] = {}
         self._mk_params = None
+        self._mk_l1: Dict[object, Tuple] = {}  # per prepared shape: L1 allocator signature at its trace capture
+        self.megakernel_l1 = None
         if self.megakernel_backend == "off":
             return
         if self.megakernel_backend == "whole":
@@ -155,6 +157,24 @@ class PI0ModelTTNN:
                                         num_steps=self.denoise_config.num_steps)
         self.megakernel_program = {"kernel_digest": kernel_digest(),
                                    "sources": [os.path.basename(p) for p in KERNEL_SOURCES]}
+
+    def l1_signature(self) -> Tuple:
+        """L1 allocator state (DESIGN.md §4.12 replay guard): an execute_trace replay does not re-validate the
+        megakernel's static circular buffers against L1 buffers allocated after the capture, so the model refuses to
+        replay when this changed."""
+        mv = ttnn.get_memory_view(self.device, ttnn.BufferType.L1)
+        return (int(mv.total_bytes_allocated_per_bank), int(mv.largest_contiguous_bytes_free_per_bank), len(mv.block_table))
+
+    def _check_l1_guard(self) -> None:
+        ref = getattr(self, "_mk_l1", {}).get(self._fused_shape_key)
+        if ref is None or os.environ.get("PI05_MK_L1_GUARD", "1") == "0":
+            return
+        now = self.l1_signature()
+        if now != ref:
+            raise RuntimeError(
+                f"PI05_MEGAKERNEL: L1 allocation state changed since the trace capture ({ref} -> {now}: "
+                "allocated bytes / largest free block / blocks per bank); an L1 buffer allocated after the capture "
+                "can overlap the megakernel's circular buffers during a replay. Free it before sample_actions_fused.")
 
     def _megakernel_for(self, prefix_len: int, batch: int):
         """The ExpertMegakernel of this serving shape (built once; the weight arenas are shared by the shapes)."""
@@ -499,6 +519,13 @@ class PI0ModelTTNN:
             ttnn.end_trace_capture(device, trace_id, cq_id=0)
             ttnn.synchronize_device(device)
             self._fused_trace_id = trace_id
+            if self.megakernel_backend == "expert":
+                self._mk_l1[key] = self.l1_signature()
+                mv = ttnn.get_memory_view(device, ttnn.BufferType.L1)
+                self.megakernel_l1 = {"total_per_bank": int(mv.total_bytes_per_bank),
+                                      "allocated_per_bank": int(mv.total_bytes_allocated_per_bank),
+                                      "largest_free_per_bank": int(mv.largest_contiguous_bytes_free_per_bank),
+                                      "cb_union": self._megakernel_for(plan["prefix_len"], batch).cb_union}
         return True
 
     def _fused_write_inputs(self, im2col_hosts, tokens_host, noise_host, valid) -> None:
@@ -558,6 +585,7 @@ class PI0ModelTTNN:
             self._fused_write_inputs(im2col_hosts, tokens_host, noise_host, valid)
 
         if self._fused_trace_id is not None:
+            self._check_l1_guard()
             ttnn.execute_trace(self.device, self._fused_trace_id, cq_id=0, blocking=True)
             actions = ttnn.to_torch(_chip0(self._fused_out))  # expert replicated: every chip holds x_T
         else:

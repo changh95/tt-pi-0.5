@@ -71,6 +71,7 @@ class ExpertMegakernel:
                 c = device.worker_core_from_logical_core(ttnn.CoreCoord(x, y))
                 self._noc[(x, y)] = (int(c.x), int(c.y))
         self.program_hash = None
+        self.cb_union = G.cb_union_bytes(shape)
 
     # ------------------------------------------------------------------ args
     def noc(self, xy) -> Tuple[int, int]:

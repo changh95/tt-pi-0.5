@@ -211,3 +211,45 @@ Decision: PI05_MK_FID8 default hifi2 (bfp8 matmuls at HiFi2): no measurable time
   AND would fail for a perfect fp32 expert (-0.0084): the reference distance on those seeds is set by the device
   prefix (SigLIP / VLM / bf8 caches); the shipped expert's own error happens to offset it on seed 2. I do not
   redefine the gate; it is reported as failing with this evidence (needs the user's ruling).
+- Edge cases (E1.json base n_lang 1 / 224 / 128 / 150, E2.json LIBERO 32 / 1; seeds 11..): megakernel minus shipped vs
+  the torch reference +0.0028 +0.0035 +0.0062 +0.0012 | +0.0001 +0.0002 (gate "no worse": PASS all six); vs the
+  expert oracle the megakernel is closer on all six (>= 0.99991 base, 0.99998 LIBERO).
+- Soak 2 (soak_base_run2.log, 03:21-03:34, kernel md5s verified unchanged before and after): 20/20 consecutive base
+  processes rc=0, one output digest 7f070cd96b1e0d17, every process's 31 calls identical: PASS (no hang in 20).
+- Server (P1-6): fastapi / uvicorn are not in the tt-metal venv; installed into scratchpad/pylib (not the GR00T tree).
+  server/app.py opens through common/device_open.py and refuses PI05_MEGAKERNEL with B > 1 / mesh / dp at startup with
+  a log line before any device open (server_refusals.txt; pipeline was already refused by load_config). Served
+  (served_S_{expert,off}.json, same session, 30 POSTs of the smoke payload): megakernel inference median 70.72 ms
+  (total 72.10), shipped 84.07 (total 85.45): PASS < 84.02; smoke_test PASS both; /info carries backend + program.
+- Replay L1 guard (l1_guard_G1.json): PI0ModelTTNN records the L1 allocator signature at capture and raises before
+  execute_trace when it changed; raised on a 1-tile L1 allocation, replay after the free bit-identical, cost 35 us
+  per call (< 0.1 ms: on in production, PI05_MK_L1_GUARD=0 disables). Free L1 at capture: largest free block
+  1,253,888 B per bank vs the CB union 1,156,768 B (base, 97,120 B headroom) / 851,616 B (LIBERO).
+- P1-4 (mk_vs_shipped_golden_VG.json): megakernel vs shipped x_0 on the 8 golden LIBERO observations 0.99987..0.99992
+  (gate >= 0.999: PASS); PCC7 vs openpi higher than the shipped path on 8/8.
+
+### Phase-1 exit gate table (03:41; files in docs/megakernel/impl/results/)
+| gate | result | evidence |
+|---|---|---|
+| structural: ONE device op after the VLM, covering loop + action io | PASS (892 ops/replay, 0 after the megakernel) | structural_{base,libero}.json |
+| stamp asserted in test_pcc_pi05_fused.py | PASS (backend "expert" from the object) | L1.json / B2.json "stamp" |
+| PCC7 vs openpi mean >= 0.9995, min >= 0.999 | PASS 0.99988 / 0.99978 | L1.json, alternating_A1.json D |
+| base per seed within 0.005 of the current path vs torch ref | FAIL on seed 2 (0.97190 vs 0.98397); 5/6 pass | B0.json, B2.json, O1.json (a perfect fp32 expert also fails: 0.97553) |
+| ten replays bit-identical | PASS both shapes | L1.json, B2.json |
+| alternating prompts / shape switch | PASS (all bit-identical to fresh refs) | alternating_A1.json |
+| no hang in 20 consecutive runs | PASS (soak 2) | soak_base_run2.log |
+| prompt-length edge cases no worse than current | PASS 6/6 | E1.json, E2.json |
+| existing suites green | test_fused_host 23/23, test_reference_vs_openpi 1/1, mk CPU 10/10, test_pcc libero PASS; test_pcc base RED on its own min-0.95 gate for BOTH paths (megakernel 0.948, shipped 0.938, seed 3) | B0.json, B2.json |
+| expert loop device time < 31.26 / 27.85 ms | PASS 17.50 / 16.08 ms | structural_*.json |
+| whole call < 84.2 / 76.77 ms | PASS 70.75 / 65.59 ms (LoFi) - 66.08 (HiFi2 fp32-S arm) | B2.json, L1.json, L2.json |
+| size <= 128 KB | PASS 70,696 / 71,032 B | size_check (impl/size_check_v1_*.json is the first build) |
+| shipped path under the 64 KiB cut | PASS (identical PCCs, 83.75 ms) | V1.json |
+| server P1-6 | PASS (smoke, 70.72 ms served, stamp, refusals) | served_*.json, server_refusals.txt |
+
+Open for the user (not redefined by me): the base per-seed gate fails on seed 2 and the base pytest's own min-0.95
+floor is red for both paths; O1.json shows the megakernel's expert loop is closer to an fp32 oracle than the shipped
+one on 18/18 seeds, and that a perfect expert would fail the same gate. Next after a ruling: phase 2 (WP-P2-0: the
+whole sample_actions binary / L1 overlay; the phase-1 program is 70.7 KB of the 128 KB budget).
+Known deviations from DESIGN v2 in the build (speed levers, not correctness): pair cores instead of Q/K/V producers +
+pair exchange, single merger per (head, row), bf16 ctx (no two-format CB), no dual-NoC hub multicast; WP P1-1 / P1-2
+harness gates were not run (the integrated loop meets the speed gates with 44 % / 42 % margin).

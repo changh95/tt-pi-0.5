@@ -27,13 +27,13 @@ stream timeline uses the review's fluid model `docs/megakernel/design/review_str
 |---|---|---|
 | profile of the shipped path (`PROFILE.md`) | DONE | b93723c |
 | this design (`DESIGN.md`) | v2 | v1 (ac2e6ea) reviewed twice, not accepted; v2 resolves every item (§10). The gates of §7 are fixed from v2 on |
-| WP-P1-0 scaffolding + host checks + mock compile + device-open / L1 facts | NOT STARTED | first thing of step 2 |
-| WP-P1-1 weight arena + stream harness | NOT STARTED | |
-| WP-P1-2 exchange microbenchmarks (the A-values of §4.3, both shapes) | NOT STARTED | decides the merge / down geometry before any layer code |
-| WP-P1-3 one expert layer in-kernel | NOT STARTED | |
-| WP-P1-4 whole 10-step loop, standalone | NOT STARTED | |
-| WP-P1-5 integration into `sample_actions_fused` + all gates | NOT STARTED | phase-1 exit (intermediate) |
-| WP-P1-6 server integration of phase 1 | NOT STARTED | |
+| WP-P1-0 scaffolding + host checks + mock compile + device-open / L1 facts | DONE (2026-09-30) | two-format CB not needed (bf16 ctx); L1 guard + free-L1 measured; JOURNAL |
+| WP-P1-1 weight arena + stream harness | arena DONE; harness gate not run | the integrated loop meets the speed gates |
+| WP-P1-2 exchange microbenchmarks (the A-values of §4.3, both shapes) | NOT RUN | superseded for phase 1 by the end-to-end result; still useful for phase 2 |
+| WP-P1-3 one expert layer in-kernel | DONE (bring-up b3: layer 0 PCC 0.99992 vs host fp32) | |
+| WP-P1-4 whole 10-step loop, standalone | DONE (b5; P1-4 gate vs shipped 0.99987+ on 8 golden obs) | |
+| WP-P1-5 integration into `sample_actions_fused` + all gates | DONE except the base per-seed gate (seed 2) | JOURNAL phase-1 exit gate table |
+| WP-P1-6 server integration of phase 1 | DONE (served 70.72 ms) | |
 | WP-P2-0 phase-2 binary size + L1 overlay proof (no card) | NOT STARTED | |
 | WP-P2-1 VLM layer prototype (go / no-go on timing) | NOT STARTED | GR00T's fused prefill ended slower than TTNN, so this is gated by measurement |
 | WP-P2-2 SigLIP layer prototype | NOT STARTED | |
