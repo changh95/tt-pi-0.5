@@ -2,11 +2,11 @@
 # SPDX-License-Identifier: Apache-2.0
 
 """
-Host-only (torch, no device, no ttnn tensors) proofs for the TT_FUSED=1 graph
+Host-only (torch, no device, no ttnn tensors) proofs for the fused device graph
 (``opt/pi05-base-p150-megakernel``).
 
 Every exact reformulation the fused device graph relies on is checked here against the reference
-math, plus the knob plumbing (``TT_FUSED=0`` -> legacy choices; unset = fused). Run with the host python of
+math, plus the knob plumbing (the fused graph is the only path; ``TT_FUSED=0`` is refused). Run with the host python of
 the model's tt-metal tree (torch 2.7.1, pytest 9):
 
     cd models/pi05-base-p150
@@ -52,28 +52,34 @@ def _assert_close(a: torch.Tensor, b: torch.Tensor, rtol: float, what: str):
 # =========================================================================================
 
 
-def test_knob_default_on_and_zero_selects_legacy():
-    # default ON since the device pass (2026-09-13); TT_FUSED=0 restores the legacy path bit-for-bit
-    assert FusedConfig.from_env({}).enabled is True
+def test_knob_tt_fused_zero_is_refused_and_unset_equals_one():
+    # the unfused path was removed: TT_FUSED unset / truthy -> the same (fused) config; falsy -> ValueError
     assert FusedConfig.from_env({}) == FusedConfig.from_env({"TT_FUSED": "1"})
-    for v in ("0", "false", "off", ""):
-        cfg = FusedConfig.from_env({"TT_FUSED": v})
-        assert cfg.enabled is False
-        assert cfg == FusedConfig.legacy()
-    # legacy choices when off, regardless of sub-knobs in the environment
-    off = FusedConfig.from_env({"TT_FUSED": "0", "PI05_FUSED_RESIDUAL": "bf16", "PI05_MLP_CHUNK": "0"})
-    assert off.expert_residual_weight_dtype() == "bfloat8_b"
-    assert off.expert_mlp_act_dtype() == "bfloat8_b"
-    assert off.action_out_weight_dtype() == "bfloat8_b"
-    assert off.keep_fused_gate_up_copy() is True
-    assert off.fused_residual is False
-    assert off.mlp_chunk == 256  # sub-knobs are not read when off
+    assert FusedConfig.from_env({}) == FusedConfig.from_env({"TT_FUSED": "true"})
+    assert FusedConfig.from_env({}) == FusedConfig.from_env({"TT_FUSED": "on"})
+    assert "enabled" not in FusedConfig.from_env({}).describe()
+    for v in ("0", "false", "off", "no", ""):
+        try:
+            FusedConfig.from_env({"TT_FUSED": v})
+        except ValueError as e:
+            assert "unfused path was removed" in str(e), str(e)
+        else:
+            raise AssertionError(f"TT_FUSED={v!r} should be refused")
+    # refused regardless of the sub-knobs in the environment
+    try:
+        FusedConfig.from_env({"TT_FUSED": "0", "PI05_FUSED_RESIDUAL": "legacy"})
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("TT_FUSED=0 should be refused")
 
 
 def test_knob_on_defaults_match_the_evaluation_recipe():
     cfg = FusedConfig.from_env({"TT_FUSED": "1"})
-    assert cfg.enabled and cfg.trace and cfg.trace_region_size == 160_000_000
-    assert cfg.residual == "bf16" and cfg.mlp_chunk == 256 and cfg.vlm_down_pc == "mcast2d" and cfg.vlm_gateup_pc == "auto"
+    assert cfg.trace and cfg.trace_region_size == 160_000_000
+    assert (
+        cfg.residual == "bf16" and cfg.mlp_chunk == 256 and cfg.vlm_down_pc == "mcast2d" and cfg.vlm_gateup_pc == "auto"
+    )
     assert FusedConfig.from_env({"TT_FUSED": "1", "PI05_MLP_CHUNK": "0"}).mlp_chunk == 0
     assert cfg.siglip_batched and cfg.skip_vlm_tail
     assert cfg.sdpa_vlm is None and cfg.sdpa_expert is None and cfg.sdpa_siglip is None  # legacy SDPA configs
@@ -85,7 +91,6 @@ def test_knob_on_defaults_match_the_evaluation_recipe():
     assert cfg.expert_residual_weight_dtype() == "bfloat16"
     assert cfg.expert_mlp_act_dtype() == "bfloat16"
     assert cfg.action_out_weight_dtype() == "bfloat16"
-    assert cfg.keep_fused_gate_up_copy() is False
     assert cfg.fused_residual is True
 
 
@@ -107,7 +112,9 @@ def test_knob_sub_modes_and_parsing():
     cfg = FusedConfig.from_env(env)
     assert cfg.trace is False and cfg.trace_region_size == 95_000_000
     assert cfg.residual == "mixed" and cfg.expert_mlp_act_dtype() == "bfloat8_b"
-    assert cfg.expert_residual_weight_dtype() == "bfloat16"  # mixed still needs bf16 weights (residual == weight format)
+    assert (
+        cfg.expert_residual_weight_dtype() == "bfloat16"
+    )  # mixed still needs bf16 weights (residual == weight format)
     assert cfg.mlp_chunk == 0 and cfg.siglip_batched is False and cfg.skip_vlm_tail is False
     assert cfg.sdpa_vlm == (128, 256) and cfg.sdpa_expert == (64, 256) and cfg.sdpa_siglip == (64, 256)
     assert cfg.dit_blocks == (4, 4, 4, 2, 2, 0, 0)  # 5 values -> full device grid
@@ -128,23 +135,14 @@ def test_knob_sub_modes_and_parsing():
     assert set(RESIDUAL_MODES) == {"bf16", "mixed", "legacy"}
 
 
-def test_knob_legacy_sample_actions_availability():
-    """The legacy expert block feeds a bf8 residual + mlp.down_proj into dit_minimal_matmul_addcmul_fused,
-    whose factory requires residual format == weight format: the legacy sample_actions can only run on a
-    model whose expert o_proj / down_proj stayed bf8 (TT_FUSED unset, or PI05_FUSED_RESIDUAL=legacy)."""
-    assert FusedConfig.legacy().legacy_sample_actions_available is True
-    assert FusedConfig.from_env({"TT_FUSED": "0"}).legacy_sample_actions_available is True
-    assert FusedConfig.from_env({}).legacy_sample_actions_available is False  # default = fused, bf16 expert weights
-    assert FusedConfig.from_env({"TT_FUSED": "1", "PI05_FUSED_RESIDUAL": "legacy"}).legacy_sample_actions_available is True
+def test_knob_residual_modes_and_rejects():
+    """``PI05_FUSED_RESIDUAL`` selects the expert residual weight format: bf16 for bf16 / mixed (the fused op
+    needs residual format == weight format), bf8 for the legacy numerics sub-mode."""
     for mode in ("bf16", "mixed"):
         cfg = FusedConfig.from_env({"TT_FUSED": "1", "PI05_FUSED_RESIDUAL": mode})
-        assert cfg.expert_residual_weight_dtype() == "bfloat16"
-        assert cfg.legacy_sample_actions_available is False
-    assert FusedConfig.from_env({"TT_FUSED": "1"}).legacy_sample_actions_available is False  # default bf16
-    # invariant the guard relies on: availability <=> bf8 expert residual weights
-    for env in ({"TT_FUSED": "0"}, {"TT_FUSED": "1"}, {"TT_FUSED": "1", "PI05_FUSED_RESIDUAL": "mixed"}, {"TT_FUSED": "1", "PI05_FUSED_RESIDUAL": "legacy"}):
-        cfg = FusedConfig.from_env(env)
-        assert cfg.legacy_sample_actions_available == (cfg.expert_residual_weight_dtype() == "bfloat8_b")
+        assert cfg.expert_residual_weight_dtype() == "bfloat16" and cfg.fused_residual is True
+    cfg = FusedConfig.from_env({"PI05_FUSED_RESIDUAL": "legacy"})
+    assert cfg.expert_residual_weight_dtype() == "bfloat8_b" and cfg.fused_residual is False
     for bad in (
         {"TT_FUSED": "1", "PI05_FUSED_RESIDUAL": "fp32"},
         {"TT_FUSED": "1", "PI05_MLP_CHUNK": "100"},
@@ -256,7 +254,9 @@ def _tiny_siglip_weights(cfg: SigLIPConfig, g: torch.Generator) -> dict:
 
 def test_siglip_batched_equals_per_image():
     """Batching the two cameras is per-row identical math (every op is row-/batch-independent)."""
-    cfg = SigLIPConfig(hidden_size=32, num_hidden_layers=2, num_attention_heads=2, image_size=28, patch_size=14, intermediate_size=64)
+    cfg = SigLIPConfig(
+        hidden_size=32, num_hidden_layers=2, num_attention_heads=2, image_size=28, patch_size=14, intermediate_size=64
+    )
     g = torch.Generator().manual_seed(1)
     tower = SigLIPVisionTower(cfg, _tiny_siglip_weights(cfg, g))
     x = torch.randn(2, 3, 28, 28, generator=g, dtype=F64)
@@ -352,14 +352,19 @@ def test_gate_up_split_equals_fused_gate_up():
 def test_kv_cache_plan_and_constraints():
     plan = fh.kv_cache_plan(736, 50)
     assert plan == {
+        "batch": 1,
         "prefix_len": 736,
         "action_horizon": 50,
         "logical_len": 786,
+        "cache_len": 800,
         "padded_len": 800,
         "suffix_rows": 64,
         "expert_update_idx": 736,
         "vlm_update_idx": 0,
     }
+    # LIBERO shape (32 tokens, H = 10): the fused attention reads the prefix in 4-tile-row chunks -> 20 tiles = 640
+    libero = fh.kv_cache_plan(544, 10)
+    assert libero["suffix_rows"] == 32 and libero["cache_len"] == 640 and libero["logical_len"] == 554
     # rotary_embedding_to_cache / fill_cache: update_idx % 32 == 0 and update_idx + rows <= padded rows
     assert plan["expert_update_idx"] % 32 == 0 and plan["vlm_update_idx"] % 32 == 0
     assert plan["expert_update_idx"] + plan["suffix_rows"] <= plan["padded_len"]
@@ -405,7 +410,9 @@ def test_kv_hoist_cache_equals_concat_and_refreshes_per_call():
 
 
 def _tiny_expert_cfg() -> GemmaConfig:
-    return GemmaConfig(width=64, depth=2, mlp_dim=128, num_heads=2, num_kv_heads=1, head_dim=32, use_adarms=True, adarms_cond_dim=64)
+    return GemmaConfig(
+        width=64, depth=2, mlp_dim=128, num_heads=2, num_kv_heads=1, head_dim=32, use_adarms=True, adarms_cond_dim=64
+    )
 
 
 def _tiny_vlm_cfg() -> GemmaConfig:
@@ -457,7 +464,10 @@ def test_64_row_suffix_matches_50_rows_on_rows_0_49():
     cos, sin = precompute_freqs_cis(cfg.head_dim, 512, dtype=F64)
     P, H = 96, 50
     plan = fh.kv_cache_plan(P, H)
-    prefix = [(torch.randn(1, 1, P, 32, generator=g, dtype=F64), torch.randn(1, 1, P, 32, generator=g, dtype=F64)) for _ in blocks]
+    prefix = [
+        (torch.randn(1, 1, P, 32, generator=g, dtype=F64), torch.randn(1, 1, P, 32, generator=g, dtype=F64))
+        for _ in blocks
+    ]
     cond = torch.randn(1, cfg.adarms_cond_dim, generator=g, dtype=F64)
     x50 = torch.randn(1, H, cfg.width, generator=g, dtype=F64)
     x64 = fh.pad_rows(x50, plan["suffix_rows"])
@@ -505,7 +515,13 @@ def test_vlm_tail_skip_leaves_the_kv_cache_unchanged():
     out_ref, caches_ref = run(weights, final_norm_w)
     perturbed = [dict(w) for w in weights]
     last = perturbed[-1]
-    for k in ("self_attn.o_proj.weight", "mlp.gate_proj.weight", "mlp.up_proj.weight", "mlp.down_proj.weight", "post_attention_layernorm.weight"):
+    for k in (
+        "self_attn.o_proj.weight",
+        "mlp.gate_proj.weight",
+        "mlp.up_proj.weight",
+        "mlp.down_proj.weight",
+        "post_attention_layernorm.weight",
+    ):
         last[k] = last[k] + torch.randn_like(last[k])
     out_p, caches_p = run(perturbed, final_norm_w + 1.0)
     assert not torch.equal(out_p, out_ref)  # the (unused) VLM output did change ...
@@ -517,11 +533,63 @@ def test_vlm_tail_skip_leaves_the_kv_cache_unchanged():
     assert not torch.equal(caches_s[-1][0], caches_ref[-1][0])
 
 
-def test_expert_positions_start_at_zero_for_the_padded_suffix():
-    """The expert's cos/sin slice grows 50 -> 64 rows: rows 0..49 are the same positions (the reference
-    uses cos[:seq_len], positions 0..seq_len-1), rows 50..63 only touch masked keys / discarded queries."""
-    cos, sin = precompute_freqs_cis(256, 2048)
-    assert torch.equal(cos[:64][:50], cos[:50]) and torch.equal(sin[:64][:50], sin[:50])
+def test_expert_attention_inputs_match_openpi_attention():
+    """The fused expert attention's operands (``attention_inputs``: rotate-half tables with the sign / scale folded,
+    the additive key row) reproduce the reference attention with openpi's mask and positions: action tokens at
+    ``n_valid + [0, H)`` attending the valid prefix keys and the H real action rows. Emulates the kernel's math
+    (x * cos + swap_halves(x) * sin_signed; S = q K^T + mask; softmax; P V) in fp64 for right-padded prompts,
+    batch 2 with different prompt lengths."""
+    from models.experimental.pi0_5.reference.torch_gemma import apply_rotary_emb
+
+    H, dh, heads = 50, 256, 8
+    plan = fh.kv_cache_plan(2 * 256 + 224, H, batch=2)
+    P, S = plan["prefix_len"], plan["suffix_rows"]
+    lang = torch.zeros(2, 224, dtype=torch.bool)
+    lang[0, :40] = True
+    lang[1, :97] = True
+    valid = fh.prefix_valid_mask(2, lang)
+    c_half, s_half = precompute_freqs_cis(dh, 2048)
+    cos_full, sin_full = torch.cat([c_half, c_half], -1), torch.cat([s_half, s_half], -1)  # rotary_embedding layout
+    att = fh.attention_inputs(valid, plan, cos_full, sin_full, 1.0 / math.sqrt(dh))
+    assert att["n_valid"].tolist() == [552, 609]
+    q = torch.randn(2, heads, S, dh, dtype=F64)
+    k = torch.randn(2, 1, S, dh, dtype=F64)
+    v = torch.randn(2, 1, S, dh, dtype=F64)
+    kp = torch.randn(2, 1, P, dh, dtype=F64)  # the cache prefix (already rotated by the VLM)
+    vp = torch.randn(2, 1, P, dh, dtype=F64)
+
+    def swap(x):
+        return torch.cat([x[..., dh // 2:], x[..., : dh // 2]], dim=-1)
+
+    qr = q * att["cosq"].double() + swap(q) * att["sinq"].double()
+    kr = k * att["cosk"].double() + swap(k) * att["sink"].double()
+    scores = qr @ torch.cat([kp, kr], 2).transpose(-1, -2) + att["exp_mask"].double()[:, :, :1]
+    fused = torch.softmax(scores, -1) @ torch.cat([vp, v], 2)
+
+    pos = att["n_valid"][:, None] + torch.arange(H)[None]
+    qh, kh = apply_rotary_emb(q[:, :, :H], k[:, :, :H], c_half.double(), s_half.double(), pos)
+    key_bias = torch.where(valid, 0.0, -1e9).double()
+    mask = torch.cat([key_bias, torch.zeros(2, H, dtype=F64)], 1)[:, None, None]
+    ref_scores = qh @ torch.cat([kp, kh], 2).transpose(-1, -2) / math.sqrt(dh) + mask
+    ref = torch.softmax(ref_scores, -1) @ torch.cat([vp, v[:, :, :H]], 2)
+    _assert_close(fused[:, :, :H], ref, 1e-10, "fused expert attention vs openpi attention")
+    # the ttnn-path mask covers the whole cache: rows beyond prefix + H are hidden
+    assert att["sdpa_mask"].shape == (2, 1, S, plan["cache_len"])
+    assert (att["sdpa_mask"][..., P + H:] < -1e4).all() and (att["sdpa_mask"][0, 0, 0, :552] == 0).all()
+    # VLM mask: every query sees exactly the valid keys
+    assert torch.equal(att["vlm_mask"][1, 0, 5] == 0, valid[1])
+
+
+def test_attention_inputs_reject_bad_prefixes():
+    plan = fh.kv_cache_plan(544, 10)
+    cos = torch.zeros(2048, 256)
+    for bad in (torch.zeros(1, 544, dtype=torch.bool), torch.ones(1, 512, dtype=torch.bool)):
+        try:
+            fh.attention_inputs(bad, plan, cos, cos, 1.0)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("expected ValueError")
 
 
 def test_language_embedding_scale_is_layout_independent():

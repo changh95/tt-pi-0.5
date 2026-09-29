@@ -1,0 +1,45 @@
+{
+ "label": "b_p300x2_gr00ttree",
+ "time": "2026-09-29 14:49:25",
+ "build_s": 36.53553245399962,
+ "fused_cfg_resolved": {
+  "enabled": "True",
+  "trace": "True",
+  "trace_region_size": "160000000",
+  "residual": "bf16",
+  "mlp_chunk": "256",
+  "vlm_down_pc": "mcast2d",
+  "vlm_gateup_pc": "mcast2d",
+  "vlm_attn_pc": "mcast2d",
+  "siglip_pc": "mcast2d",
+  "siglip_batched": "True",
+  "skip_vlm_tail": "True",
+  "sdpa_vlm": "None",
+  "sdpa_expert": "None",
+  "sdpa_siglip": "None",
+  "dit_blocks": "(1, 8, 4, 1, 4, 0, 2)",
+  "euler_dit_blocks": "(1, 8, 1, 1, 1, 0, 2)",
+  "expert_mm": "mcast1d_fp32",
+  "expert_mm_blocks": "(1, 8, 4, 1, 4, 0, 2)",
+  "tp": "1",
+  "ccl_topology": "ring",
+  "env_keys": "('TT_FUSED',)",
+  "kv_dtype": "bf8",
+  "expert_geglu": "True",
+  "expert_attn": "fused",
+  "expert_norm_fold": "True"
+ },
+ "first_call_ms": 25045.280118007213,
+ "traced": true,
+ "call_ms": {
+  "min": 82.65788599965163,
+  "median": 82.96543850156013,
+  "max": 86.81642901501618
+ },
+ "replay_ms": {
+  "min": 81.59709098981693,
+  "median": 81.64754601602908,
+  "max": 81.86321100220084
+ },
+ "bit_identical_repeats": true
+}

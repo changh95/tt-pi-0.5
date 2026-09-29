@@ -16,13 +16,16 @@ Contents
     euler_dts                 the dt sequence of the denoising loop (same arithmetic as the legacy loop)
     dit_reference             a1 + scalar * (act @ W + bias) * a2 == ttnn.experimental.dit_minimal_matmul_addcmul_fused
     kv_cache_plan             cache geometry + the rotary_embedding_to_cache / fill_cache tile constraints
+    prefix_valid_mask         [B, P] validity of the prefix tokens (cameras, then the right-padded prompt)
+    attention_inputs          openpi's padding masks + the action tokens' RoPE rows (n_valid + [0, S)) as the
+                              host tensors of the graph's persistent attention inputs
     persistent_input_specs    shapes / dtypes / layouts of the trace inputs
     prefix_concat_batched     [B,256,D] image tokens -> [1, B*256, D] view (== legacy per-image concat order)
 """
 
 from __future__ import annotations
 
-from typing import Dict, List, Optional, Sequence
+from typing import Dict, List, Optional
 
 import torch
 
@@ -155,34 +158,102 @@ def euler_step_reference(h: torch.Tensor, w_out: torch.Tensor, b_out: torch.Tens
 # ----------------------------------------------------------------------------------------
 
 
-def kv_cache_plan(prefix_len: int, action_horizon: int, tile: int = TILE) -> Dict[str, int]:
-    """Cache ``[1, 1, logical_len, head_dim]`` with ``logical_len = prefix_len + action_horizon``
-    (SDPA masks keys >= logical_len exactly as the legacy concat buffer did), padded to a tile
-    multiple. The expert writes ``suffix_rows = round_up(action_horizon)`` rows at
-    ``update_idx = prefix_len``. Raises when the fused ops' tile constraints do not hold."""
+def kv_cache_plan(prefix_len: int, action_horizon: int, tile: int = TILE, batch: int = 1) -> Dict[str, int]:
+    """Cache ``[batch, 1, cache_len, head_dim]``: rows ``0..prefix_len-1`` are written by the VLM, the expert's
+    tile-padded suffix goes to rows ``prefix_len..`` (``suffix_rows = round_up(action_horizon)``). Which keys an
+    expert query sees is decided by the explicit additive key mask (``attention_inputs``), not by the cache length:
+    ``cache_len`` also covers the fused attention's 4-tile-row prefix reads (tt/kernels/fused_attn/reader.cpp, CH = 4)
+    and is a tile multiple. ``logical_len = prefix_len + action_horizon`` is the count of key rows that can be valid.
+    Raises when the fused ops' tile constraints do not hold."""
     if prefix_len <= 0 or action_horizon <= 0:
         raise ValueError("prefix_len and action_horizon must be positive")
-    logical_len = prefix_len + action_horizon
-    padded_len = round_up(logical_len, tile)
-    suffix_rows = round_up(action_horizon, tile)
     if prefix_len % tile != 0:
         raise ValueError(
             f"prefix_len={prefix_len} must be a multiple of {tile}: rotary_embedding_to_cache / fill_cache need "
             "update_idx % 32 == 0 (num_images*256 + PI05_TOKEN_LEN with PI05_TOKEN_LEN % 32 == 0)"
         )
-    if prefix_len + suffix_rows > padded_len:
-        raise ValueError(
-            f"prefix_len + suffix_rows = {prefix_len + suffix_rows} > padded cache {padded_len}: the expert's tile-padded "
-            "suffix would not fit (fill_cache: update_idx + input height <= cache height)"
-        )
+    if batch < 1:
+        raise ValueError("batch must be >= 1")
+    logical_len = prefix_len + action_horizon
+    suffix_rows = round_up(action_horizon, tile)
+    chunked_prefix = -(-(prefix_len // tile) // 4) * 4 * tile
+    cache_len = round_up(max(prefix_len + suffix_rows, chunked_prefix), tile)
     return {
+        "batch": batch,
         "prefix_len": prefix_len,
         "action_horizon": action_horizon,
         "logical_len": logical_len,
-        "padded_len": padded_len,
+        "cache_len": cache_len,
+        "padded_len": cache_len,
         "suffix_rows": suffix_rows,
         "expert_update_idx": prefix_len,
         "vlm_update_idx": 0,
+    }
+
+
+# Additive bias of a masked key. -30000 is exact in bf16 and exp(-30000 - rowmax) is 0; the rows always keep valid keys.
+MASK_NEG = -30000.0
+
+
+def prefix_valid_mask(num_images: int, lang_masks: torch.Tensor, img_masks: Optional[torch.Tensor] = None,
+                      tokens_per_image: int = 256) -> torch.Tensor:
+    """``[B, num_images*256 + L]`` bool: camera tokens (``img_masks [B, num_images]``, default all valid) then the
+    language tokens (``lang_masks [B, L]``). openpi's ``prefix_pad_masks``."""
+    lang = lang_masks.reshape(lang_masks.shape[0], -1).bool()
+    b = lang.shape[0]
+    img = torch.ones(b, num_images, dtype=torch.bool) if img_masks is None else img_masks.reshape(b, num_images).bool()
+    return torch.cat([img.repeat_interleave(tokens_per_image, dim=1), lang], dim=1)
+
+
+def attention_inputs(valid: torch.Tensor, plan: Dict[str, int], cos: torch.Tensor, sin: torch.Tensor,
+                     scale: float) -> Dict[str, torch.Tensor]:
+    """openpi pi0.5 attention for the fused graph, as host tensors (fp32; the model rounds them to bf16).
+
+    ``valid [B, P]`` = ``prefix_valid_mask``; ``cos`` / ``sin`` = the expert RoPE tables ``[>= n_valid + S, dh]`` in
+    the rotate-half layout of ``ttnn.experimental.rotary_embedding``. Every VALID prefix key is visible to every
+    query (the prefix is bidirectional); pad keys are hidden. The action tokens attend the valid prefix keys and the
+    ``action_horizon`` real action rows (not the tile-padding rows) and are rotated at positions
+    ``n_valid + [0, S)``. Returns:
+
+    ``vlm_mask``   [B, 1, P, P]            additive, the VLM prefill SDPA
+    ``exp_mask``   [B, 1, 32, Pt*32 + S]   additive key row of the fused expert attention (prefix, then suffix)
+    ``sdpa_mask``  [B, 1, S, cache_len]    additive, the ttnn expert SDPA over the whole cache
+    ``cos`` / ``sin``  [B, 1, S, dh]        rows ``n_valid + [0, S)`` (ttnn rotary_embedding path)
+    ``cosq`` / ``sinq`` / ``cosk`` / ``sink``  [B, 1, S, dh]  fused-attention tables: rotate-half sign folded into
+                   the sin tables, ``scale`` = 1/sqrt(dh) folded into the q tables
+    ``n_valid``    [B] long
+    """
+    valid = valid.bool()
+    b, p = valid.shape
+    if p != plan["prefix_len"]:
+        raise ValueError(f"valid mask has {p} prefix tokens, the plan {plan['prefix_len']}")
+    h, s, cache_len = plan["action_horizon"], plan["suffix_rows"], plan["cache_len"]
+    key = torch.where(valid, 0.0, MASK_NEG)  # [B, P]
+    suffix_key = torch.full((b, s), MASK_NEG)
+    suffix_key[:, :h] = 0.0
+    tail = torch.full((b, cache_len - p - s), MASK_NEG)
+    n_valid = valid.long().sum(dim=1)
+    if int(n_valid.min()) < 1:
+        raise ValueError("every request needs at least one valid prefix token")
+    if int(n_valid.max()) + s > cos.shape[-2]:
+        raise ValueError(f"RoPE table has {cos.shape[-2]} rows < n_valid + {s}")
+    rows = n_valid[:, None] + torch.arange(s)[None, :]  # [B, S]
+    c = cos.reshape(-1, cos.shape[-1]).float()[rows]  # [B, S, dh]
+    sn = sin.reshape(-1, sin.shape[-1]).float()[rows]
+    half = c.shape[-1] // 2
+    s_signed = torch.cat([-sn[..., :half], sn[..., half:]], dim=-1)  # rotate_half(x) = (-x2, x1)
+    exp_key = torch.cat([key, suffix_key], dim=1)
+    return {
+        "vlm_mask": key[:, None, None, :].expand(b, 1, p, p).contiguous(),
+        "exp_mask": exp_key[:, None, None, :].expand(b, 1, TILE, p + s).contiguous(),
+        "sdpa_mask": torch.cat([exp_key, tail], dim=1)[:, None, None, :].expand(b, 1, s, cache_len).contiguous(),
+        "cos": c[:, None].contiguous(),
+        "sin": sn[:, None].contiguous(),
+        "cosq": (c * scale)[:, None].contiguous(),
+        "sinq": (s_signed * scale)[:, None].contiguous(),
+        "cosk": c[:, None].contiguous(),
+        "sink": s_signed[:, None].contiguous(),
+        "n_valid": n_valid,
     }
 
 
@@ -242,14 +313,15 @@ def persistent_input_specs(
     }
 
 
-def check_fused_shape_contract(num_images: int, token_len: int, action_horizon: int) -> Dict[str, int]:
-    """Everything the fused graph assumes about the serving shape, as plain arithmetic."""
+def check_fused_shape_contract(num_images: int, token_len: int, action_horizon: int, batch: int = 1) -> Dict[str, int]:
+    """Everything the fused graph assumes about the serving shape, as plain arithmetic. ``num_images`` is
+    the camera count PER request; ``batch`` requests share one trace (same shapes)."""
     if token_len <= 0 or token_len % TILE != 0:
         raise ValueError(f"PI05_TOKEN_LEN={token_len} must be a positive multiple of 32 for the fused graph")
     if num_images < 1:
         raise ValueError("at least one image")
     prefix_len = num_images * 256 + token_len
-    return kv_cache_plan(prefix_len, action_horizon)
+    return kv_cache_plan(prefix_len, action_horizon, batch=batch)
 
 
 __all__ = [
@@ -266,6 +338,9 @@ __all__ = [
     "dit_reference",
     "euler_step_reference",
     "kv_cache_plan",
+    "MASK_NEG",
+    "prefix_valid_mask",
+    "attention_inputs",
     "build_kv_cache_reference",
     "persistent_input_specs",
     "check_fused_shape_contract",

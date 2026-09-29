@@ -12,8 +12,9 @@ following optimizations:
     - Fused QKV projection
     - Native TTNN RoPE (ttnn.experimental.rotary_embedding)
     - Native head operations (nlp_create_qkv_heads, nlp_concat_heads)
-    - Pre-computed attention masks and timesteps
-    - Denoising loop stays entirely on device
+    - Pre-computed timesteps and adaRMS modulations
+    - The whole graph (SigLIP, VLM prefill, 10 denoising steps) stays on device, captured in
+      one Metal trace (``PI0ModelTTNN.sample_actions_fused``)
 
 Modules:
     - ttnn_gemma: GemmaAttentionTTNN, GemmaMLPTTNN, GemmaBlockTTNN
@@ -65,13 +66,7 @@ from .ttnn_paligemma import PaliGemmaBackboneTTNN, PaliGemmaBackbone
 from .ttnn_pi0_model import PI0ModelTTNN, PI0Model
 
 # Common utilities
-from .ttnn_common import (
-    create_sinusoidal_pos_embedding_ttnn,
-    safe_cat_ttnn,
-    compute_position_ids_ttnn,
-    ttnn_to_torch,
-    torch_to_ttnn,
-)
+from .ttnn_common import create_sinusoidal_pos_embedding_ttnn
 
 __all__ = [
     # Gemma
@@ -110,8 +105,4 @@ __all__ = [
     "PI0Model",
     # Utilities
     "create_sinusoidal_pos_embedding_ttnn",
-    "safe_cat_ttnn",
-    "compute_position_ids_ttnn",
-    "ttnn_to_torch",
-    "torch_to_ttnn",
 ]

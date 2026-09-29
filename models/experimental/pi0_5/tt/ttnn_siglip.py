@@ -7,25 +7,20 @@ SigLIP Vision Tower - TTNN Implementation
 This module implements the SigLIP vision encoder using TTNN operations.
 
 SigLIP Architecture:
-    - Patch embedding (Unfold + TTNN linear - optimized)
+    - Patch embedding (host im2col + TTNN linear)
     - Positional embedding (learned)
     - Transformer encoder blocks (fused QKV, native head operations)
     - Multi-modal projector (linear to match language model dimension)
 
-Optimizations over baseline:
-    1. Unfold + TTNN linear for patch embedding (from Gemma3)
-    2. Fused QKV projection (single linear instead of 3)
-    3. Native ttnn.experimental.nlp_create_qkv_heads
-    4. Native ttnn.experimental.nlp_concat_heads for output
-
-Fused graph (``TT_FUSED=1``, the ``forward_fused`` methods; legacy ``forward`` untouched):
+Fused graph (the only inference path, the ``forward_fused`` methods):
     - the camera images arrive as ONE host im2col tensor ``[B, 256, 608]`` bf16 (ROW_MAJOR persistent
-      trace input, tilized on device) in the exact (kh, kw, c) order the legacy 6-op device unfold
-      produced, so the same padded [608, 1152] weight applies (exact);
+      trace input, tilized on device) in (kh, kw, c) order, so the padded [608, 1152] weight (the conv
+      weight permuted to (out, kh, kw, c)) applies (exact);
     - both cameras run as one batch (B = 2) through every block (all ops carry the batch dim);
     - the positional embedding is a precomputed ``[B, 256, 1152]`` table (identity gather dropped);
     - out_proj / fc2 biases are fused into their linears (bias added in the fp32 accumulator);
-    - the SDPA program config is a knob (``PI05_SDPA_SIGLIP_CHUNKS`` -> full grid), default legacy.
+    - the SDPA program config is a knob (``PI05_SDPA_SIGLIP_CHUNKS`` -> full grid), default 8x8 grid,
+      256/256 chunks.
 """
 
 import math
@@ -33,10 +28,20 @@ from typing import Dict, Optional
 
 import torch
 import ttnn
+
 try:  # legacy module inside the ttnn package; only used for pos-embedding interpolation (never at 224px/patch14)
     import tt_lib.fallback_ops as fallback_ops
 except ImportError:  # pragma: no cover - keep the import side-effect free if tt_lib disappears
     fallback_ops = None
+from .ttnn_ccl import (
+    shard_cols as _shard_cols,
+    shard_rows as _shard_rows,
+    per_chip_cols as _per_chip_cols,
+    bias_cols as _bias_cols,
+    bias_once as _bias_once,
+    tp_all_reduce as _tp_all_reduce,
+)
+
 
 from models.experimental.pi0_5.common.configs import SigLIPConfig
 from models.experimental.pi0_5.common.fused_config import FusedConfig
@@ -71,10 +76,7 @@ def nearest_32(x: int) -> int:
 
 class PatchEmbeddingTTNN:
     """
-    Convert image patches to embeddings using TTNN 6D permute + linear.
-
-    OPTIMIZED: Uses TTNN's MultiCoreTileInvariant 6D permute for patch extraction,
-    staying in TILE layout throughout to minimize layout conversions.
+    Convert image patches (host im2col) to embeddings with one TTNN linear.
     """
 
     def __init__(
@@ -113,9 +115,9 @@ class PatchEmbeddingTTNN:
         self.in_features = in_features
         self.in_channels = in_channels
 
-        # Reorder weight to match our unfold's channel-last output order (h, w, c)
+        # Reorder weight to match the im2col's channel-last patch order (h, w, c)
         # Conv weight: (out, c, h, w) -> permute to (out, h, w, c) -> flatten to (out, h*w*c)
-        # This matches our _unfold_conv2d which produces (B, num_patches, h*w*c) order
+        # This matches fused_host.im2col_patches which produces (B, num_patches, h*w*c) order
         linear_weight = conv_weight.permute(0, 2, 3, 1).contiguous()  # (hidden_size, 14, 14, 3)
         linear_weight = linear_weight.view(out_channels, -1)  # (hidden_size, 588)
 
@@ -151,87 +153,9 @@ class PatchEmbeddingTTNN:
         else:
             self._linear_bias = None
 
-    def _unfold_conv2d(self, x: ttnn.Tensor) -> ttnn.Tensor:
-        """
-        Unfold using TTNN 6D permute with MultiCoreTileInvariant optimization.
-        Stays in TILE layout throughout - no layout conversions.
-
-        The permute pattern (0, 1, 3, 2, 4, 5) keeps the last 2 dimensions (4, 5)
-        in place, enabling the optimized MultiCoreTileInvariant kernel.
-
-        Args:
-            x: TTNN tensor (batch_size, height, width, channels) - channel-last, TILE layout
-
-        Returns:
-            TTNN tensor (batch_size, num_patches, patch_size * patch_size * channels) - TILE layout
-        """
-        batch_size = x.shape[0]
-        img_h = x.shape[1]
-        img_w = x.shape[2]
-        img_c = x.shape[3]
-
-        patches_h = img_h // self.patch_size
-        patches_w = img_w // self.patch_size
-
-        # Reshape to 6D: (B, H, W, C) -> (B, patches_h, patch_size, patches_w, patch_size, C)
-        x = ttnn.reshape(x, (batch_size, patches_h, self.patch_size, patches_w, self.patch_size, img_c))
-
-        # Optimized 6D permute - last 2 dims (4, 5) stay in place
-        # Uses MultiCoreTileInvariant kernel for TILE layout
-        # (B, patches_h, patch_size, patches_w, patch_size, C) -> (B, patches_h, patches_w, patch_size, patch_size, C)
-        x = ttnn.permute(x, (0, 1, 3, 2, 4, 5))
-
-        # Flatten to 3D: (B, patches_h, patches_w, patch_size, patch_size, C) -> (B, num_patches, patch_features)
-        x = ttnn.reshape(x, (batch_size, patches_h * patches_w, self.patch_size * self.patch_size * img_c))
-
-        return x
-
-    def forward(self, pixel_values) -> ttnn.Tensor:
-        """
-        OPTIMIZED: Extract patch embeddings entirely on device using TILE layout.
-        Minimizes layout conversions by staying in TILE throughout.
-
-        Args:
-            pixel_values: PyTorch tensor (batch_size, channels, height, width)
-
-        Returns:
-            TTNN tensor (batch_size, num_patches, hidden_size)
-        """
-
-        x = pixel_values
-
-        # Step 2: Permute to channel-last: (B, C, H, W) -> (B, H, W, C)
-        # Note: This uses generic kernel since last 2 dims move, but unavoidable
-        x = ttnn.permute(x, (0, 2, 3, 1))
-
-        # Step 3: Unfold using optimized 6D permute (MultiCoreTileInvariant)
-        x = self._unfold_conv2d(x)
-
-        # Step 4: Pad to tile-aligned if needed (588 -> 608)
-        current_features = x.shape[-1]
-        if current_features < self.in_features_padded:
-            pad_amount = self.in_features_padded - current_features
-            # Use ttnn.pad: pad last dimension
-            x = ttnn.pad(x, [(0, 0), (0, 0), (0, pad_amount)], value=0.0)
-
-        # Step 5: TTNN linear (already in TILE - no conversion needed!)
-        # Use L1 for intermediate computation
-        out = ttnn.linear(
-            x,
-            self._linear_weight,
-            bias=self._linear_bias,
-            dtype=ttnn.bfloat16,
-            memory_config=ttnn.L1_MEMORY_CONFIG,
-            compute_kernel_config=_SIGLIP_CKC,
-        )
-
-        ttnn.deallocate(x)
-
-        return out
-
     def forward_fused(self, patches_tile: ttnn.Tensor) -> ttnn.Tensor:
-        """Fused graph: ``[B, num_patches, 608]`` bf16 TILE host im2col (already padded, same feature
-        order as ``_unfold_conv2d``) -> ``[B, num_patches, hidden]``: the legacy step 5 linear alone."""
+        """Fused graph: ``[B, num_patches, 608]`` bf16 TILE host im2col (already padded, (h, w, c) feature
+        order) -> ``[B, num_patches, hidden]``: one linear."""
         return ttnn.linear(
             patches_tile,
             self._linear_weight,
@@ -259,7 +183,7 @@ class SigLIPAttentionTTNN:
         config: SigLIPConfig,
         weights: Dict[str, torch.Tensor],
         device: ttnn.Device,
-        fused_cfg: Optional[FusedConfig] = None,
+        fused_cfg: FusedConfig,
     ):
         """
         Initialize attention with TTNN weights.
@@ -268,7 +192,7 @@ class SigLIPAttentionTTNN:
             config: SigLIP configuration
             weights: PyTorch weights to convert
             device: TTNN device
-            fused_cfg: TT_FUSED knobs (None / disabled -> the legacy ``forward`` only)
+            fused_cfg: fused-graph knobs
         """
         self.config = config
         self.device = device
@@ -279,55 +203,38 @@ class SigLIPAttentionTTNN:
         self.head_dim = config.head_dim
         self.hidden_size = config.hidden_size
         self.scale = 1.0 / math.sqrt(self.head_dim)
+        # Tensor parallel: chip i runs heads i*H/tp .. (i+1)*H/tp-1; wo is row-parallel (all-reduced)
+        self.tp = fused_cfg.tp
+        assert self.num_heads % self.tp == 0, (self.num_heads, self.tp)
+        self.num_heads_local = self.num_heads // self.tp
 
         # Pad head_dim to multiple of 32 for TTNN tile alignment
         self.padded_head_dim = ((self.head_dim + 31) // 32) * 32  # 72 -> 96
         padding_size = self.padded_head_dim - self.head_dim
 
-        # Helper function to pad weights on device using ttnn.pad
+        # Pad the per-head dim 72 -> 96 with zeros on the HOST (same values as the former device
+        # ttnn.pad round trip, which cannot run on a MeshDevice: to_torch of a replicated tensor).
         def pad_head_dim_weight_ttnn(weight, heads_out=True):
-            """Pad weight tensor's head dimension using TTNN operations."""
+            """Pad weight tensor's head dimension (torch). heads_out: heads live on dim 0 (q/k/v proj)."""
+            if padding_size == 0:
+                return weight
             dim = weight.shape[0]  # hidden_size
-
-            if padding_size > 0:
-                if heads_out:
-                    weight = weight.T  # (hidden, hidden) -> transpose for reshape
-                # Reshape to expose head dimension
-                weight = weight.reshape(dim, self.num_heads, self.head_dim)
-                # Transfer to device
-                weight_ttnn = ttnn.from_torch(
-                    weight.contiguous(),
-                    dtype=ttnn.bfloat16,
-                    layout=ttnn.TILE_LAYOUT,
-                    device=device,
-                    memory_config=ttnn.DRAM_MEMORY_CONFIG,
-                )
-                # Pad head dimension using ttnn.pad
-                weight_ttnn = ttnn.pad(weight_ttnn, padding=((0, 0), (0, 0), (0, padding_size)), value=0.0)
-                weight_ttnn = ttnn.reshape(weight_ttnn, (dim, self.num_heads * self.padded_head_dim))
-                weight = ttnn.to_torch(weight_ttnn)
-                if heads_out:
-                    weight = weight.T
-            return weight
+            if heads_out:
+                weight = weight.T  # (hidden, heads*head_dim)
+            weight = weight.reshape(dim, self.num_heads, self.head_dim)
+            weight = torch.nn.functional.pad(weight, (0, padding_size), value=0.0)
+            weight = weight.reshape(dim, self.num_heads * self.padded_head_dim)
+            if heads_out:
+                weight = weight.T
+            return weight.contiguous()
 
         def pad_head_dim_bias_ttnn(bias):
-            """Pad 1D bias using TTNN operations."""
-            if padding_size > 0:
-                # Reshape to expose head dimension
-                bias = bias.view(self.num_heads, self.head_dim)
-                # Transfer to device
-                bias_ttnn = ttnn.from_torch(
-                    bias.contiguous(),
-                    dtype=ttnn.bfloat16,
-                    layout=ttnn.TILE_LAYOUT,
-                    device=device,
-                    memory_config=ttnn.DRAM_MEMORY_CONFIG,
-                )
-                # Pad using ttnn.pad
-                bias_ttnn = ttnn.pad(bias_ttnn, padding=((0, 0), (0, padding_size)), value=0.0)
-                bias_ttnn = ttnn.reshape(bias_ttnn, (self.num_heads * self.padded_head_dim,))
-                bias = ttnn.to_torch(bias_ttnn)
-            return bias
+            """Pad 1D bias per head (torch)."""
+            if padding_size == 0:
+                return bias
+            bias = bias.view(self.num_heads, self.head_dim)
+            bias = torch.nn.functional.pad(bias, (0, padding_size), value=0.0)
+            return bias.reshape(self.num_heads * self.padded_head_dim).contiguous()
 
         # OPTIMIZATION: Fused QKV weights - single linear instead of 3
         # Pad each weight using TTNN, then concatenate
@@ -335,155 +242,58 @@ class SigLIPAttentionTTNN:
         wk_padded = pad_head_dim_weight_ttnn(weights["self_attn.k_proj.weight"])
         wv_padded = pad_head_dim_weight_ttnn(weights["self_attn.v_proj.weight"])
 
-        # Concatenate Q, K, V weights on device: [hidden, 3 * num_heads * padded_head_dim]
+        # Concatenate Q, K, V weights: [hidden, 3 * num_heads_local * padded_head_dim] per chip
+        # (chip i: its heads of wq | wk | wv, so nlp_create_qkv_heads sees the same layout as on one chip).
         # Use bfloat8_b for weight matrices — reduces bandwidth
         _siglip_w_dtype = ttnn.bfloat8_b
-        wq_ttnn = ttnn.from_torch(
-            wq_padded.T.contiguous(), dtype=_siglip_w_dtype, layout=ttnn.TILE_LAYOUT, device=device
-        )
-        wk_ttnn = ttnn.from_torch(
-            wk_padded.T.contiguous(), dtype=_siglip_w_dtype, layout=ttnn.TILE_LAYOUT, device=device
-        )
-        wv_ttnn = ttnn.from_torch(
-            wv_padded.T.contiguous(), dtype=_siglip_w_dtype, layout=ttnn.TILE_LAYOUT, device=device
-        )
-        self.wqkv = ttnn.concat([wq_ttnn, wk_ttnn, wv_ttnn], dim=-1, memory_config=ttnn.DRAM_MEMORY_CONFIG)
+        hl = self.num_heads_local * self.padded_head_dim  # local columns per q / k / v
+        wq_t, wk_t, wv_t = wq_padded.T, wk_padded.T, wv_padded.T  # [hidden, H*pdh]
+        chunks = [
+            torch.cat(
+                [wq_t[:, i * hl : (i + 1) * hl], wk_t[:, i * hl : (i + 1) * hl], wv_t[:, i * hl : (i + 1) * hl]], dim=-1
+            )
+            for i in range(self.tp)
+        ]
+        self.wqkv = _per_chip_cols(device, chunks, _siglip_w_dtype)
 
-        # Fused QKV biases
+        # Fused QKV biases (same per-chip layout)
         if "self_attn.q_proj.bias" in weights:
-            bq_padded = pad_head_dim_bias_ttnn(weights["self_attn.q_proj.bias"])
-            bk_padded = pad_head_dim_bias_ttnn(weights["self_attn.k_proj.bias"])
-            bv_padded = pad_head_dim_bias_ttnn(weights["self_attn.v_proj.bias"])
-
-            # Concatenate biases on device (using tensor_1d_to_2d_ttnn to avoid torch.unsqueeze)
-            bq_ttnn = tensor_1d_to_2d_ttnn(bq_padded, device, dtype=ttnn.bfloat16)
-            bk_ttnn = tensor_1d_to_2d_ttnn(bk_padded, device, dtype=ttnn.bfloat16)
-            bv_ttnn = tensor_1d_to_2d_ttnn(bv_padded, device, dtype=ttnn.bfloat16)
-            self.bqkv = ttnn.concat([bq_ttnn, bk_ttnn, bv_ttnn], dim=-1, memory_config=ttnn.DRAM_MEMORY_CONFIG)
+            bq_padded = pad_head_dim_bias_ttnn(weights["self_attn.q_proj.bias"]).reshape(1, -1)
+            bk_padded = pad_head_dim_bias_ttnn(weights["self_attn.k_proj.bias"]).reshape(1, -1)
+            bv_padded = pad_head_dim_bias_ttnn(weights["self_attn.v_proj.bias"]).reshape(1, -1)
+            bchunks = [
+                torch.cat(
+                    [
+                        bq_padded[:, i * hl : (i + 1) * hl],
+                        bk_padded[:, i * hl : (i + 1) * hl],
+                        bv_padded[:, i * hl : (i + 1) * hl],
+                    ],
+                    dim=-1,
+                )
+                for i in range(self.tp)
+            ]
+            self.bqkv = _per_chip_cols(device, bchunks, ttnn.bfloat16)
         else:
             self.bqkv = None
 
-        # Output projection - pad input head dim, output is hidden_size
+        # Output projection - pad input head dim, output is hidden_size; rows (heads) sharded over the mesh
         wo_padded = pad_head_dim_weight_ttnn(weights["self_attn.out_proj.weight"], heads_out=False)
-        self.wo = ttnn.from_torch(
-            wo_padded.T.contiguous(),
-            dtype=_siglip_w_dtype,
-            layout=ttnn.TILE_LAYOUT,
-            device=device,
-            memory_config=ttnn.DRAM_MEMORY_CONFIG,
-        )
+        self.wo = _shard_rows(device, wo_padded.T.contiguous(), self.tp, _siglip_w_dtype)
 
         if "self_attn.out_proj.bias" in weights:
-            self.bo = tensor_1d_to_2d_ttnn(weights["self_attn.out_proj.bias"], device, dtype=ttnn.bfloat16)
+            # row-parallel + all-reduce: the bias must enter the sum exactly once (chip 0 only)
+            self.bo = _bias_once(device, weights["self_attn.out_proj.bias"], self.tp)
         else:
             self.bo = None
-
-    def forward(self, hidden_states: ttnn.Tensor) -> ttnn.Tensor:
-        """
-        OPTIMIZED forward pass using fused QKV and native TTNN head operations.
-
-        Key optimizations:
-        1. Single fused QKV linear (3x fewer linear ops)
-        2. Native ttnn.experimental.nlp_create_qkv_heads
-        3. Native ttnn.experimental.nlp_concat_heads
-
-        Args:
-            hidden_states: TTNN tensor (batch_size, seq_len, hidden_size)
-
-        Returns:
-            TTNN tensor (batch_size, seq_len, hidden_size)
-        """
-        batch_size = hidden_states.shape[0]
-        seq_len = hidden_states.shape[1]
-
-        # Reshape to 4D for nlp_create_qkv_heads: [batch, 1, seq, hidden]
-        if len(hidden_states.shape) == 3:
-            hidden_states = ttnn.reshape(hidden_states, (batch_size, 1, seq_len, -1))
-
-        # OPTIMIZATION 1: Single fused QKV linear (instead of 3 separate)
-        # Output: [batch, 1, seq, 3 * num_heads * padded_head_dim]
-        # Use L1 for intermediate computation
-        xqkv_fused = ttnn.linear(
-            hidden_states,
-            self.wqkv,
-            compute_kernel_config=_SIGLIP_CKC,
-            bias=self.bqkv,
-            dtype=ttnn.bfloat16,
-            memory_config=ttnn.L1_MEMORY_CONFIG,
-        )
-
-        # OPTIMIZATION 2: Native TTNN head splitting
-        # This splits the fused QKV into separate Q, K, V with proper head layout
-        q_heads, k_heads, v_heads = ttnn.experimental.nlp_create_qkv_heads(
-            xqkv_fused,
-            num_heads=self.num_heads,
-            num_kv_heads=self.num_heads,  # SigLIP uses MHA, not MQA
-            transpose_k_heads=False,
-            memory_config=ttnn.L1_MEMORY_CONFIG,
-        )
-        ttnn.deallocate(xqkv_fused)
-
-        # SDPA configuration
-        device_grid = self.device.compute_with_storage_grid_size()
-        grid_x = min(8, device_grid.x)
-        grid_y = min(8, device_grid.y)
-
-        sdpa_cfg = ttnn.SDPAProgramConfig(
-            compute_with_storage_grid_size=(grid_x, grid_y),
-            q_chunk_size=min(256, seq_len),
-            k_chunk_size=min(256, seq_len),
-            exp_approx_mode=False,
-        )
-
-        # SDPA - stays entirely on device
-        attn_output = ttnn.transformer.scaled_dot_product_attention(
-            q_heads,
-            k_heads,
-            v_heads,
-            is_causal=False,
-            scale=self.scale,
-            program_config=sdpa_cfg,
-        )
-
-        ttnn.deallocate(q_heads)
-        ttnn.deallocate(k_heads)
-        ttnn.deallocate(v_heads)
-
-        # OPTIMIZATION 3: Native TTNN head concatenation
-        # This concatenates heads back to [batch, 1, seq, num_heads * padded_head_dim]
-        attn_concat = ttnn.experimental.nlp_concat_heads(
-            attn_output,
-            memory_config=ttnn.L1_MEMORY_CONFIG,
-        )
-        ttnn.deallocate(attn_output)
-
-        # Output projection - use L1 for intermediate computation
-        output = ttnn.linear(
-            attn_concat,
-            self.wo,
-            compute_kernel_config=_SIGLIP_CKC,
-            dtype=ttnn.bfloat16,
-            memory_config=ttnn.L1_MEMORY_CONFIG,
-        )
-        ttnn.deallocate(attn_concat)
-
-        # Add bias if present
-        if self.bo is not None:
-            output = ttnn.add(output, self.bo)
-
-        # Reshape back to 3D: [batch, 1, seq, hidden] -> [batch, seq, hidden]
-        output = ttnn.reshape(output, (batch_size, seq_len, self.hidden_size))
-
-        return output
 
     # ------------------------------------------------------------------ fused graph
 
     def _sdpa_config_fused(self, seq_len: int) -> ttnn.SDPAProgramConfig:
         """PI05_SDPA_SIGLIP_CHUNKS="q,k" -> full compute grid with those chunks (b x heads x q-chunks
-        work items instead of 16 for B=1); unset -> the legacy config (grid capped 8x8, 256/256)."""
+        work items instead of 16 for B=1); unset -> grid capped 8x8, 256/256 chunks."""
         if seq_len not in self._sdpa_cfg_fused_cache:
             device_grid = self.device.compute_with_storage_grid_size()
-            chunks = self.fused_cfg.sdpa_siglip if self.fused_cfg is not None else None
+            chunks = self.fused_cfg.sdpa_siglip
             if chunks is not None:
                 cfg = ttnn.SDPAProgramConfig(
                     compute_with_storage_grid_size=device_grid,
@@ -502,13 +312,17 @@ class SigLIPAttentionTTNN:
         return self._sdpa_cfg_fused_cache[seq_len]
 
     def forward_fused(self, hidden_states: ttnn.Tensor) -> ttnn.Tensor:
-        """Legacy attention with the out_proj bias fused into the linear (drops one add per block) and
-        the batch dim carried through (B camera images at once)."""
+        """Attention with the out_proj bias fused into the linear and the batch dim carried through
+        (B camera images at once)."""
         batch_size = hidden_states.shape[0]
         seq_len = hidden_states.shape[1]
         rows = batch_size * seq_len
         pc_qkv, pc_wo = self._program_configs(rows)
-        ckc = with_fp32_acc(_SIGLIP_CKC) if (pc_qkv is not None and self.fused_cfg.siglip_pc == "mcast2d_fp32") else _SIGLIP_CKC
+        ckc = (
+            with_fp32_acc(_SIGLIP_CKC)
+            if (pc_qkv is not None and self.fused_cfg.siglip_pc == "mcast2d_fp32")
+            else _SIGLIP_CKC
+        )
         x4 = ttnn.reshape(hidden_states, (batch_size, 1, seq_len, -1))
         xqkv_fused = ttnn.linear(
             x4,
@@ -521,8 +335,8 @@ class SigLIPAttentionTTNN:
         )
         q_heads, k_heads, v_heads = ttnn.experimental.nlp_create_qkv_heads(
             xqkv_fused,
-            num_heads=self.num_heads,
-            num_kv_heads=self.num_heads,
+            num_heads=self.num_heads_local,
+            num_kv_heads=self.num_heads_local,
             transpose_k_heads=False,
             memory_config=ttnn.L1_MEMORY_CONFIG,
         )
@@ -552,12 +366,14 @@ class SigLIPAttentionTTNN:
             program_config=pc_wo,
         )
         ttnn.deallocate(attn_concat)
+        if self.tp > 1:  # row-parallel wo: sum the per-chip partials
+            output = _tp_all_reduce(output, self.fused_cfg)
         return ttnn.reshape(output, (batch_size, seq_len, self.hidden_size))
 
     def _program_configs(self, rows: int):
         """PI05_SIGLIP_PC=mcast2d: explicit 2D multicast configs for the qkv / wo linears (rows = cameras x
         patches); auto -> (None, None)."""
-        if self.fused_cfg is None or self.fused_cfg.siglip_pc not in ("mcast2d", "mcast2d_fp32"):
+        if self.fused_cfg.siglip_pc not in ("mcast2d", "mcast2d_fp32"):
             return None, None
         if rows not in self._pc_cache:
             self._pc_cache[rows] = (
@@ -577,6 +393,7 @@ class SigLIPMLPTTNN:
         config: SigLIPConfig,
         weights: Dict[str, torch.Tensor],
         device: ttnn.Device,
+        fused_cfg: FusedConfig,
     ):
         """
         Initialize MLP with TTNN weights.
@@ -585,85 +402,66 @@ class SigLIPMLPTTNN:
             config: SigLIP configuration
             weights: PyTorch weights to convert
             device: TTNN device
+            fused_cfg: fused-graph knobs; ``fused_cfg.tp`` > 1 shards fc1 columns / fc2 rows over the mesh
+                (the intermediate 4304 is zero-padded to a multiple of 32 * tp, exact) and all-reduces fc2.
         """
         self.config = config
         self.device = device
+        self.fused_cfg = fused_cfg
+        self.tp = fused_cfg.tp
 
-        # FC1 (input -> intermediate) — bfloat8_b for reduced bandwidth
         _siglip_w_dtype = ttnn.bfloat8_b
-        fc1_weight = weights["mlp.fc1.weight"].T.contiguous()
-        self.fc1_weight = ttnn.from_torch(
-            fc1_weight,
-            dtype=_siglip_w_dtype,
-            layout=ttnn.TILE_LAYOUT,
-            device=device,
-            memory_config=ttnn.DRAM_MEMORY_CONFIG,
-        )
-
-        if "mlp.fc1.bias" in weights:
-            self.fc1_bias = tensor_1d_to_2d_ttnn(weights["mlp.fc1.bias"], device, dtype=ttnn.bfloat16)
+        fc1_weight = weights["mlp.fc1.weight"].T.contiguous()  # [hidden, inter]
+        fc2_weight = weights["mlp.fc2.weight"].T.contiguous()  # [inter, hidden]
+        fc1_bias = weights.get("mlp.fc1.bias")
+        fc2_bias = weights.get("mlp.fc2.bias")
+        if self.tp > 1:
+            inter = fc1_weight.shape[-1]
+            unit = 32 * self.tp
+            inter_padded = ((inter + unit - 1) // unit) * unit
+            if inter_padded != inter:  # zero columns -> gelu(0) = 0 -> zero fc2 rows: exact
+                fc1_weight = torch.nn.functional.pad(fc1_weight, (0, inter_padded - inter))
+                fc2_weight = torch.nn.functional.pad(fc2_weight, (0, 0, 0, inter_padded - inter))
+                if fc1_bias is not None:
+                    fc1_bias = torch.nn.functional.pad(fc1_bias, (0, inter_padded - inter))
+            self.fc1_weight = _shard_cols(device, fc1_weight, self.tp, _siglip_w_dtype)
+            self.fc1_bias = _bias_cols(device, fc1_bias, self.tp) if fc1_bias is not None else None
+            self.fc2_weight = _shard_rows(device, fc2_weight, self.tp, _siglip_w_dtype)
+            self.fc2_bias = _bias_once(device, fc2_bias, self.tp) if fc2_bias is not None else None
         else:
-            self.fc1_bias = None
-
-        # FC2 (intermediate -> output)
-        fc2_weight = weights["mlp.fc2.weight"].T.contiguous()
-        self.fc2_weight = ttnn.from_torch(
-            fc2_weight,
-            dtype=_siglip_w_dtype,
-            layout=ttnn.TILE_LAYOUT,
-            device=device,
-            memory_config=ttnn.DRAM_MEMORY_CONFIG,
-        )
-
-        if "mlp.fc2.bias" in weights:
-            self.fc2_bias = tensor_1d_to_2d_ttnn(weights["mlp.fc2.bias"], device, dtype=ttnn.bfloat16)
-        else:
-            self.fc2_bias = None
-
-    def forward(self, hidden_states: ttnn.Tensor) -> ttnn.Tensor:
-        """
-        Forward pass using TTNN operations.
-
-        Args:
-            hidden_states: TTNN tensor (batch_size, seq_len, hidden_size)
-
-        Returns:
-            TTNN tensor (batch_size, seq_len, hidden_size)
-        """
-        # FC1 with GELU activation - use L1 for intermediate computation
-        x = ttnn.linear(
-            hidden_states,
-            self.fc1_weight,
-            bias=self.fc1_bias,
-            dtype=ttnn.bfloat16,
-            memory_config=ttnn.L1_MEMORY_CONFIG,
-            activation="gelu",
-            compute_kernel_config=_SIGLIP_CKC,
-        )
-
-        # FC2 - use L1 for intermediate computation
-        output = ttnn.linear(
-            x,
-            self.fc2_weight,
-            dtype=ttnn.bfloat16,
-            memory_config=ttnn.L1_MEMORY_CONFIG,
-            compute_kernel_config=_SIGLIP_CKC,
-        )
-        ttnn.deallocate(x)
-
-        # Add bias if present
-        if self.fc2_bias is not None:
-            output = ttnn.add(output, self.fc2_bias)
-
-        return output
+            # FC1 (input -> intermediate) — bfloat8_b for reduced bandwidth
+            self.fc1_weight = ttnn.from_torch(
+                fc1_weight,
+                dtype=_siglip_w_dtype,
+                layout=ttnn.TILE_LAYOUT,
+                device=device,
+                memory_config=ttnn.DRAM_MEMORY_CONFIG,
+            )
+            self.fc1_bias = (
+                tensor_1d_to_2d_ttnn(fc1_bias, device, dtype=ttnn.bfloat16) if fc1_bias is not None else None
+            )
+            # FC2 (intermediate -> output)
+            self.fc2_weight = ttnn.from_torch(
+                fc2_weight,
+                dtype=_siglip_w_dtype,
+                layout=ttnn.TILE_LAYOUT,
+                device=device,
+                memory_config=ttnn.DRAM_MEMORY_CONFIG,
+            )
+            self.fc2_bias = (
+                tensor_1d_to_2d_ttnn(fc2_bias, device, dtype=ttnn.bfloat16) if fc2_bias is not None else None
+            )
 
     def forward_fused(self, hidden_states: ttnn.Tensor) -> ttnn.Tensor:
-        """fc1(+gelu) as legacy, fc2 with its bias fused into the linear (drops one add per block).
+        """fc1(+gelu), fc2 with its bias fused into the linear.
         PI05_SIGLIP_PC=mcast2d: explicit 2D multicast program configs (the GELU moves into fc1's config)."""
         rows = int(hidden_states.shape[0]) * int(hidden_states.shape[1])
         pc1, pc2 = self._program_configs(rows)
-        fc = getattr(self, "fused_cfg", None)
-        ckc = with_fp32_acc(_SIGLIP_CKC) if (pc1 is not None and fc is not None and fc.siglip_pc == "mcast2d_fp32") else _SIGLIP_CKC
+        ckc = (
+            with_fp32_acc(_SIGLIP_CKC)
+            if (pc1 is not None and self.fused_cfg.siglip_pc == "mcast2d_fp32")
+            else _SIGLIP_CKC
+        )
         x = ttnn.linear(
             hidden_states,
             self.fc1_weight,
@@ -684,19 +482,28 @@ class SigLIPMLPTTNN:
             program_config=pc2,
         )
         ttnn.deallocate(x)
+        if self.tp > 1:  # row-parallel fc2: sum the per-chip partials
+            output = _tp_all_reduce(output, self.fused_cfg)
         return output
 
     def _program_configs(self, rows: int):
-        fused_cfg = getattr(self, "fused_cfg", None)
-        if fused_cfg is None or fused_cfg.siglip_pc not in ("mcast2d", "mcast2d_fp32"):
+        if self.fused_cfg.siglip_pc not in ("mcast2d", "mcast2d_fp32"):
             return None, None
         if not hasattr(self, "_pc_cache"):
             self._pc_cache = {}
         if rows not in self._pc_cache:
             gelu = ttnn.UnaryWithParam(ttnn.UnaryOpType.GELU, False)
             self._pc_cache[rows] = (
-                mcast2d_program_config(self.device, rows, int(self.fc1_weight.shape[-2]), int(self.fc1_weight.shape[-1]), fused_activation=gelu),
-                mcast2d_program_config(self.device, rows, int(self.fc2_weight.shape[-2]), int(self.fc2_weight.shape[-1])),
+                mcast2d_program_config(
+                    self.device,
+                    rows,
+                    int(self.fc1_weight.shape[-2]),
+                    int(self.fc1_weight.shape[-1]),
+                    fused_activation=gelu,
+                ),
+                mcast2d_program_config(
+                    self.device, rows, int(self.fc2_weight.shape[-2]), int(self.fc2_weight.shape[-1])
+                ),
             )
         return self._pc_cache[rows]
 
@@ -711,7 +518,7 @@ class SigLIPBlockTTNN:
         config: SigLIPConfig,
         weights: Dict[str, torch.Tensor],
         device: ttnn.Device,
-        fused_cfg: Optional[FusedConfig] = None,
+        fused_cfg: FusedConfig,
     ):
         """
         Initialize block with TTNN weights.
@@ -720,7 +527,7 @@ class SigLIPBlockTTNN:
             config: SigLIP configuration
             weights: PyTorch weights to convert
             device: TTNN device
-            fused_cfg: TT_FUSED knobs (None / disabled -> the legacy ``forward`` only)
+            fused_cfg: fused-graph knobs
         """
         self.config = config
         self.device = device
@@ -767,11 +574,10 @@ class SigLIPBlockTTNN:
 
         # Attention and MLP - using native TTNN with padded head dim workaround
         self.attention = SigLIPAttentionTTNN(config, weights, device, fused_cfg=fused_cfg)
-        self.mlp = SigLIPMLPTTNN(config, weights, device)
-        self.mlp.fused_cfg = fused_cfg  # PI05_SIGLIP_PC (the legacy MLP constructor signature is unchanged)
+        self.mlp = SigLIPMLPTTNN(config, weights, device, fused_cfg=fused_cfg)
 
     def forward_fused(self, hidden_states: ttnn.Tensor) -> ttnn.Tensor:
-        """Legacy block with the fused-bias attention / MLP (11 launches per block instead of 13)."""
+        """Pre-LN block with the fused-bias attention / MLP (11 launches per block)."""
         normed = ttnn.layer_norm(
             hidden_states,
             weight=self.ln1_weight,
@@ -797,50 +603,6 @@ class SigLIPBlockTTNN:
         ttnn.deallocate(mlp_output)
         return hidden_states
 
-    def forward(self, hidden_states: ttnn.Tensor) -> ttnn.Tensor:
-        """
-        Forward pass using native TTNN operations.
-
-        Args:
-            hidden_states: TTNN tensor (batch_size, seq_len, hidden_size)
-
-        Returns:
-            TTNN tensor (batch_size, seq_len, hidden_size)
-        """
-        # Pre-attention LayerNorm
-        normed = ttnn.layer_norm(
-            hidden_states,
-            weight=self.ln1_weight,
-            bias=self.ln1_bias,
-            epsilon=self.config.layer_norm_eps,
-            memory_config=ttnn.L1_MEMORY_CONFIG,
-        )
-
-        # Native TTNN attention with padded head dim workaround
-        attn_output = self.attention.forward(normed)
-        ttnn.deallocate(normed)
-
-        # Residual connection - use L1 for intermediate computation
-        hidden_states = ttnn.add(hidden_states, attn_output, memory_config=ttnn.L1_MEMORY_CONFIG)
-        ttnn.deallocate(attn_output)
-
-        # Pre-MLP LayerNorm
-        normed = ttnn.layer_norm(
-            hidden_states,
-            weight=self.ln2_weight,
-            bias=self.ln2_bias,
-            epsilon=self.config.layer_norm_eps,
-            memory_config=ttnn.L1_MEMORY_CONFIG,
-        )
-
-        # MLP with residual - use L1 for intermediate computation
-        mlp_output = self.mlp.forward(normed)
-        ttnn.deallocate(normed)
-        hidden_states = ttnn.add(hidden_states, mlp_output, memory_config=ttnn.L1_MEMORY_CONFIG)
-        ttnn.deallocate(mlp_output)
-
-        return hidden_states
-
 
 # ============================================================================
 # Full Vision Tower (TTNN)
@@ -852,7 +614,7 @@ class SigLIPVisionTowerTTNN:
     Complete SigLIP vision tower using TTNN operations.
 
     Fully implemented in TTNN:
-        - Patch embedding on host (Unfold) + device (TTNN linear)
+        - Patch embedding: host im2col + device (TTNN linear)
         - Position embedding addition on device
         - All transformer blocks on device (TTNN)
         - Final layer norm on device
@@ -863,7 +625,7 @@ class SigLIPVisionTowerTTNN:
         config: SigLIPConfig,
         weights: Dict[str, torch.Tensor],
         device: ttnn.Device,
-        fused_cfg: Optional[FusedConfig] = None,
+        fused_cfg: FusedConfig,
     ):
         """
         Initialize vision tower.
@@ -872,16 +634,15 @@ class SigLIPVisionTowerTTNN:
             config: SigLIP configuration
             weights: PyTorch weights (will be converted)
             device: TTNN device
-            fused_cfg: TT_FUSED knobs (None / disabled -> the legacy ``forward`` only)
+            fused_cfg: fused-graph knobs
         """
         self.config = config
         self.device = device
         self.fused_cfg = fused_cfg
-        self._fused = fused_cfg is not None and fused_cfg.enabled
         self._pos_emb_torch: Optional[torch.Tensor] = None  # kept (fp32, 1.2 MB) for the fused pos table
         self._pos_table_cache: Dict[int, ttnn.Tensor] = {}  # batch -> [B, num_patches, hidden] bf16 DRAM
 
-        # Patch embedding (Unfold + TTNN linear)
+        # Patch embedding (host im2col + TTNN linear)
         self.patch_embed = PatchEmbeddingTTNN(config, weights, device)
 
         # Position embedding on device (handle both formats)
@@ -916,24 +677,7 @@ class SigLIPVisionTowerTTNN:
                 # Reshape back: (1, hidden_size, H, W) -> (num_patches, hidden_size)
                 pos_emb = pos_emb_interpolated.permute(0, 2, 3, 1).flatten(0, 2)
 
-            if self._fused:
-                self._pos_emb_torch = pos_emb.detach().clone().float()
-
-            # Create position IDs
-            self.position_ids = ttnn.arange(0, num_patches, 1, dtype=ttnn.uint32, device=device)
-            self.position_ids = ttnn.reshape(self.position_ids, (1, -1))
-
-            # Load position embedding weights
-            self.pos_emb_weights = ttnn.as_tensor(
-                pos_emb,
-                dtype=ttnn.bfloat16,
-                layout=ttnn.TILE_LAYOUT,
-                device=device,
-                memory_config=ttnn.DRAM_MEMORY_CONFIG,
-            )
-        else:
-            self.position_ids = None
-            self.pos_emb_weights = None
+            self._pos_emb_torch = pos_emb.detach().clone().float()
 
         # Initialize TTNN transformer blocks
         self.blocks = []
@@ -970,100 +714,13 @@ class SigLIPVisionTowerTTNN:
                     layer_weights[new_key] = value
         return layer_weights
 
-    def forward(self, pixel_values: torch.Tensor) -> ttnn.Tensor:
-        """
-        Process images to embeddings (TTNN).
-
-        Args:
-            pixel_values: PyTorch tensor (batch_size, channels, height, width)
-
-        Returns:
-            TTNN tensor (batch_size, num_patches, hidden_size)
-        """
-        # Patch embedding (hybrid - Unfold on host, linear on device)
-        hidden_states = self.patch_embed.forward(pixel_values)
-
-        # Add position embeddings (on device)
-        if self.pos_emb_weights is not None:
-            num_patches_actual = hidden_states.shape[1]
-            num_patches_expected = self.position_ids.shape[1]
-
-            # Check if we need to interpolate position embeddings dynamically
-            if num_patches_actual != num_patches_expected:
-                # Dynamic position embedding interpolation (rare - only when image size differs)
-                original_size = int(math.sqrt(num_patches_expected))
-                target_size = int(math.sqrt(num_patches_actual))
-
-                # Reshape position embeddings for interpolation
-                # pos_emb_weights: [num_patches, hidden_size] -> [1, hidden_size, H, W]
-                pos_emb_2d = ttnn.reshape(self.pos_emb_weights, (1, original_size, original_size, -1))
-                pos_emb_2d = ttnn.permute(pos_emb_2d, (0, 3, 1, 2))
-
-                # Interpolate using bicubic (via TTNN fallback_ops - handles TTNN tensors)
-                # fallback_ops.interpolate to replace torch.nn.functional.interpolate
-                pos_emb_interpolated = fallback_ops.interpolate(
-                    pos_emb_2d,
-                    size=(target_size, target_size),
-                    mode="bicubic",
-                    align_corners=False,
-                )
-
-                # Reshape back: [1, hidden_size, H, W] -> [num_patches, hidden_size]
-                pos_emb_resized = ttnn.permute(pos_emb_interpolated, (0, 2, 3, 1))
-                pos_emb_resized = ttnn.reshape(pos_emb_resized, (target_size * target_size, -1))
-
-                # Create new position IDs for actual number of patches
-                position_ids_new = ttnn.arange(0, num_patches_actual, 1, dtype=ttnn.uint32, device=self.device)
-                position_ids_new = ttnn.reshape(position_ids_new, (1, -1))
-
-                # Convert resized embeddings to TTNN
-                pos_emb_weights_new = ttnn.as_tensor(
-                    pos_emb_resized,
-                    dtype=ttnn.bfloat16,
-                    layout=ttnn.TILE_LAYOUT,
-                    device=self.device,
-                    memory_config=ttnn.DRAM_MEMORY_CONFIG,
-                )
-
-                # Use ttnn.embedding with resized weights
-                positional_embeddings = ttnn.embedding(
-                    position_ids_new,
-                    pos_emb_weights_new,
-                    layout=ttnn.TILE_LAYOUT,
-                )
-            else:
-                # Use pre-loaded position embeddings
-                positional_embeddings = ttnn.embedding(
-                    self.position_ids,
-                    self.pos_emb_weights,
-                    layout=ttnn.TILE_LAYOUT,
-                )
-
-            hidden_states = ttnn.add(hidden_states, positional_embeddings)
-
-        # Run through TTNN transformer blocks
-        for block in self.blocks:
-            hidden_states = block.forward(hidden_states)
-
-        # Final layer norm (on device)
-        if self.post_ln_weight is not None:
-            hidden_states = ttnn.layer_norm(
-                hidden_states,
-                weight=self.post_ln_weight,
-                bias=self.post_ln_bias,
-                epsilon=self.config.layer_norm_eps,
-                memory_config=ttnn.L1_MEMORY_CONFIG,
-            )
-
-        return hidden_states
-
     # ------------------------------------------------------------------ fused graph
 
     def _pos_table(self, batch: int) -> ttnn.Tensor:
         """``[B, num_patches, hidden]`` bf16 positional table: ``embedding(arange(N), table)`` is the
         identity gather, so the table itself (repeated over B so the add is same-shape). Built once per
-        batch size on the compile pass (outside the trace) from the same fp32 values as the legacy
-        ``pos_emb_weights`` (same bf16 rounding -> exact)."""
+        batch size on the compile pass (outside the trace) from the fp32 checkpoint values (the same bf16
+        rounding as a device copy of the table -> exact)."""
         if batch not in self._pos_table_cache:
             if self._pos_emb_torch is None:
                 raise RuntimeError("SigLIP fused path needs the positional embedding table")
@@ -1084,7 +741,7 @@ class SigLIPVisionTowerTTNN:
         hidden_states = self.patch_embed.forward_fused(patches)
         ttnn.deallocate(patches)
 
-        if self.pos_emb_weights is not None:
+        if self._pos_emb_torch is not None:
             pos = self._pos_table(hidden_states.shape[0])
             added = ttnn.add(hidden_states, pos)
             ttnn.deallocate(hidden_states)

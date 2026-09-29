@@ -2,16 +2,15 @@
 # SPDX-License-Identifier: Apache-2.0
 
 """
-Knobs for the fused / traced pi0.5 device graph (``TT_FUSED=1``).
+Knobs of the fused / traced pi0.5 device graph (``PI0ModelTTNN.sample_actions_fused``), the only
+inference path of this port.
 
-Everything new in the ``opt/pi05-base-p150-megakernel`` branch is opt-in behind ONE env knob
-that is read ONCE when the model is built (``PI0ModelTTNN.__init__`` -> ``FusedConfig.from_env``).
-``TT_FUSED`` unset / ``1`` -> ``FusedConfig.enabled == True`` (the DEFAULT since the device pass of
-2026-09-13); ``TT_FUSED=0`` -> every module runs the legacy code path untouched (bit-for-bit the
-behaviour shipped before that pass).
+The knobs are read ONCE when the model is built (``PI0ModelTTNN.__init__`` -> ``FusedConfig.from_env``).
+The unfused (legacy) path was removed: ``TT_FUSED`` unset or truthy is accepted and ignored;
+``TT_FUSED=0`` / ``false`` / ``off`` raises ``ValueError`` so an old manifest that asked for the
+unfused path cannot silently get the fused graph instead.
 
-Sub-knobs (only read when the fused path is enabled; every default is the recipe of
-``reports/megakernel/pi05-base-p150.md`` for the device pass):
+Sub-knobs (every default is the recipe of ``reports/megakernel/pi05-base-p150.md`` for the device pass):
 
 ``PI05_TRACE``              ``1`` (default): capture the whole device graph in one Metal trace during
                             the first ``sample_actions_fused`` call (the server's warm-up) and replay
@@ -27,14 +26,10 @@ Sub-knobs (only read when the fused path is enabled; every default is the recipe
                             (bf8 act x bf16 weight, path unexercised on Blackhole by this port).
                             ``legacy``: bf8 weights, linear + mac and the 3 typecasts (numerics of the
                             shipped path) while keeping the other fused levers.
-                            NOTE: with ``bf16`` / ``mixed`` the expert o_proj / down_proj are bf16 on
-                            the device, and the LEGACY ``sample_actions`` (which typecasts its
-                            residual / gate to bf8 before ``dit_minimal_matmul_addcmul_fused``) can no
-                            longer run on that model: the op requires the residual format == the
-                            weight format (``minimal_matmul_program_factory.cpp``
-                            ``TT_FATAL(ternary_a_data_format == in1_data_format)``). Only
-                            ``PI05_FUSED_RESIDUAL=legacy`` (or ``TT_FUSED`` unset) keeps the legacy
-                            entry points usable -- see ``legacy_sample_actions_available``.
+                            With ``bf16`` / ``mixed`` the expert o_proj / down_proj are bf16 on the
+                            device: ``dit_minimal_matmul_addcmul_fused`` requires the residual format ==
+                            the weight format (``minimal_matmul_program_factory.cpp``
+                            ``TT_FATAL(ternary_a_data_format == in1_data_format)``).
 ``PI05_MLP_CHUNK``          VLM MLP sequence chunk (default 256 = the legacy chunking; 384 / 512 / 0 were
                             measured far slower in the graph: the auto matmul program collapses above 8 M
                             tiles, and the unchunked path (``0``) also lowered the e2e PCC on 3 of 8
@@ -89,7 +84,7 @@ Sub-knobs (only read when the fused path is enabled; every default is the recipe
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass, fields
+from dataclasses import dataclass, field, fields
 from typing import Mapping, Optional, Tuple
 
 _TRUE = ("1", "true", "yes", "on")
@@ -162,7 +157,9 @@ def _blocks(env: Mapping[str, str], name: str, default: Optional[Blocks]) -> Opt
         return None
     parts = [p.strip() for p in raw.split(",")]
     if len(parts) not in (5, 7):
-        raise ValueError(f"{name}={raw!r}: expected 'M,K,N,subblock_h,subblock_w[,grid_x,grid_y]' (tiles; grid 0 = device)")
+        raise ValueError(
+            f"{name}={raw!r}: expected 'M,K,N,subblock_h,subblock_w[,grid_x,grid_y]' (tiles; grid 0 = device)"
+        )
     try:
         vals = [int(p) for p in parts]
     except ValueError:
@@ -180,9 +177,8 @@ def _blocks(env: Mapping[str, str], name: str, default: Optional[Blocks]) -> Opt
 
 @dataclass(frozen=True)
 class FusedConfig:
-    """Resolved knobs. ``enabled=False`` means: legacy path everywhere, nothing else is consulted."""
+    """Resolved knobs of the fused graph."""
 
-    enabled: bool = False
     trace: bool = True
     trace_region_size: int = 160_000_000
     residual: str = "bf16"
@@ -200,8 +196,38 @@ class FusedConfig:
     euler_dit_blocks: Optional[Blocks] = DEFAULT_EULER_DIT_BLOCKS
     expert_mm: str = "mcast1d_fp32"
     expert_mm_blocks: Optional[Blocks] = DEFAULT_DIT_BLOCKS
+    # Multi-chip (MeshDevice) knobs -- see ``tt/ttnn_ccl.py``.
+    # ``tp``: tensor-parallel degree of the SigLIP tower and the VLM prefill (heads / MLP columns
+    # sharded over the mesh, one all-reduce after every attention and MLP). 1 = every chip holds the
+    # full weights (single chip, or replicated mesh). 0 = "auto": resolved to the mesh size when the
+    # model is built. The action expert is always replicated (its 64-row ops are launch-bound: sharding
+    # them costs more in all-reduces than it saves -- expert_mm_bench.py, 2026-09-17).
+    tp: int = 1
+    ccl_topology: str = "ring"  # ring (FABRIC_1D_RING) | linear (FABRIC_1D)
+    # Knob names that were set explicitly in the environment (so ``resolved`` can apply TP-mode
+    # defaults only to the knobs the user did not choose).
+    env_keys: Tuple[str, ...] = field(default=(), compare=False, repr=False)
+    # Expert decode-loop knobs (PI05_KV_DTYPE, PI05_EXPERT_GEGLU):
+    # ``kv_dtype`` bf8 (as shipped) | bf16: the qkv projections of the VLM and the expert emit bf16 and the
+    #   KV caches are bf16, so the SDPA output is bf16 and the per-layer typecast before the fused o_proj
+    #   residual disappears (-1 launch per expert layer per step) with more precise K/V.
+    # ``expert_geglu``: ONE [1024, 8192] gate+up matmul followed by ttnn.geglu instead of gate linear(+gelu),
+    #   up linear and multiply (-1 launch per expert layer per step).
+    kv_dtype: str = "bf8"
+    expert_geglu: bool = False
+    # ``expert_attn`` ttnn | fused (the resolved default): ONE generic_op program per expert layer
+    #   (tt/ttnn_fused_attn.py) instead of create_heads + rotary x2 + cache fills + SDPA + concat_heads
+    #   (128.8 -> 40 us, PCC 0.9996; B = 1 only, other batches fall back to the ttnn ops).
+    expert_attn: str = "ttnn"
+    # ``expert_norm_fold`` (resolved default: on with the fused attention): the two adaRMS norms of every expert
+    #   layer are folded into per-step qkv / up|gate weights + biases (tt/ttnn_fused_norm.py); the remaining
+    #   per-row rsqrt is one small program and the fused attention / fused GeGLU apply it. -2 rms_norm launches and
+    #   -1 geglu launch per layer.
+    expert_norm_fold: bool = False
 
     def __post_init__(self):
+        if self.expert_attn not in ("ttnn", "fused"):
+            raise ValueError(f"PI05_EXPERT_ATTN={self.expert_attn!r} must be 'ttnn' or 'fused'")
         if self.residual not in RESIDUAL_MODES:
             raise ValueError(f"PI05_FUSED_RESIDUAL={self.residual!r} must be one of {RESIDUAL_MODES}")
         if self.mlp_chunk < 0 or self.mlp_chunk % 32 != 0:
@@ -218,20 +244,23 @@ class FusedConfig:
             raise ValueError(f"PI05_VLM_ATTN_PC={self.vlm_attn_pc!r} must be 'mcast2d', 'mcast2d_fp32' or 'auto'")
         if self.siglip_pc not in ("mcast2d", "mcast2d_fp32", "auto"):
             raise ValueError(f"PI05_SIGLIP_PC={self.siglip_pc!r} must be 'mcast2d', 'mcast2d_fp32' or 'auto'")
-
-    @classmethod
-    def legacy(cls) -> "FusedConfig":
-        return cls(enabled=False)
+        if self.tp < 0:
+            raise ValueError(f"PI05_TP={self.tp} must be 0 (auto = mesh size) or >= 1")
+        if self.ccl_topology not in ("ring", "linear"):
+            raise ValueError(f"PI05_CCL_TOPOLOGY={self.ccl_topology!r} must be 'ring' or 'linear'")
+        if self.kv_dtype not in ("bf8", "bf16"):
+            raise ValueError(f"PI05_KV_DTYPE={self.kv_dtype!r} must be 'bf8' or 'bf16'")
 
     @classmethod
     def from_env(cls, env: Optional[Mapping[str, str]] = None) -> "FusedConfig":
         """Read the knobs once. ``env`` defaults to ``os.environ`` (tests pass a dict)."""
         env = os.environ if env is None else env
-        enabled = _bool(env, "TT_FUSED", True)  # default ON (device pass 2026-09-13); TT_FUSED=0 = legacy
-        if not enabled:
-            return cls.legacy()
+        if not _bool(env, "TT_FUSED", True):
+            raise ValueError(
+                f"TT_FUSED={env.get('TT_FUSED')!r}: the unfused path was removed; the fused graph is the only "
+                "inference path (unset TT_FUSED)"
+            )
         return cls(
-            enabled=True,
             trace=_bool(env, "PI05_TRACE", True),
             trace_region_size=_int(env, "PI05_TRACE_REGION_SIZE", 160_000_000, minimum=1),
             residual=env.get("PI05_FUSED_RESIDUAL", "bf16").strip().lower() or "bf16",
@@ -249,41 +278,82 @@ class FusedConfig:
             euler_dit_blocks=_blocks(env, "PI05_EULER_DIT_BLOCKS", DEFAULT_EULER_DIT_BLOCKS),
             expert_mm=env.get("PI05_EXPERT_MM", "mcast1d_fp32").strip().lower() or "mcast1d_fp32",
             expert_mm_blocks=_blocks(env, "PI05_EXPERT_MM_BLOCKS", DEFAULT_DIT_BLOCKS),
+            tp=_int(env, "PI05_TP", 0, minimum=0),
+            ccl_topology=env.get("PI05_CCL_TOPOLOGY", "ring").strip().lower() or "ring",
+            env_keys=tuple(sorted(k for k in env.keys() if k.startswith("PI05_") or k == "TT_FUSED")),
+            kv_dtype=env.get("PI05_KV_DTYPE", "bf8").strip().lower() or "bf8",
+            expert_geglu=_bool(env, "PI05_EXPERT_GEGLU", False),
+            expert_attn=env.get("PI05_EXPERT_ATTN", "ttnn").strip().lower() or "ttnn",
+            expert_norm_fold=_bool(env, "PI05_EXPERT_NORM_FOLD", False),
         )
+
+    def resolved(self, num_devices: int) -> "FusedConfig":
+        """``tp`` 0 (auto) -> the mesh size, plus the layout defaults of the knobs not set explicitly."""
+        from dataclasses import replace
+
+        tp = self.tp if self.tp else max(1, int(num_devices))
+        if tp > 1 and num_devices % tp != 0:
+            raise ValueError(f"PI05_TP={tp} does not divide the mesh size {num_devices}")
+        updates = {"tp": tp}
+        if tp > 1:
+            # TP-mode defaults (1x4 sweep 2026-09-17, 2 cameras x 224 tokens, PCC vs torch on obs1):
+            #   chunked MLP (256) + auto gate/up: 87.5 ms / 0.9958; unchunked + auto: 120.3 ms (the auto
+            #   program of the per-chip [736,4096]x[4096,2048] down-proj is slow); unchunked + mcast2d
+            #   gate/up (+ the default mcast2d down): 78.5 ms / 0.9988. The per-chip gate/up outputs
+            #   [736, 4096] fit in L1, which is why the single-chip chunking is unnecessary here.
+            if "PI05_MLP_CHUNK" not in self.env_keys:
+                updates["mlp_chunk"] = 0
+            if "PI05_VLM_GATEUP_PC" not in self.env_keys:
+                updates["vlm_gateup_pc"] = "mcast2d"
+            # expert SDPA: q 64 / k 128 chunks measured 51.4 us vs 58.4 us for the legacy 32/32 (single chip,
+            # in-trace, 64 queries x 8 heads x 786 keys, 2026-09-17)
+            if "PI05_SDPA_EXPERT_CHUNKS" not in self.env_keys:
+                updates["sdpa_expert"] = (64, 128)
+            # one [1024, 8192] up|gate matmul + ttnn.geglu instead of gate(+gelu), up, multiply: 77.3 -> 76.5 ms,
+            # PCC unchanged (0.9988 / 0.9986), 1x4 sweep 2026-09-17
+            if "PI05_EXPERT_GEGLU" not in self.env_keys:
+                updates["expert_geglu"] = True
+        # explicit 2D-multicast programs for the VLM attention (qkv / o_proj) and SigLIP (qkv / wo / fc1 / fc2)
+        # matmuls on every layout: the auto programs are 4-8x slower at these shapes (single chip: VLM qkv 261 vs
+        # 38 us, o_proj 256 vs 31, SigLIP fc2 195 vs 42; micro-bench 2026-09-17 after comparing with the
+        # sdawle/dvartanians/pi0.5_bh branch). 1x4 mesh 57.5 -> 50.5 ms, one chip 102 -> 84 ms, PCC unchanged
+        # (0.9986 / 0.9988 vs torch on the mesh; the fp32-dest variants were slower AND lower PCC here).
+        if "PI05_VLM_ATTN_PC" not in self.env_keys:
+            updates["vlm_attn_pc"] = "mcast2d"
+        if "PI05_SIGLIP_PC" not in self.env_keys:
+            updates["siglip_pc"] = "mcast2d"
+        if "PI05_VLM_GATEUP_PC" not in self.env_keys and "vlm_gateup_pc" not in updates:
+            updates["vlm_gateup_pc"] = "mcast2d"
+        # fused expert attention (one generic_op program per expert layer, batch 1): 1x4 mesh 76.1 -> 59.7 ms per
+        # request, one chip 122.7 -> 103.1 ms, PCC vs torch unchanged (2026-09-17). PI05_EXPERT_ATTN=ttnn opts out.
+        if "PI05_EXPERT_ATTN" not in self.env_keys:
+            updates["expert_attn"] = "fused"
+        # the norm fold needs the fused [up | gate] weight (expert_geglu); with the fused attention both are on by
+        # default on every layout (the geglu default above only covered TP > 1)
+        if "PI05_EXPERT_GEGLU" not in self.env_keys and updates.get("expert_attn", self.expert_attn) == "fused":
+            updates["expert_geglu"] = True
+        if "PI05_EXPERT_NORM_FOLD" not in self.env_keys and updates.get("expert_attn", self.expert_attn) == "fused":
+            updates["expert_norm_fold"] = updates.get("expert_geglu", self.expert_geglu)
+        return replace(self, **updates)
 
     # ---- derived choices (pure python so the host tests can check them without ttnn) ----
 
     @property
     def fused_residual(self) -> bool:
         """True when the expert gated residuals use the fused matmul+addcmul with a bf16 stream."""
-        return self.enabled and self.residual != "legacy"
+        return self.residual != "legacy"
 
     def expert_residual_weight_dtype(self) -> str:
         """dtype name of the expert o_proj / down_proj weights (the fused op needs residual == weight format)."""
         return "bfloat16" if self.fused_residual else "bfloat8_b"
 
-    @property
-    def legacy_sample_actions_available(self) -> bool:
-        """True when the legacy ``sample_actions`` / ``sample_actions_traced`` can run on a model built
-        with this config. The legacy expert block typecasts hidden + gate to bf8 and feeds them with
-        ``mlp.down_proj`` into ``dit_minimal_matmul_addcmul_fused``, whose program factory requires the
-        residual format == the weight format; with bf16 o_proj / down_proj (``fused_residual``) that is
-        a hard device failure, so the legacy path is only available with bf8 expert weights."""
-        return self.expert_residual_weight_dtype() == "bfloat8_b"
-
     def expert_mlp_act_dtype(self) -> str:
         """dtype name of the expert gate/up/gelu*up activations feeding the down-proj."""
-        if not self.enabled or self.residual == "legacy":
-            return "bfloat8_b"
         return "bfloat16" if self.residual == "bf16" else "bfloat8_b"
 
     def action_out_weight_dtype(self) -> str:
-        """The Euler+out-proj fused op needs x_t (bf16) == weight format -> bf16 when fused."""
-        return "bfloat16" if self.enabled else "bfloat8_b"
-
-    def keep_fused_gate_up_copy(self) -> bool:
-        """Legacy keeps a fused [hidden, 2*mlp] gate_up copy next to the separate weights; fused mode does not."""
-        return not self.enabled
+        """The Euler+out-proj fused op needs x_t (bf16) == weight format -> bf16."""
+        return "bfloat16"
 
     def describe(self) -> dict:
         return {f.name: getattr(self, f.name) for f in fields(self)}

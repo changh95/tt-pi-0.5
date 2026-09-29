@@ -2,27 +2,29 @@
 # SPDX-License-Identifier: Apache-2.0
 
 """
-DEVICE test (not run in the host-only pass): fused / traced graph vs torch reference and vs the
-legacy ttnn path, on the served shape (2 cameras, PI05_TOKEN_LEN tokens, 10 steps).
+DEVICE tests of the fused / traced graph (``sample_actions_fused``), with openpi as ground truth.
 
-    # from the model repo root ($ROOT/models/pi05-base-p150), tree python, PYTHONPATH=code
-    TT_FUSED=1 [PI05_TRACE=0] [PI05_FUSED_RESIDUAL=legacy] \
-        pytest code/models/experimental/pi0_5/tests/pcc/test_pcc_pi05_fused.py -v -s
+    TT_FUSED=1 pytest models/experimental/pi0_5/tests/pcc/test_pcc_pi05_fused.py -v -s -k libero   # one model each:
+    TT_FUSED=1 pytest models/experimental/pi0_5/tests/pcc/test_pcc_pi05_fused.py -v -s -k base     # run separately
+    python models/experimental/pi0_5/tests/pcc/test_pcc_pi05_fused.py {libero|base} --out results.json
 
-Gates (same as test_pcc_pi05_model / test_pcc_pi05_multireplan): e2e PCC(fused, torch) >= 0.93,
-PCC(fused, legacy ttnn) >= 0.99 for the exact levers with PI05_FUSED_RESIDUAL=legacy (rounding-level
-differences only), traced == eager fused bit-for-bit, repeat == repeat bit-for-bit, and a second
-observation must move the output about as much as it moves the torch reference (multi-replan).
+``libero``: lerobot/pi05_libero at openpi's pi05_libero shape (2 cameras, prompt right-padded to 32, H = 10) on the
+openpi GPU golden (``golden_openpi.py``): PCC over the 7 action dims of every record; ten trace replays bit-identical.
 
-The fused-vs-legacy-ttnn comparison runs ONLY with PI05_FUSED_RESIDUAL=legacy: under ``bf16`` /
-``mixed`` the model stores the expert o_proj / down_proj in bf16 and the legacy expert block (bf8
-residual into dit_minimal_matmul_addcmul_fused) cannot run on it -- ``sample_actions`` raises a
-RuntimeError (see FusedConfig.legacy_sample_actions_available); the true legacy baseline for those
-modes is the TT_FUSED-unset run (DEVICE_VALIDATION.md step 0).
+``base``: lerobot/pi05_base at the served shape (2 cameras, 224 tokens, H = 50) with PADDED prompts (a real prefix
+of ``N_REAL`` ids, then ``<pad>`` = 0): PCC vs the torch reference (which applies openpi's padding mask and suffix
+positions, see ``test_reference_vs_openpi.py``); the mask is live (treating the pads as real tokens changes the
+output) and exact (changing the pad ids under the mask leaves the output bit-identical); ten replays bit-identical.
+
+Both report the traced latency: ``sample_actions_fused`` wall (upload + replay + readback) and ``execute_trace``
+alone, median of ``PI05_BENCH_RUNS`` (default 60).
 """
 
+import json
 import os
-from pathlib import Path
+import statistics
+import sys
+import time
 
 import pytest
 import torch
@@ -32,18 +34,28 @@ from models.experimental.pi0_5.common.configs import PI0ModelConfig, SigLIPConfi
 from models.experimental.pi0_5.common.fused_config import FusedConfig
 from models.experimental.pi0_5.common.weight_loader import PI0WeightLoader
 from models.experimental.pi0_5.reference.torch_pi0_model import PI0Model as PI0ModelTorch
+from models.experimental.pi0_5.tests.pcc.golden_openpi import (
+    LIBERO_WEIGHTS,
+    libero_config,
+    load_records,
+    pcc,
+    pcc7,
+    record_inputs,
+)
 from models.experimental.pi0_5.tt.ttnn_pi0_model import PI0ModelTTNN
 
-CHECKPOINT_PATH = os.environ.get("PI05_WEIGHTS_DIR", "lerobot/pi05_base")
-TOKEN_LEN = int(os.environ.get("PI05_TOKEN_LEN", "224"))
-NUM_IMAGES = int(os.environ.get("PI05_NUM_IMAGES", "2"))
-SEED = 42
-PCC_E2E = 0.93
-PCC_VS_LEGACY_EXACT = 0.99
-RESPONSE_RATIO_MIN = 0.6
+BASE_WEIGHTS = os.environ.get("PI05_WEIGHTS_DIR", "lerobot/pi05_base")
+BENCH_RUNS = int(os.environ.get("PI05_BENCH_RUNS", "60"))
+LIBERO_LANG_LEN = 32
+BASE_TOKEN_LEN = 224
+N_REAL = (40, 97, 12, 150, 201, 224)  # real prompt ids of the base observations (the rest is <pad>; 224 = unpadded)
+PCC7_LIBERO_MIN = 0.95  # per record; the mean gate is below
+PCC7_LIBERO_MEAN = 0.9828  # the eager workaround's mean (tt_pi05_policy.py mode=openpi, 2026-09-2x)
+PCC_BASE_MIN = 0.95  # per observation: bf16 device vs fp32 torch on random inputs (unpadded: 0.90-0.999, README)
+PCC_BASE_MEAN = 0.98
 
 
-def create_pi05_config() -> PI0ModelConfig:
+def base_config() -> PI0ModelConfig:
     config = PI0ModelConfig(action_dim=32, action_horizon=50, state_dim=32, pi05=True)
     config.siglip_config = SigLIPConfig(
         hidden_size=1152, intermediate_size=4304, num_hidden_layers=27, num_attention_heads=16, image_size=224, patch_size=14
@@ -51,105 +63,153 @@ def create_pi05_config() -> PI0ModelConfig:
     return config
 
 
-def compute_pcc(a: torch.Tensor, b: torch.Tensor) -> float:
-    t1, t2 = a.flatten().float(), b.flatten().float()
-    s1, s2 = torch.std(t1), torch.std(t2)
-    if s1 == 0 or s2 == 0:
-        return 1.0 if torch.allclose(t1, t2) else 0.0
-    return (torch.mean((t1 - t1.mean()) * (t2 - t2.mean())) / (s1 * s2)).item()
-
-
-def make_inputs(seed: int):
-    g = torch.Generator().manual_seed(seed)
-    images = [torch.rand(1, 3, 224, 224, generator=g) * 2 - 1 for _ in range(NUM_IMAGES)]
-    tokens = torch.randint(0, 256000, (1, TOKEN_LEN), generator=g)
-    noise = torch.randn(1, 50, 32, generator=g)
-    return images, tokens, noise
-
-
-def run_legacy(model: PI0ModelTTNN, device, images, tokens, noise):
-    images_ttnn = [
-        ttnn.from_torch(im, dtype=ttnn.bfloat16, layout=ttnn.TILE_LAYOUT, device=device, memory_config=ttnn.DRAM_MEMORY_CONFIG)
-        for im in images
-    ]
-    masks = [torch.ones(1, dtype=torch.bool) for _ in images]
-    tok = ttnn.from_torch(tokens, dtype=ttnn.uint32, layout=ttnn.ROW_MAJOR_LAYOUT, device=device)
-    lm = ttnn.from_torch(torch.ones(1, TOKEN_LEN), dtype=ttnn.bfloat16, layout=ttnn.TILE_LAYOUT, device=device)
-    st = ttnn.from_torch(torch.zeros(1, 32), dtype=ttnn.bfloat16, layout=ttnn.TILE_LAYOUT, device=device)
-    out = model.sample_actions(images=images_ttnn, img_masks=masks, lang_tokens=tok, lang_masks=lm, state=st, noise=noise)
-    return ttnn.to_torch(out).float()
-
-
-def run_torch(model_torch: PI0ModelTorch, images, tokens, noise):
-    masks = [torch.ones(1, dtype=torch.bool) for _ in images]
-    lm = torch.ones(1, TOKEN_LEN, dtype=torch.bool)
-    torch.manual_seed(SEED)
-    # the torch reference draws its own noise: monkeypatch the sampler to use ours
-    model_torch.denoising.sample_noise = lambda *a, **k: noise.clone()
-    return model_torch.sample_actions(images, masks, tokens, lm, torch.zeros(1, 32)).float()
+def open_device():
+    fused = FusedConfig.from_env()
+    kwargs = dict(device_id=int(os.environ.get("PI0_DEVICE_ID", "0")), l1_small_size=24576)
+    if fused.trace:
+        kwargs["trace_region_size"] = fused.trace_region_size
+    dev = ttnn.open_device(**kwargs)
+    dev.enable_program_cache()
+    return dev
 
 
 @pytest.fixture(scope="module")
 def device():
-    fused = FusedConfig.from_env()
-    kwargs = dict(device_id=int(os.environ.get("PI0_DEVICE_ID", "0")), l1_small_size=24576)
-    if fused.enabled and fused.trace:
-        kwargs["trace_region_size"] = fused.trace_region_size
-    dev = ttnn.open_device(**kwargs)
-    dev.enable_program_cache()
+    dev = open_device()
     yield dev
     ttnn.close_device(dev)
 
 
-def test_fused_vs_torch_and_legacy(device):
-    fused_cfg = FusedConfig.from_env()
-    if not fused_cfg.enabled:
-        pytest.skip("set TT_FUSED=1")
-    loader = PI0WeightLoader(CHECKPOINT_PATH)
-    config = create_pi05_config()
+def bench(model, device, args, runs=BENCH_RUNS):
+    """``args`` = (images, tokens, noise, lang_masks)."""
+    call, replay = [], []
+    for _ in range(runs):
+        t0 = time.perf_counter()
+        model.sample_actions_fused(*args[:3], lang_masks=args[3])
+        call.append((time.perf_counter() - t0) * 1e3)
+    for _ in range(runs):
+        t0 = time.perf_counter()
+        ttnn.execute_trace(device, model._fused_trace_id, cq_id=0, blocking=True)
+        replay.append((time.perf_counter() - t0) * 1e3)
+    return {
+        "runs": runs,
+        "call_ms_median": statistics.median(call),
+        "call_ms_min": min(call),
+        "replay_ms_median": statistics.median(replay),
+        "replay_ms_min": min(replay),
+    }
 
-    images, tokens, noise = make_inputs(1)
-    images_b, tokens_b, _ = make_inputs(2)
 
-    torch.manual_seed(SEED)
-    model_torch = PI0ModelTorch(config, loader)
-    ref_a = run_torch(model_torch, images, tokens, noise)
-    ref_b = run_torch(model_torch, images_b, tokens_b, noise)
-    del model_torch
+def replays_identical(model, args, n=10):
+    first = model.sample_actions_fused(*args[:3], lang_masks=args[3])
+    return all(torch.equal(first, model.sample_actions_fused(*args[:3], lang_masks=args[3])) for _ in range(n - 1))
 
-    torch.manual_seed(SEED)
-    model = PI0ModelTTNN(config, loader, device, fused=fused_cfg)
 
-    fused_a = model.sample_actions_fused(images, tokens, noise)  # compile + capture (+ execute)
-    fused_a2 = model.sample_actions_fused(images, tokens, noise)  # replay
-    fused_b = model.sample_actions_fused(images_b, tokens_b, noise)
-    assert fused_a.shape == (1, 50, 32) and torch.isfinite(fused_a).all()
-    assert torch.equal(fused_a, fused_a2), "trace replay must be deterministic"
-
-    pcc_a = compute_pcc(fused_a, ref_a)
-    pcc_b = compute_pcc(fused_b, ref_b)
-    print(f"PCC fused vs torch: A={pcc_a:.4f} B={pcc_b:.4f} (trace={model._fused_trace_id is not None})")
-    assert pcc_a >= PCC_E2E and pcc_b >= PCC_E2E
-
-    # multi-replan responsiveness (stale prefix KV would collapse the fused response)
-    resp_torch = (ref_b - ref_a).norm().item()
-    resp_fused = (fused_b - fused_a).norm().item()
-    print(f"response to a new observation: torch {resp_torch:.4f} fused {resp_fused:.4f}")
-    assert resp_fused >= RESPONSE_RATIO_MIN * resp_torch
-
-    # legacy ttnn path on the same model object for the A/B number -- only when the model keeps the
-    # bf8 expert o_proj / down_proj (PI05_FUSED_RESIDUAL=legacy); with bf16 weights the legacy block
-    # would hit TT_FATAL(ternary_a_data_format == in1_data_format) and sample_actions refuses to run.
-    if fused_cfg.legacy_sample_actions_available:
-        legacy_a = run_legacy(model, device, images, tokens, noise)
-        pcc_fl = compute_pcc(fused_a, legacy_a)
-        print(f"PCC fused vs legacy-ttnn (same weights, residual={fused_cfg.residual}): {pcc_fl:.4f}")
-        assert pcc_fl >= PCC_VS_LEGACY_EXACT
-    else:
-        print(
-            f"PI05_FUSED_RESIDUAL={fused_cfg.residual}: legacy sample_actions is not runnable on this model "
-            "(bf16 expert o_proj / down_proj); compare against the TT_FUSED-unset run (step 0) instead"
-        )
-        with pytest.raises(RuntimeError, match="not available"):
-            run_legacy(model, device, images, tokens, noise)
+def run_libero(device):
+    records = load_records()
+    torch.manual_seed(42)
+    model = PI0ModelTTNN(libero_config(), PI0WeightLoader(LIBERO_WEIGHTS), device, fused=FusedConfig.from_env())
+    rows = []
+    for rec in records:
+        images, tokens, lang_mask, noise = record_inputs(rec, LIBERO_LANG_LEN)
+        out = model.sample_actions_fused(images, tokens, noise, lang_masks=lang_mask)
+        rows.append({"tag": rec["tag"], "n_lang": int(lang_mask.sum()), "pcc7": pcc7(out, rec["actions_model_norm"]),
+                     "pcc32": pcc(out, rec["actions_model_norm"]),
+                     "maxabs7": float((out[..., :7] - rec["actions_model_norm"][..., :7]).abs().max())})
+        print(json.dumps(rows[-1]), flush=True)
+    images, tokens, lang_mask, noise = record_inputs(records[0], LIBERO_LANG_LEN)
+    args = (images, tokens, noise, lang_mask)
+    res = {
+        "shape": "libero 2x224^2, lang_len 32, H 10",
+        "traced": model._fused_trace_id is not None,
+        "fused_cfg": {k: str(v) for k, v in model.fused_cfg.describe().items()},
+        "rows": rows,
+        "pcc7_mean": sum(r["pcc7"] for r in rows) / len(rows),
+        "pcc7_min": min(r["pcc7"] for r in rows),
+        "ten_replays_bit_identical": replays_identical(model, args),
+        "latency": bench(model, device, args),
+    }
     model.release_trace()
+    return res
+
+
+def padded_prompt(seed: int, n_real: int, pad_fill: int = 0):
+    g = torch.Generator().manual_seed(seed)
+    images = [torch.rand(1, 3, 224, 224, generator=g) * 2 - 1 for _ in range(2)]
+    tokens = torch.full((1, BASE_TOKEN_LEN), pad_fill, dtype=torch.long)
+    tokens[0, :n_real] = torch.randint(1, 256000, (n_real,), generator=g)
+    mask = torch.zeros(1, BASE_TOKEN_LEN, dtype=torch.bool)
+    mask[0, :n_real] = True
+    noise = torch.randn(1, 50, 32, generator=g)
+    return images, tokens, noise, mask
+
+
+def run_base(device):
+    loader = PI0WeightLoader(BASE_WEIGHTS)
+    obs = [padded_prompt(i + 1, n) for i, n in enumerate(N_REAL)]
+    ref = PI0ModelTorch(base_config(), loader)
+    refs = []
+    for images, tokens, noise, mask in obs:
+        ref.denoising.sample_noise = lambda *a, _n=noise, **k: _n.clone()
+        with torch.no_grad():
+            refs.append(ref.sample_actions(images, [torch.ones(1, dtype=torch.bool)] * 2, tokens, mask, torch.zeros(1, 32)).float())
+    del ref
+    torch.manual_seed(42)
+    model = PI0ModelTTNN(base_config(), loader, device, fused=FusedConfig.from_env())
+    outs = [model.sample_actions_fused(i, t, n, lang_masks=m) for (i, t, n, m) in obs]
+    images, tokens, noise, mask = obs[0]
+    # mask live: the same padded prompt with every pad treated as a real token
+    unmasked = model.sample_actions_fused(images, tokens, noise, lang_masks=torch.ones_like(mask))
+    # mask exact: different ids in the pad slots, same mask -> the pads are invisible
+    other_pads = tokens.clone()
+    other_pads[0, N_REAL[0]:] = torch.randint(1, 256000, (BASE_TOKEN_LEN - N_REAL[0],), generator=torch.Generator().manual_seed(9))
+    repadded = model.sample_actions_fused(images, other_pads, noise, lang_masks=mask)
+    # default mask (tokens != 0) == explicit mask for a <pad>=0 prompt
+    default_mask = model.sample_actions_fused(images, tokens, noise)
+    res = {
+        "shape": "base 2x224^2, 224 tokens, H 50",
+        "n_real": list(N_REAL),
+        "traced": model._fused_trace_id is not None,
+        "fused_cfg": {k: str(v) for k, v in model.fused_cfg.describe().items()},
+        "pcc_vs_reference": [pcc(o, r) for o, r in zip(outs, refs)],
+        "masked_vs_unmasked_pcc": pcc(outs[0], unmasked),
+        "masked_vs_unmasked_maxabs": float((outs[0] - unmasked).abs().max()),
+        "unmasked_pcc_vs_reference": pcc(unmasked, refs[0]),
+        "pad_ids_invisible_bit_identical": bool(torch.equal(outs[0], repadded)),
+        "default_mask_bit_identical": bool(torch.equal(outs[0], default_mask)),
+        "ten_replays_bit_identical": replays_identical(model, obs[0]),
+        "latency": bench(model, device, obs[0]),
+    }
+    model.release_trace()
+    return res
+
+
+def test_libero_vs_openpi(device):
+    res = run_libero(device)
+    print(json.dumps({k: v for k, v in res.items() if k != "rows"}, indent=1))
+    assert res["traced"] and res["ten_replays_bit_identical"]
+    assert res["pcc7_mean"] >= PCC7_LIBERO_MEAN and res["pcc7_min"] >= PCC7_LIBERO_MIN
+
+
+def test_base_padded_vs_reference(device):
+    res = run_base(device)
+    print(json.dumps(res, indent=1))
+    assert res["traced"] and res["ten_replays_bit_identical"]
+    assert min(res["pcc_vs_reference"]) >= PCC_BASE_MIN
+    assert sum(res["pcc_vs_reference"]) / len(res["pcc_vs_reference"]) >= PCC_BASE_MEAN
+    assert res["masked_vs_unmasked_maxabs"] > 0.0, "the padding mask is not applied"
+    assert res["pad_ids_invisible_bit_identical"] and res["default_mask_bit_identical"]
+
+
+if __name__ == "__main__":
+    which = sys.argv[1]
+    out = sys.argv[sys.argv.index("--out") + 1] if "--out" in sys.argv else None
+    dev = open_device()
+    try:
+        res = run_libero(dev) if which == "libero" else run_base(dev)
+    finally:
+        ttnn.close_device(dev)
+    res["time"] = time.strftime("%F %T")
+    print("RESULT", json.dumps({k: v for k, v in res.items() if k not in ("rows", "fused_cfg")}), flush=True)
+    if out:
+        json.dump(res, open(out, "w"), indent=1)
