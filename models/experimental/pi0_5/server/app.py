@@ -52,6 +52,8 @@ Configuration is read from the environment inside the lifespan (never at import)
                            ``0`` starts anyway and serves pre-tokenised ``tokens`` only
 ``PI05_WARMUP_RUNS``       warm-up forwards before READY (default 2)
 ``PI05_FREE_HOST_WEIGHTS`` ``1`` (default) drops the fp32 host copy of the checkpoint after conversion
+``PI05_MODEL_NAME``        name reported by ``/info`` and ``/v1/models`` (default ``pi05-base-p150``)
+``PI05_SOURCE_COMMIT``     commit of github.com/changh95/tt-pi-0.5 reported by ``/info`` (set by the package)
 
 Fused / traced device graph (the only inference path; knobs read once by ``FusedConfig.from_env()``):
 the whole device graph (host im2col -> SigLIP batched over the cameras -> VLM prefill writing the
@@ -102,7 +104,7 @@ from pydantic import BaseModel, Field
 # constants (the validated contract)
 # ----------------------------------------------------------------------------------------
 
-MODEL_NAME = os.environ.get("PI05_MODEL_NAME", "pi05-base-p300x2")  # /info and the /v1/models stub
+MODEL_NAME = os.environ.get("PI05_MODEL_NAME", "pi05-base-p150")  # /info and the /v1/models stub
 DEFAULT_WEIGHTS_REPO = "lerobot/pi05_base"
 DEFAULT_TOKENIZER_REPO = "google/paligemma-3b-pt-224"
 IMAGE_SIZE = 224
@@ -113,10 +115,10 @@ PALIGEMMA_VOCAB_SIZE = 257152
 PAD_TOKEN_ID = 0  # PaliGemma <pad>
 NUM_STATE_BINS = 256
 SOURCE_REPO = "https://github.com/changh95/tt-pi-0.5"
-SOURCE_COMMIT = "f4a1d8389a9f8cbcaa6ba542a238429cfdc67a3b"
-FORK_REPO = "https://github.com/tenstorrent/tt-metal"
-FORK_BRANCH = "changh95/pi05-v2-disagg"
-FORK_COMMIT = "see the package's tt_kernel_manifest.json (built.tt_metal)"
+# The commit of SOURCE_REPO the served code was taken from; the package sets it in serve.env
+# (a commit cannot name itself). The tt-metal tree is in tt_kernel_manifest.json (container.built.tt_metal).
+SOURCE_COMMIT = os.environ.get("PI05_SOURCE_COMMIT") or None
+TT_METAL_NOTE = "see the package's tt_kernel_manifest.json (container.built.tt_metal)"
 LICENSE_NOTE = (
     "Weights: lerobot/pi05_base under the Gemma Terms of Use "
     "(https://ai.google.dev/gemma/terms); the port code (Tenstorrent / Hyunggi Chang) is "
@@ -956,7 +958,8 @@ def info() -> dict:
         "source": {
             "repo": SOURCE_REPO,
             "commit": SOURCE_COMMIT,
-            "code_from": f"{FORK_REPO} branch {FORK_BRANCH} @ {FORK_COMMIT} (models/experimental/pi0_5, newer than the GitHub snapshot)",
+            "path": "models/experimental/pi0_5",
+            "tt_metal": TT_METAL_NOTE,
         },
         "inputs": {
             "num_images": cfg.num_images if cfg else 2,
