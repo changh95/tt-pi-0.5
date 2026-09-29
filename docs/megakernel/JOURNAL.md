@@ -241,7 +241,7 @@ Decision: PI05_MK_FID8 default hifi2 (bfp8 matmuls at HiFi2): no measurable time
 | prompt-length edge cases no worse than current | PASS 6/6 | E1.json, E2.json |
 | existing suites green | test_fused_host 23/23, test_reference_vs_openpi 1/1, mk CPU 10/10, test_pcc libero PASS; test_pcc base RED on its own min-0.95 gate for BOTH paths (megakernel 0.948, shipped 0.938, seed 3) | B0.json, B2.json |
 | expert loop device time < 31.26 / 27.85 ms | PASS 17.50 / 16.08 ms | structural_*.json |
-| whole call < 84.2 / 76.77 ms | PASS 70.75 / 65.59 ms (LoFi) - 66.08 (HiFi2 fp32-S arm) | B2.json, L1.json, L2.json |
+| whole call < 84.2 / 76.77 ms | PASS base 70.75 ms (B2.json, final config), LIBERO 65.76 ms (L3.json, final config; PCC7 0.999884 / 0.999778, traced, 10 replays bit-identical) | B2.json, L3.json |
 | size <= 128 KB | PASS 70,696 / 71,032 B | size_check (impl/size_check_v1_*.json is the first build) |
 | shipped path under the 64 KiB cut | PASS (identical PCCs, 83.75 ms) | V1.json |
 | server P1-6 | PASS (smoke, 70.72 ms served, stamp, refusals) | served_*.json, server_refusals.txt |
