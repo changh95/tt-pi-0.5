@@ -44,6 +44,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent.parent.parent)
 from models.experimental.pi0_5.reference.torch_pi0_model import PI0Model as PI0ModelTorch
 from models.experimental.pi0_5.tt.ttnn_pi0_model import PI0ModelTTNN
 from models.experimental.pi0_5.common.configs import PI0ModelConfig, SigLIPConfig
+from models.experimental.pi0_5.common.fused_config import FusedConfig
 from models.experimental.pi0_5.common.weight_loader import PI0WeightLoader
 
 
@@ -307,40 +308,10 @@ def run_sample(sample, config, model_torch, model_ttnn, device, shared_x0: torch
         model_torch.denoising.sample_noise = saved_sample_noise
 
     # ---- TTNN ----
-    # Sync the model's internal x_0 slot to match shared_x0 so both use identical noise
-    model_ttnn.x_t_ttnn = ttnn.from_torch(
-        shared_x0,
-        dtype=ttnn.bfloat16,
-        layout=ttnn.TILE_LAYOUT,
-        device=device,
-        memory_config=ttnn.L1_MEMORY_CONFIG,
-    )
-
-    images_ttnn = [
-        ttnn.from_torch(
-            img,
-            dtype=ttnn.bfloat16,
-            layout=ttnn.TILE_LAYOUT,
-            device=device,
-            memory_config=ttnn.DRAM_MEMORY_CONFIG,
-        )
-        for img in images
-    ]
-    lang_tokens_ttnn = ttnn.from_torch(lang_tokens, dtype=ttnn.uint32, layout=ttnn.ROW_MAJOR_LAYOUT, device=device)
-    lang_masks_ttnn = ttnn.from_torch(lang_masks.float(), dtype=ttnn.bfloat16, layout=ttnn.TILE_LAYOUT, device=device)
-    state_ttnn = ttnn.from_torch(state, dtype=ttnn.bfloat16, layout=ttnn.TILE_LAYOUT, device=device)
-
+    # Fused graph: torch inputs, the same x_0 as `noise` (state / img_masks are not graph inputs for pi0.5)
     with torch.no_grad():
         ttnn_t0 = time.time()
-        ttnn_actions = model_ttnn.sample_actions(
-            images=images_ttnn,
-            img_masks=img_masks,
-            lang_tokens=lang_tokens_ttnn,
-            lang_masks=lang_masks_ttnn,
-            state=state_ttnn,
-        )
-        if isinstance(ttnn_actions, ttnn.Tensor):
-            ttnn_actions = ttnn.to_torch(ttnn_actions)
+        ttnn_actions = model_ttnn.sample_actions_fused(images, lang_tokens, noise=shared_x0, lang_masks=lang_masks)
         ttnn_ms = (time.time() - ttnn_t0) * 1000
 
     # Metrics
@@ -419,7 +390,13 @@ def main():
         return 1
 
     print("\n🔌 Opening TTNN device...")
-    device = ttnn.open_device(device_id=0, l1_small_size=24576)
+    fused_cfg = FusedConfig.from_env()
+    open_kwargs = dict(device_id=0, l1_small_size=24576)
+    if fused_cfg.trace:
+        open_kwargs["trace_region_size"] = fused_cfg.trace_region_size
+    device = ttnn.open_device(**open_kwargs)
+    device.enable_program_cache()
+    model_ttnn = None
 
     try:
         config = create_pi05_config()
@@ -433,7 +410,7 @@ def main():
 
         print("5. TTNN model...")
         torch.manual_seed(SEED)
-        model_ttnn = PI0ModelTTNN(config, weight_loader, device)
+        model_ttnn = PI0ModelTTNN(config, weight_loader, device, fused=fused_cfg)
 
         # Shared initial noise — same x_0 used for every sample, both models
         torch.manual_seed(SEED)
@@ -490,6 +467,8 @@ def main():
 
     finally:
         print("\n🔌 Closing device...")
+        if model_ttnn is not None:
+            model_ttnn.release_trace()
         ttnn.close_device(device)
 
 

@@ -52,4 +52,4 @@ COPY models/experimental/pi0_5 /workspace/models/experimental/pi0_5
 RUN python3 -c "import ttnn; import torch; print('Imports OK')" 2>/dev/null || true
 
 # Default entrypoint: run PCC test
-CMD ["python3", "-c", "print('Pi0.5 on Blackhole ready. Run tests with: python3 models/experimental/pi0_5/tests/pcc/test_pcc_pi05_model.py')"]
+CMD ["python3", "-c", "print('Pi0.5 on Blackhole ready. Run tests with: python3 -m pytest models/experimental/pi0_5/tests/pcc/test_pcc_pi05_fused.py -v -s')"]

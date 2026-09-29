@@ -9,6 +9,11 @@ every number marked "est." is an estimate with its arithmetic. Evaluation:
 152.8 total; soak x10 143.1 / 145.0 / 147.1 ms (min / median / max); PCC 0.9921 (README, 32 tokens);
 LIBERO 4/5 (fine-tuned checkpoint).
 
+> **2026-09-29:** the unfused (legacy, `TT_FUSED=0`) path was removed from the code together with its
+> entry points (`sample_actions`, `sample_actions_traced`) and the tests that drove it. The fused graph
+> is the only inference path; `TT_FUSED=0` now fails with a `ValueError`. The legacy comparisons below
+> are the historical record of this pass; their commands no longer run.
+
 ## 0. What is on the branch (all opt-in, `TT_FUSED` unset = shipped behaviour bit-for-bit)
 
 Tree: `changh95/pi05` @ `4c9fbfcceb9` (`/home/deepgadget/experiments/pi05/tt-metal`, `source.tt_metal`).
@@ -90,34 +95,28 @@ PASS (repeat_maxdiff 0, change_maxdiff > 0). Speed: `$PY $PKG/tests/perf/test_pe
 and the served soak (`smoke_test.py` timings / `tt serve` log) against 143 / 145 / 147 ms.
 
 ```bash
-# step 0 (legacy parity, TT_FUSED unset)
-$PY -m pytest $PKG/tests/pcc/test_pcc_pi05_model.py $PKG/tests/pcc/test_pcc_pi05_multireplan.py \
-    $PKG/tests/pcc/test_determinism_pi05.py -v -s
-$PY $PKG/tests/perf/test_perf_pi05.py
 # steps 1-8 (fused; set the step's env first)
-TT_FUSED=1 PI05_TRACE=0 PI05_FUSED_RESIDUAL=legacy PI05_SIGLIP_BATCHED=0 \
+PI05_TRACE=0 PI05_FUSED_RESIDUAL=legacy PI05_SIGLIP_BATCHED=0 \
     $PY -m pytest $PKG/tests/pcc/test_pcc_pi05_fused.py -v -s
-TT_FUSED=1 $PY $PKG/tests/perf/test_perf_pi05_fused.py --runs 10        # add --skip-legacy to save time
+$PY $PKG/tests/perf/test_perf_pi05_fused.py --runs 10
 # step 9 (served): after the server is READY
 $PY $PKG/server/smoke_test.py --url http://127.0.0.1:20000
 ```
 
 | step | env | what it isolates | expected | gate |
 |---|---:|---|---|---|
-| 0 | `TT_FUSED` unset | this branch's legacy path == shipped | PCC / perf identical to the baseline (`pytest $PKG/tests/pcc/test_pcc_pi05_model.py $PKG/tests/pcc/test_pcc_pi05_multireplan.py $PKG/tests/pcc/test_determinism_pi05.py`; `$PY $PKG/tests/perf/test_perf_pi05.py`) | bit-identical actions, 143-150 ms |
+| 0 | (removed) | legacy parity: ran 2026-09-13 (Results §0); the unfused path and its tests were removed 2026-09-29 | -- | -- |
 | 1 | `TT_FUSED=1 PI05_TRACE=0 PI05_FUSED_RESIDUAL=legacy PI05_SIGLIP_BATCHED=0` | the EXACT set, eager: KV hoist, 64-row suffix, im2col + pos table, mask removal, TILE embedding, tail skip, cos/sin cache; plus the two rounding-level fusions (fused gelu, fused biases) | `pytest $PKG/tests/pcc/test_pcc_pi05_fused.py -v -s`: PCC(fused, torch) ~ legacy's; PCC(fused, legacy ttnn on the same model) >= 0.99 (differences only from the fused gelu / bias rounding) | PCC >= 0.93, ratio >= 0.6 |
-| 2 | step 1 + `PI05_TRACE=1` | the trace | output bit-identical to step 1; first call = compile + capture (`trace_region_size` 160 MB fits?) | `torch.equal`; `$PY $PKG/tests/perf/test_perf_pi05_fused.py` (legacy timing in-process: still `PI05_FUSED_RESIDUAL=legacy`) |
+| 2 | step 1 + `PI05_TRACE=1` | the trace | output bit-identical to step 1; first call = compile + capture (`trace_region_size` 160 MB fits?) | `torch.equal`; `$PY $PKG/tests/perf/test_perf_pi05_fused.py` |
 | 3 | step 2 + `PI05_SIGLIP_BATCHED=1` (default), keep `PI05_FUSED_RESIDUAL=legacy` | cameras batched (M=512 matmul programs) | rounding-level | PCC gates |
 | 4 | defaults (`PI05_FUSED_RESIDUAL=bf16`) | fused gated residuals: bf16 stream / o_proj / down_proj (+0.75 GB weight reads) AND bf16 GeGLU intermediates (gate, up, gelu*up into down_proj; §0 correction 2c) | PCC expected UP (no bf8 residual rounding; down-proj input rounded once in bf16 instead of bf8); +1.5..3 ms weight reads est. From here on the harness has NO in-process legacy comparison (legacy `sample_actions` raises on bf16 weights) -- compare against step 0 / step 3 | per-step + e2e PCC, multi-replan, LIBERO 4/5 |
 | 5 | `PI05_FUSED_RESIDUAL=mixed` | bf8 activation x bf16 weight into the fused op (drops 180 typecasts) | may fail validate / differ; keep only if PCC holds | PCC gates |
 | 6 | `PI05_MLP_CHUNK=0` | unchunked VLM MLP (-3.9 GB est. repeated weight reads; intermediates in DRAM) | L1/DRAM fit and program selection unknown | PCC gates + speed |
 | 7 | `PI05_SDPA_VLM_CHUNKS=128,256`, `PI05_SDPA_EXPERT_CHUNKS=64,256`, `PI05_SDPA_SIGLIP_CHUNKS=64,256` (one at a time) | SDPA program configs on the full grid | precision-affecting (online-softmax rescale) | per-step PCC + LIBERO |
 | 8 | `PI05_DIT_BLOCKS=4,4,4,2,2` | explicit fused-matmul blocks (rf-detr's L1-safe config) if the default blocks clash with the L1 working set | -- | no OOM, PCC unchanged |
-| 9 | serve: `TT_FUSED=1 tt serve ...` (or the host uvicorn recipe) | warm-up captures before READY; `/info.hardware` says traced | `$PY $PKG/server/smoke_test.py --url ...` PASS; soak x10 | contract + timing |
+| 9 | serve: `tt serve ...` (or the host uvicorn recipe) | warm-up captures before READY; `/info.hardware` says traced | `$PY $PKG/server/smoke_test.py --url ...` PASS; soak x10 | contract + timing |
 
-Per-step PCC: `$PKG/tests/pcc/test_pcc_pi05_per_step.py` drives the legacy API (so it needs
-`TT_FUSED` unset or `PI05_FUSED_RESIDUAL=legacy`); for the fused graph the same check is
-`sample_actions_fused` with `PI05_NUM_STEPS=1` vs the torch reference's first velocity
+Per-step PCC for the fused graph: `sample_actions_fused` with `PI05_NUM_STEPS=1` vs the torch reference's first velocity
 (x_1 = x_0 + dt * v), or add a debug flag that returns the per-step x_t list from
 `_fused_device_graph` in eager mode.
 
@@ -153,12 +152,8 @@ Per-step PCC: `$PKG/tests/pcc/test_pcc_pi05_per_step.py` drives the legacy API (
   selection and L1 CB fit unknown (the author chunked for L1).
 - SDPA chunk knobs: `k_chunk=256` against K padded 736 / 800 (non-multiple) relies on the kernel's tail
   handling; accuracy moved with chunk size on rf-detr.
-- Legacy `sample_actions` / `sample_actions_traced` on a `TT_FUSED=1` model: runnable ONLY with
-  `PI05_FUSED_RESIDUAL=legacy` (bf8 o_proj / down_proj as shipped; it then sees a bf16 `W_out` --
-  `ttnn.linear` accepts that -- and no fused gate_up copy, so numerics differ slightly from the
-  shipped legacy). With `bf16` / `mixed` it raises a `RuntimeError` before touching the device
-  (§0 correction 3); the earlier claim that it "still works" was wrong. Use `TT_FUSED` unset for the
-  true legacy A/B (step 0).
+- Legacy `sample_actions` / `sample_actions_traced` on a fused-built model (§0 correction 3): moot since
+  2026-09-29, the legacy entry points were removed.
 
 ## 4. Launch counts and expected gain (est., corrected for the fused-gate_up finding)
 
@@ -346,7 +341,7 @@ fused Euler step with the measured `MinimalMatmulConfig` blocks (`PI05_DIT_BLOCK
 `PI05_EULER_DIT_BLOCKS=1,8,1,1,1,0,2`); GeGLU with the fused GELU; batched SigLIP from a host im2col with
 the pos table and fused biases; TILE language embedding; mask removal; cos/sin cache; VLM tail skip;
 expert qkv / up through the 1D-multicast program with fp32 accumulation (`PI05_EXPERT_MM=mcast1d_fp32`).
-`TT_FUSED=0` restores the previously shipped path bit-for-bit.
+(The unfused path that `TT_FUSED=0` selected was removed on 2026-09-29.)
 
 Dropped (knobs kept, defaults unchanged): unchunked VLM MLP (`PI05_MLP_CHUNK=0`, -16 ms with explicit
 programs but two observations 0.014-0.020 below legacy); explicit 2D-multicast programs for the VLM

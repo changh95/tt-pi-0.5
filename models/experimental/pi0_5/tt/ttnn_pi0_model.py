@@ -2,11 +2,11 @@
 # SPDX-License-Identifier: Apache-2.0
 
 """
-Main PI0 model - TTNN Implementation (Inference Only)
+Main pi0.5 model - TTNN Implementation (Inference Only)
 
-This module assembles all PI0 components into a complete model:
-    - PrefixEmbedding: Images + language → embeddings
-    - SuffixEmbedding: State + actions + timestep → embeddings
+This module assembles all components into the complete model:
+    - PrefixEmbedding: Images + language -> embeddings
+    - SuffixEmbedding: noisy actions -> embeddings; Euler step
     - PaliGemmaBackbone: VLM + Action Expert transformers
 
 Architecture:
@@ -15,16 +15,11 @@ Architecture:
     3. Concatenate to form prefix embeddings
     4. Prefill prefix, cache KV, denoise actions iteratively
 
-Optimizations:
-    1. Pre-computed timesteps
-    2. Denoising loop stays entirely on device
-    3. Single transfer at the end for final actions
+Build-time precomputation: the timesteps, the per-step adaRMS conditioning and the per-(step, layer)
+adaRMS modulations are constants and are computed once in ``__init__``.
 
-Fused / traced graph (the DEFAULT since the device pass of 2026-09-13; ``TT_FUSED=0`` = the legacy
-``sample_actions`` untouched; read ONCE at build time into ``self.fused_cfg``; with the fused path the legacy entry points stay callable
-ONLY under ``PI05_FUSED_RESIDUAL=legacy`` -- ``bf16`` / ``mixed`` store the expert o_proj / down_proj
-in bf16, which the legacy block's bf8 residual cannot feed into ``dit_minimal_matmul_addcmul_fused``;
-``sample_actions`` / ``sample_actions_traced`` then raise a RuntimeError up front):
+Fused / traced graph (the only inference path; knobs read ONCE at build time into ``self.fused_cfg``,
+see ``common/fused_config.py``):
     ``sample_actions_fused(images, lang_tokens, noise)`` runs the WHOLE device graph
     (host im2col -> SigLIP x cameras -> language embedding -> VLM prefill writing the backbone-owned
     KV caches -> 10 x (expert on the 64-row suffix + fused Euler step)) from three persistent device
@@ -90,8 +85,7 @@ class PI0ModelTTNN:
             config: Model configuration
             weight_loader: Loaded weights
             device: TTNN device
-            fused: TT_FUSED knobs; None -> ``FusedConfig.from_env()`` (read once, here). Disabled ->
-                every component is built and runs exactly as before.
+            fused: fused-graph knobs; None -> ``FusedConfig.from_env()`` (read once, here).
         """
         self.config = config
         self.weight_loader = weight_loader
@@ -99,9 +93,8 @@ class PI0ModelTTNN:
         self.fused_cfg = FusedConfig.from_env() if fused is None else fused
         # Multi-chip: PI05_TP=0 (auto) -> the mesh size; single chip -> 1 (see tt/ttnn_ccl.py)
         self.fused_cfg = self.fused_cfg.resolved(_mesh_num_devices(device))
-        self.fused = self.fused_cfg.enabled
-        if self.fused and not config.pi05:
-            raise RuntimeError("TT_FUSED=1 supports the pi0.5 (adaRMS) expert only")
+        if not config.pi05:
+            raise RuntimeError("the fused graph supports the pi0.5 (adaRMS) expert only")
         # Fused graph state (persistent device inputs, trace, output)
         self._suffix_rows = round_up(config.action_horizon)  # 50 -> 64
         self._fused_shape_key = None
@@ -121,11 +114,6 @@ class PI0ModelTTNN:
             action_horizon=config.action_horizon,
         )
 
-        pad_steps = ((self.denoise_config.num_steps + 31) // 32) * 32
-
-        # Create timestep indices on device using ttnn.arange
-        self.timestep_indices = ttnn.arange(0, pad_steps, 1, device=self.device, dtype=ttnn.bfloat16)
-
         # Pre-compute all timestep tensors for the denoising loop
         num_steps = self.denoise_config.num_steps
         self._precomputed_timesteps = []
@@ -136,18 +124,9 @@ class PI0ModelTTNN:
             t_ttnn = ttnn.reshape(t_ttnn, (1,))
             self._precomputed_timesteps.append(t_ttnn)
 
-        # Default initial flow-matching noise buffer (seeded). sample_actions() reuses it for a
-        # deterministic, reproducible policy and reallocates it when the input batch size differs;
-        # the traced denoising path also reads it. Pass an explicit `noise=` to override.
-        x_t_torch = torch.randn(1, self.config.action_horizon, self.config.action_dim)
-        self._default_noise_torch = x_t_torch.clone()  # fused path: same seeded noise, host copy
-        self.x_t_ttnn = ttnn.from_torch(
-            x_t_torch,
-            dtype=ttnn.bfloat16,
-            layout=ttnn.TILE_LAYOUT,
-            device=self.device,
-            memory_config=ttnn.L1_MEMORY_CONFIG,
-        )
+        # Default initial flow-matching noise (seeded, host copy): sample_actions_fused uses it when no
+        # `noise=` is passed, for a deterministic, reproducible policy.
+        self._default_noise_torch = torch.randn(1, self.config.action_horizon, self.config.action_dim)
 
         # Initialize components
         self._init_components()
@@ -163,8 +142,8 @@ class PI0ModelTTNN:
         )
         pi0_weights = self.weight_loader.get_pi0_projections()
 
-        # Convert weights to TTNN (fused: action_out_proj in bf16 for the Euler fused op, x_t is bf16)
-        overrides = {"action_out_proj.weight": ttnn.bfloat16} if self.fused else None
+        # Convert weights to TTNN (action_out_proj in bf16 for the Euler fused op, x_t is bf16)
+        overrides = {"action_out_proj.weight": ttnn.bfloat16}
         ttnn_weights = convert_suffix_weights_to_ttnn(pi0_weights, self.device, weight_dtype_overrides=overrides)
         self.suffix_embedding = SuffixEmbeddingTTNN(suffix_config, ttnn_weights, self.device, fused_cfg=self.fused_cfg)
 
@@ -238,7 +217,7 @@ class PI0ModelTTNN:
                 ttnn.deallocate(mod_final)
                 ttnn.deallocate(gate_f_unused)
                 self._precomputed_final_mod.append((scale_f, shift_f))
-            if self.fused_cfg is not None and self.fused_cfg.enabled and getattr(self.fused_cfg, "expert_norm_fold", False):
+            if getattr(self.fused_cfg, "expert_norm_fold", False):
                 import time as _time
 
                 t_fold = _time.perf_counter()
@@ -253,341 +232,19 @@ class PI0ModelTTNN:
         self.prefix_embedding = PrefixEmbeddingTTNN(
             prefix_config,
             self.device,
-            embed_image_fn=self.backbone.embed_image,
-            embed_language_fn=self.backbone.embed_language_tokens,
             embed_images_fused_fn=self.backbone.embed_images_fused,
             embed_language_fused_fn=self.backbone.embed_language_tokens_fused,
         )
 
-    def embed_prefix(
-        self,
-        images: List[torch.Tensor],
-        img_masks: List[torch.Tensor],
-        lang_tokens: ttnn.Tensor,
-        lang_masks: ttnn.Tensor,
-    ) -> Tuple[ttnn.Tensor, ttnn.Tensor, ttnn.Tensor]:
-        """
-        Embed prefix (images + language) using TTNN.
-
-        Args:
-            images: List of input images (PyTorch)
-            img_masks: Image validity masks (PyTorch)
-            lang_tokens: Language token IDs (TTNN)
-            lang_masks: Language masks (TTNN)
-
-        Returns:
-            Tuple of (embeddings, padding_mask, attention_mask) as TTNN tensors
-        """
-        return self.prefix_embedding.embed_prefix(images, img_masks, lang_tokens, lang_masks)
-
-    def embed_suffix(
-        self,
-        state: ttnn.Tensor,
-        noisy_actions: ttnn.Tensor,
-        timestep: ttnn.Tensor,
-    ) -> Tuple[ttnn.Tensor, ttnn.Tensor, ttnn.Tensor, Optional[ttnn.Tensor]]:
-        """
-        Embed suffix (state + noisy actions + timestep) using TTNN.
-
-        Args:
-            state: Robot state (TTNN)
-            noisy_actions: Noisy actions (TTNN)
-            timestep: Diffusion timestep (TTNN)
-
-        Returns:
-            Tuple of (embeddings, padding_mask, attention_mask, adarms_cond)
-        """
-        return self.suffix_embedding.embed_suffix(state, noisy_actions, timestep)
-
-    def _check_legacy_path_available(self, entry: str) -> None:
-        """The legacy entry points reuse the shipped expert block, which typecasts its residual / gate
-        to bf8 before ``dit_minimal_matmul_addcmul_fused(..., self.mlp.down_proj, ...)``. A model built
-        with ``TT_FUSED=1`` and ``PI05_FUSED_RESIDUAL`` in (``bf16``, ``mixed``) stores o_proj /
-        down_proj in bf16 for the fused residual op, and the device op then fails hard
-        (``TT_FATAL(ternary_a_data_format == in1_data_format)``). Fail here, in Python, instead."""
-        if self.fused and not self.fused_cfg.legacy_sample_actions_available:
-            raise RuntimeError(
-                f"PI0ModelTTNN.{entry} is not available on a model built with TT_FUSED=1 and "
-                f"PI05_FUSED_RESIDUAL={self.fused_cfg.residual!r}: the expert o_proj / down_proj are "
-                "bfloat16 for the fused residual op while the legacy expert block feeds a bfloat8_b "
-                "residual into dit_minimal_matmul_addcmul_fused (residual format must equal the weight "
-                "format). Use sample_actions_fused, or build the model with PI05_FUSED_RESIDUAL=legacy "
-                "(or TT_FUSED unset) for the legacy path."
-            )
-
-    def sample_actions(
-        self,
-        images: List[torch.Tensor],
-        img_masks: List[torch.Tensor],
-        lang_tokens: torch.Tensor,
-        lang_masks: torch.Tensor,
-        state: torch.Tensor,
-        noise: Optional[torch.Tensor] = None,
-    ) -> torch.Tensor:
-        """
-        Sample actions via denoising (TTNN inference).
-
-        This runs the full denoising loop:
-        1. Compute prefix embeddings (images + language) once
-        2. Forward prefix through VLM and cache KV
-        3. For each denoising step: compute suffix, forward through expert with cached KV
-
-        Args:
-            images: Input images (PyTorch)
-            img_masks: Image masks (PyTorch)
-            lang_tokens: Language tokens (PyTorch)
-            lang_masks: Language masks (PyTorch)
-            state: Robot state (PyTorch)
-            noise: Optional initial flow-matching noise (batch_size, action_horizon, action_dim).
-                If None, a cached deterministic noise buffer is used (reallocated to match state's
-                batch dimension) for a reproducible policy; pass a tensor for matched-noise
-                comparisons or seeded sampling.
-
-        Returns:
-            Sampled actions (PyTorch)
-        """
-        self._check_legacy_path_available("sample_actions")
-        # Convert inputs to TTNN
-        lang_tokens_ttnn = lang_tokens
-        lang_masks_ttnn = lang_masks
-        state_ttnn = state
-
-        # Step 1: Embed prefix (images + language) using TTNN
-        prefix_embs, prefix_pad, prefix_att = self.embed_prefix(images, img_masks, lang_tokens_ttnn, lang_masks_ttnn)
-
-        # Step 2: Forward prefix through VLM and cache KV
-        _, prefix_kv_cache = self.backbone.forward_vlm(prefix_embs, use_cache=True)
-
-        # Get timesteps using pure Python list (for control flow on host)
-        num_steps = self.denoise_config.num_steps
-        # Create timesteps as Python list: [1.0, 0.9, 0.8, ..., 0.0]
-        timesteps = [1.0 - i / num_steps for i in range(num_steps + 1)]
-
-        # Step 3: Initial flow-matching noise. By default we reuse a cached, seeded noise buffer so
-        # the policy is deterministic and reproducible (the right choice for closed-loop robot eval);
-        # the buffer is (re)allocated whenever the input batch size changes, so batch_size > 1 now
-        # produces a correctly-sized action tensor. Pass `noise` to inject a specific tensor (e.g.
-        # for matched-noise ttnn-vs-torch comparisons or seeded sampling).
-        batch_size = state.shape[0]
-        if noise is not None:
-            x_t_ttnn = (
-                noise
-                if isinstance(noise, ttnn.Tensor)
-                else ttnn.from_torch(
-                    noise,
-                    dtype=ttnn.bfloat16,
-                    layout=ttnn.TILE_LAYOUT,
-                    device=self.device,
-                    memory_config=ttnn.L1_MEMORY_CONFIG,
-                )
-            )
-        else:
-            if self.x_t_ttnn is None or self.x_t_ttnn.shape[0] != batch_size:
-                self.x_t_ttnn = ttnn.from_torch(
-                    torch.randn(batch_size, self.config.action_horizon, self.config.action_dim),
-                    dtype=ttnn.bfloat16,
-                    layout=ttnn.TILE_LAYOUT,
-                    device=self.device,
-                    memory_config=ttnn.L1_MEMORY_CONFIG,
-                )
-            x_t_ttnn = self.x_t_ttnn
-
-        # Step 4: Denoising loop (stays on device!)
-        for i in range(num_steps):
-            t = timesteps[i]
-            t_next = timesteps[i + 1]
-            dt = t_next - t
-
-            # Use pre-computed timestep tensor (no slice/reshape per step)
-            t_tensor = self._precomputed_timesteps[i]
-
-            # Embed suffix (x_t_ttnn already on device - no transfer!)
-            if self.config.pi05 and self._precomputed_adarms_cond is not None:
-                suffix_embs, suffix_pad, suffix_att, adarms_cond = self.suffix_embedding.embed_suffix_pi05_cached(
-                    x_t_ttnn, self._precomputed_adarms_cond[i]
-                )
-            else:
-                suffix_embs, suffix_pad, suffix_att, adarms_cond = self.embed_suffix(state_ttnn, x_t_ttnn, t_tensor)
-
-            # Forward through expert with cached prefix KV (pass adarms_cond for Pi0.5)
-            expert_output, _ = self.backbone.forward_expert(
-                suffix_embs,
-                past_key_values=prefix_kv_cache,
-                adarms_cond=adarms_cond,
-                precomputed_block_mods=(
-                    self._precomputed_block_mods[i] if self._precomputed_block_mods is not None else None
-                ),
-                precomputed_final_mod=(
-                    self._precomputed_final_mod[i] if self._precomputed_final_mod is not None else None
-                ),
-            )
-
-            # Extract action output (skip state token in PI0 mode)
-            if not self.config.pi05:
-                action_output = ttnn.slice(
-                    expert_output, [0, 1, 0], [expert_output.shape[0], expert_output.shape[1], expert_output.shape[2]]
-                )
-            else:
-                action_output = expert_output
-
-            # Project to velocity
-            velocity = self.suffix_embedding.project_output(action_output)
-
-            # Euler step ON DEVICE (no transfer per step!)
-            velocity_scaled = ttnn.mul(velocity, dt)
-            x_t_ttnn = ttnn.add(x_t_ttnn, velocity_scaled, memory_config=ttnn.L1_MEMORY_CONFIG)
-
-            # Clear profiler buffer after each denoising step (~500 ops)
-            # ReadDeviceProfiler removed for performance
-
-        # Convert back to PyTorch only at the very end (1 transfer instead of 10!)
-        return x_t_ttnn
-
-    def _run_denoising_loop(
-        self,
-        state_ttnn: ttnn.Tensor,
-        x_t_ttnn: ttnn.Tensor,
-        prefix_kv_cache,
-    ) -> ttnn.Tensor:
-        """Run the 10-step denoising loop. Factored out for trace capture."""
-        num_steps = self.denoise_config.num_steps
-        timesteps = [1.0 - i / num_steps for i in range(num_steps + 1)]
-
-        for i in range(num_steps):
-            dt = timesteps[i + 1] - timesteps[i]
-            t_tensor = self._precomputed_timesteps[i]
-
-            if self.config.pi05 and self._precomputed_adarms_cond is not None:
-                suffix_embs, suffix_pad, suffix_att, adarms_cond = self.suffix_embedding.embed_suffix_pi05_cached(
-                    x_t_ttnn, self._precomputed_adarms_cond[i]
-                )
-            else:
-                suffix_embs, suffix_pad, suffix_att, adarms_cond = self.embed_suffix(state_ttnn, x_t_ttnn, t_tensor)
-
-            expert_output, _ = self.backbone.forward_expert(
-                suffix_embs,
-                past_key_values=prefix_kv_cache,
-                adarms_cond=adarms_cond,
-                precomputed_block_mods=(
-                    self._precomputed_block_mods[i] if self._precomputed_block_mods is not None else None
-                ),
-                precomputed_final_mod=(
-                    self._precomputed_final_mod[i] if self._precomputed_final_mod is not None else None
-                ),
-            )
-
-            if not self.config.pi05:
-                action_output = ttnn.slice(
-                    expert_output, [0, 1, 0], [expert_output.shape[0], expert_output.shape[1], expert_output.shape[2]]
-                )
-            else:
-                action_output = expert_output
-
-            velocity = self.suffix_embedding.project_output(action_output)
-            velocity_scaled = ttnn.mul(velocity, dt)
-            x_t_ttnn = ttnn.add(x_t_ttnn, velocity_scaled, memory_config=ttnn.L1_MEMORY_CONFIG)
-
-        return x_t_ttnn
-
-    def setup_trace(
-        self,
-        images: List[torch.Tensor],
-        img_masks: List[torch.Tensor],
-        lang_tokens: torch.Tensor,
-        lang_masks: torch.Tensor,
-        state: torch.Tensor,
-    ):
-        """
-        Set up 2CQ + Trace for the denoising loop.
-
-        Call this once to compile and capture. Then call execute_trace() for fast inference.
-        """
-        # Step 1: Run prefix (not traced — runs once per new observation)
-        prefix_embs, prefix_pad, prefix_att = self.embed_prefix(images, img_masks, lang_tokens, lang_masks)
-        _, self._trace_prefix_kv_cache = self.backbone.forward_vlm(prefix_embs, use_cache=True)
-
-        # Step 2: Compile pass — run denoising loop to JIT compile all kernels
-        x_t_compile = self.x_t_ttnn
-        self._run_denoising_loop(state, x_t_compile, self._trace_prefix_kv_cache)
-
-        # Step 3: Capture trace — re-run denoising loop under trace capture
-        # The x_t tensor at self.x_t_ttnn address will be the input
-        self._trace_x_t = self.x_t_ttnn
-        self._trace_state = state
-
-        trace_id = ttnn.begin_trace_capture(self.device, cq_id=0)
-        self._trace_output = self._run_denoising_loop(self._trace_state, self._trace_x_t, self._trace_prefix_kv_cache)
-        ttnn.end_trace_capture(self.device, trace_id, cq_id=0)
-
-        self._trace_id = trace_id
-
-    def execute_trace(self) -> ttnn.Tensor:
-        """Execute the captured denoising trace. Call setup_trace() first."""
-        ttnn.execute_trace(self.device, self._trace_id, cq_id=0, blocking=True)
-        return self._trace_output
-
-    def sample_actions_traced(
-        self,
-        images: List[torch.Tensor],
-        img_masks: List[torch.Tensor],
-        lang_tokens: torch.Tensor,
-        lang_masks: torch.Tensor,
-        state: torch.Tensor,
-    ) -> torch.Tensor:
-        """
-        Sample actions using 2CQ + Trace for the denoising loop.
-
-        First call sets up the trace. Subsequent calls execute it.
-        The prefix (SigLIP + VLM) runs normally each time.
-        """
-        self._check_legacy_path_available("sample_actions_traced")
-        # Run prefix (new observation each time)
-        prefix_embs, prefix_pad, prefix_att = self.embed_prefix(images, img_masks, lang_tokens, lang_masks)
-        _, prefix_kv_cache = self.backbone.forward_vlm(prefix_embs, use_cache=True)
-
-        if not hasattr(self, "_trace_id"):
-            # First call: compile + capture trace
-            # Compile pass
-            x_t_compile = self.x_t_ttnn
-            self._run_denoising_loop(state, x_t_compile, prefix_kv_cache)
-
-            # Store references for trace
-            self._trace_prefix_kv_cache = prefix_kv_cache
-            self._trace_x_t = self.x_t_ttnn
-            self._trace_state = state
-
-            # Capture trace
-            trace_id = ttnn.begin_trace_capture(self.device, cq_id=0)
-            self._trace_output = self._run_denoising_loop(
-                self._trace_state, self._trace_x_t, self._trace_prefix_kv_cache
-            )
-            ttnn.end_trace_capture(self.device, trace_id, cq_id=0)
-            self._trace_id = trace_id
-        else:
-            # Update prefix KV cache in-place at the same tensor addresses
-            # Copy new KV cache values to the trace's pre-allocated KV tensors
-            for i in range(len(prefix_kv_cache)):
-                new_k, new_v = prefix_kv_cache[i]
-                old_k, old_v = self._trace_prefix_kv_cache[i]
-                ttnn.copy(new_k, old_k)
-                ttnn.copy(new_v, old_v)
-
-        # Execute traced denoising loop
-        ttnn.execute_trace(self.device, self._trace_id, cq_id=0, blocking=True)
-        return self._trace_output
-
     def release_trace(self):
-        """Release trace resources (the legacy loop trace and the fused whole-graph trace)."""
-        if hasattr(self, "_trace_id"):
-            ttnn.release_trace(self.device, self._trace_id)
-            del self._trace_id
+        """Release the fused whole-graph trace."""
         if self._fused_trace_id is not None:
             ttnn.release_trace(self.device, self._fused_trace_id)
             self._fused_trace_id = None
             self._fused_out = None
 
     # ======================================================================
-    # Fused / traced whole-graph path (TT_FUSED=1)
+    # Fused / traced whole-graph path
     # ======================================================================
 
     def _fused_host_inputs(
@@ -842,8 +499,6 @@ class PI0ModelTTNN:
         """Whole-graph fused (and traced) inference. torch in -> torch ``[B, action_horizon, action_dim]``
         float32 out. ``lang_masks`` [B, L] marks the real (right-padded) prompt tokens; None -> ``tokens != 0``.
         First call for a shape: allocate + compile + capture (the server's warm-up)."""
-        if not self.fused:
-            raise RuntimeError("sample_actions_fused needs TT_FUSED=1 (FusedConfig.enabled)")
         if self._precomputed_block_mods is None or self._precomputed_final_mod is None:
             raise RuntimeError("fused path needs the precomputed pi0.5 adaRMS modulations")
         im2col_hosts, tokens_host, noise_host, valid = self._fused_host_inputs(images, lang_tokens, noise, lang_masks)

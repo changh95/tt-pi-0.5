@@ -19,14 +19,14 @@ Optimizations:
     2. Native TTNN RoPE (ttnn.experimental.rotary_embedding)
     3. Pre-added RMSNorm weights (Gemma-style +1 offset)
 
-Fused graph (``TT_FUSED=1``): the backbone OWNS the 18 expert KV caches
+Fused graph (the only inference path): the backbone OWNS the 18 expert KV caches
 ``[1, 1, prefix_len + action_horizon, head_dim]`` bf8 (L1); ``forward_vlm_fused`` writes the prefix
 rows through every VLM layer on EVERY call (the multi-replan invariant: a new observation always
-refreshes the prefix) and ``forward_expert_fused`` only writes the suffix rows -- the legacy
-per-layer-per-step prefix refill (2 x fill_cache x 18 x 10) is gone. The last VLM layer stops after
-its K/V write and the unused final VLM norm is skipped (``PI05_SKIP_VLM_TAIL``, exact: nothing in
-``sample_actions`` reads the VLM hidden output). SigLIP runs batched over the camera images from a
-host im2col input and the language embedding is emitted in TILE layout.
+refreshes the prefix) and ``forward_expert_fused`` only writes the suffix rows (no per-layer-per-step
+prefix refill). The last VLM layer stops after its K/V write and the unused final VLM norm is skipped
+(``PI05_SKIP_VLM_TAIL``, exact: nothing in ``sample_actions_fused`` reads the VLM hidden output).
+SigLIP runs batched over the camera images from a host im2col input and the language embedding is
+emitted in TILE layout.
 """
 
 from typing import Dict, List, Optional, Tuple
@@ -45,7 +45,6 @@ from .ttnn_common import tensor_1d_to_2d_ttnn
 from .ttnn_gemma import (
     GemmaBlockTTNN,
     rms_norm_ttnn,
-    adarms_norm_ttnn,
     adarms_norm_precomputed,
     precompute_freqs_cis_meta_format,
     ttnn_dtype_from_name,
@@ -66,7 +65,7 @@ class PaliGemmaBackboneTTNN:
         config: PaliGemmaConfig,
         weights: Dict[str, Dict[str, torch.Tensor]],
         device: ttnn.Device,
-        fused_cfg: Optional[FusedConfig] = None,
+        fused_cfg: FusedConfig,
         action_horizon: int = 50,
     ):
         """
@@ -76,20 +75,17 @@ class PaliGemmaBackboneTTNN:
             config: PaliGemma configuration
             weights: Categorized PyTorch weights
             device: TTNN device
-            fused_cfg: TT_FUSED knobs (None / disabled -> legacy weights, dtypes and forwards)
+            fused_cfg: fused-graph knobs (resolved, see ``PI0ModelTTNN``)
             action_horizon: action tokens per request (the expert's suffix; tile-padded on the device)
         """
         self.config = config
         self.device = device
         self.fused_cfg = fused_cfg
-        self._fused = fused_cfg is not None and fused_cfg.enabled
         # Tensor-parallel degree of the SigLIP tower / VLM prefill (1 = full weights on every chip)
-        self.tp = fused_cfg.tp if self._fused else 1
+        self.tp = fused_cfg.tp
         # Fused residual op: residual (bf16 hidden) format must equal the weight format -> expert
-        # o_proj / down_proj in bf16 (PI05_FUSED_RESIDUAL != legacy). Legacy: None -> bf8 as shipped.
-        self._expert_residual_weight_dtype = (
-            ttnn_dtype_from_name(fused_cfg.expert_residual_weight_dtype()) if self._fused else None
-        )
+        # o_proj / down_proj in bf16 (PI05_FUSED_RESIDUAL != legacy); bf8 with PI05_FUSED_RESIDUAL=legacy.
+        self._expert_residual_weight_dtype = ttnn_dtype_from_name(fused_cfg.expert_residual_weight_dtype())
         # Backbone-owned expert KV caches (fused graph), allocated by allocate_kv_caches()
         self.kv_caches: Optional[List[Tuple[ttnn.Tensor, ttnn.Tensor]]] = None
         self.kv_cache_plan: Optional[Dict[str, int]] = None
@@ -130,14 +126,6 @@ class PaliGemmaBackboneTTNN:
                 memory_config=ttnn.DRAM_MEMORY_CONFIG,
             )
             self.expert_norm_dense_bias = tensor_1d_to_2d_ttnn(norm_dense_b, device, dtype=ttnn.bfloat16)
-            # Pre-allocate ones weight for adaRMS (needed for trace compatibility)
-            self._expert_norm_ones = ttnn.ones((1, config.expert_config.width), device=device, dtype=ttnn.bfloat16)
-            self._expert_norm_ones = ttnn.to_layout(self._expert_norm_ones, ttnn.TILE_LAYOUT)
-            self.expert_norm = None
-        else:
-            self.expert_norm = tensor_1d_to_2d_ttnn(
-                weights["action_expert"]["model.norm.weight"] + 1.0, device, dtype=ttnn.bfloat16
-            )
 
         # Initialize vision tower
         self.vision_tower = SigLIPVisionTowerTTNN(
@@ -169,8 +157,6 @@ class PaliGemmaBackboneTTNN:
         )
 
         # Initialize VLM transformer blocks (18 layers for Gemma 2B)
-        # Pre-slice RoPE for known prefix_len: 2 images × 256 patches + 32 lang = 544 tokens
-        vlm_seq_len = 2 * config.siglip_config.num_patches + 32  # 544
         self.vlm_blocks = []
         # TP: each chip runs num_heads / tp query heads (the single MQA K/V head is replicated), so the
         # block sees a config with the LOCAL head count; width / head_dim / kv heads are unchanged.
@@ -189,15 +175,14 @@ class PaliGemmaBackboneTTNN:
                     device,
                     self.cos_meta,
                     self.sin_meta,
-                    expected_seq_len=vlm_seq_len,
                     fused_cfg=fused_cfg,
                     role="vlm",
                 )
             )
 
         # Initialize Expert transformer blocks (18 layers for Gemma 300M)
-        # Expert always processes suffix_len = action_horizon (50 for Pi0.5)
-        # Pre-slice RoPE for this known length to save 2 slice ops per layer per step
+        # Expert always processes suffix_len = action_horizon (50 for Pi0.5): the fused expert attention
+        # (PI05_EXPERT_ATTN=fused) is built for this length
         expert_seq_len = int(action_horizon)
         self.expert_blocks = []
         for i in range(config.expert_config.depth):
@@ -330,7 +315,7 @@ class PaliGemmaBackboneTTNN:
 
         # PI05_EXPERT_GEGLU: one [width, 2*mlp] matmul + ttnn.geglu (= first half * gelu(second half)),
         # so the fused weight is [up | gate] along the output dim.
-        if self._fused and self.fused_cfg.expert_geglu:
+        if self.fused_cfg.expert_geglu:
             g_key, u_key = f"{prefix}mlp.gate_proj.weight", f"{prefix}mlp.up_proj.weight"
             if g_key in weights and u_key in weights:
                 fused_ug = torch.cat([weights[u_key], weights[g_key]], dim=0).T.contiguous()  # [width, 2*mlp]
@@ -377,7 +362,7 @@ class PaliGemmaBackboneTTNN:
             ttnn.deallocate(wq_ttnn)
             ttnn.deallocate(wk_ttnn)
             ttnn.deallocate(wv_ttnn)
-            if self._fused and getattr(self.fused_cfg, "expert_norm_fold", False):
+            if getattr(self.fused_cfg, "expert_norm_fold", False):
                 # torch originals for the per-step adaRMS folding (tt/ttnn_fused_norm.py); freed after folding
                 if os.environ.get("PI05_EXPERT_NORM_FOLD_ATTN", "0") == "1":
                     block_weights["_torch_wqkv"] = torch.cat(
@@ -421,7 +406,7 @@ class PaliGemmaBackboneTTNN:
                     # Regular weight matrices: transpose for TTNN linear
                     # Use bfloat8_b for expert weights (output projection, etc.)
                     w_dtype = expert_weight_dtype
-                    if self._expert_residual_weight_dtype is not None and new_key in (
+                    if new_key in (
                         "self_attn.o_proj.weight",
                         "mlp.down_proj.weight",
                     ):
@@ -457,38 +442,13 @@ class PaliGemmaBackboneTTNN:
                         )
         return block_weights
 
-    def embed_image(self, pixel_values: torch.Tensor) -> ttnn.Tensor:
-        """
-        Embed images through vision tower and projector (TTNN).
-
-        Args:
-            pixel_values: PyTorch tensor (batch_size, channels, height, width)
-
-        Returns:
-            TTNN tensor (batch_size, num_patches, vlm_width)
-        """
-        vision_features = self.vision_tower.forward(pixel_values)
-        return self.mm_projector.forward(vision_features)
-
-    def embed_language_tokens(self, token_ids: ttnn.Tensor) -> ttnn.Tensor:
-        """
-        Embed language tokens using TTNN.
-
-        Args:
-            token_ids: TTNN tensor of token IDs
-
-        Returns:
-            TTNN tensor of embeddings
-        """
-        return ttnn.embedding(token_ids, self.vlm_embed_tokens)
-
     # ------------------------------------------------------------------ fused graph
 
     def embed_language_tokens_fused(self, token_ids: ttnn.Tensor) -> ttnn.Tensor:
         """Token gather emitted in TILE layout (fused tilize inside the embedding op: token_len % 32 == 0
         and 2048 % 32 == 0) so the following scalar multiply and concat run on tiles directly, instead of
-        the legacy ROW_MAJOR output that is tilized/untilized inside ``mul`` and re-tilized by ``concat``.
-        Same bf16 values as the legacy row-major gather (exact)."""
+        a ROW_MAJOR output that is tilized/untilized inside ``mul`` and re-tilized by ``concat``.
+        Same bf16 values as a row-major gather (exact)."""
         return ttnn.embedding(token_ids, self.vlm_embed_tokens, layout=ttnn.TILE_LAYOUT)
 
     def embed_images_fused(self, im2col_dev: ttnn.Tensor, batch: int = 1) -> ttnn.Tensor:
@@ -527,7 +487,7 @@ class PaliGemmaBackboneTTNN:
         cfg = self.config.expert_config
         self.kv_caches = []
         # == the qkv linear output dtype of both VLM and expert (PI05_KV_DTYPE; fill_cache needs equal dtypes)
-        kv_dtype = ttnn.bfloat16 if (self._fused and self.fused_cfg.kv_dtype == "bf16") else ttnn.bfloat8_b
+        kv_dtype = ttnn.bfloat16 if self.fused_cfg.kv_dtype == "bf16" else ttnn.bfloat8_b
         # L1 for one or two requests (the reference's SDPA 75 -> 53 us win); DRAM for larger batches: at
         # batch 4 the 36 caches are ~30 MB of L1 and the VLM prefill's static circular buffers clashed with
         # the L1 buffers (dataflow_buffer.cpp "clash with L1 buffers", 2026-09-17). With several sets alive
@@ -573,7 +533,7 @@ class PaliGemmaBackboneTTNN:
             new_hidden = block.forward_fused_vlm(hidden_states, cache_k, cache_v, attn_mask=attn_mask)
             ttnn.deallocate(hidden_states)
             hidden_states = new_hidden
-        # PI05_SKIP_VLM_TAIL=0: compute the legacy final norm too (A/B parity), result unused
+        # PI05_SKIP_VLM_TAIL=0: compute the final norm too (A/B parity), result unused
         final = rms_norm_ttnn(hidden_states, self.vlm_norm, self.config.vlm_config.rms_norm_eps)
         ttnn.deallocate(hidden_states)
         ttnn.deallocate(final)
@@ -614,170 +574,6 @@ class PaliGemmaBackboneTTNN:
         out = adarms_norm_precomputed(hidden_states, scale_f, shift_f, self.config.expert_config.rms_norm_eps)
         ttnn.deallocate(hidden_states)
         return out
-
-    def forward_vlm(
-        self,
-        hidden_states: ttnn.Tensor,
-        attention_mask: Optional[ttnn.Tensor] = None,
-        position_ids: Optional[ttnn.Tensor] = None,
-        past_key_values: Optional[List[Tuple[ttnn.Tensor, ttnn.Tensor]]] = None,
-        use_cache: bool = False,
-    ) -> Tuple[ttnn.Tensor, Optional[List[Tuple[ttnn.Tensor, ttnn.Tensor]]]]:
-        """
-        Forward pass through VLM backbone using TTNN.
-
-        Args:
-            hidden_states: Prefix embeddings (TTNN tensor)
-            attention_mask: Attention mask (TTNN tensor)
-            position_ids: Position indices (TTNN tensor)
-            past_key_values: Cached KV from previous forward
-            use_cache: Whether to return updated cache
-
-        Returns:
-            Tuple of (output, optional_new_cache)
-        """
-        new_cache = [] if use_cache else None
-
-        for i, block in enumerate(self.vlm_blocks):
-            past_kv = past_key_values[i] if past_key_values else None
-            hidden_states, new_kv = block.forward(
-                hidden_states,
-                None,  # cos - unused, native TTNN RoPE uses cos_meta stored in block
-                None,  # sin - unused, native TTNN RoPE uses sin_meta stored in block
-                attention_mask,
-                position_ids,
-                past_kv,
-                use_cache,
-            )
-            if use_cache:
-                new_cache.append(new_kv)
-
-        # Final norm using TTNN
-        hidden_states = rms_norm_ttnn(
-            hidden_states,
-            self.vlm_norm,
-            self.config.vlm_config.rms_norm_eps,
-        )
-
-        return hidden_states, new_cache
-
-    def forward_expert(
-        self,
-        hidden_states: ttnn.Tensor,
-        attention_mask: Optional[ttnn.Tensor] = None,
-        position_ids: Optional[ttnn.Tensor] = None,
-        past_key_values: Optional[List[Tuple[ttnn.Tensor, ttnn.Tensor]]] = None,
-        use_cache: bool = False,
-        adarms_cond: Optional[ttnn.Tensor] = None,
-        precomputed_block_mods: Optional[List] = None,
-        precomputed_final_mod: Optional[Tuple] = None,
-    ) -> Tuple[ttnn.Tensor, Optional[List[Tuple[ttnn.Tensor, ttnn.Tensor]]]]:
-        """
-        Forward pass through action expert using TTNN.
-
-        Args:
-            hidden_states: Suffix embeddings (TTNN tensor)
-            attention_mask: Attention mask (TTNN tensor)
-            position_ids: Position indices (TTNN tensor)
-            past_key_values: Cached KV from VLM prefix (for cross-attention)
-            use_cache: Whether to return updated cache
-            adarms_cond: Pi0.5 time conditioning vector (TTNN tensor)
-
-        Returns:
-            Tuple of (output, optional_new_cache)
-        """
-        new_cache = [] if use_cache else None
-
-        # Pre-reshape adaRMS conditioning to 3D once (avoids 37 reshapes inside adarms_norm_ttnn)
-        if adarms_cond is not None and len(adarms_cond.shape) == 2:
-            adarms_cond = ttnn.reshape(adarms_cond, (adarms_cond.shape[0], 1, -1))
-
-        for i, block in enumerate(self.expert_blocks):
-            past_kv = past_key_values[i] if past_key_values else None
-            block_mod = precomputed_block_mods[i] if precomputed_block_mods is not None else None
-            hidden_states, new_kv = block.forward(
-                hidden_states,
-                None,  # cos - unused, native TTNN RoPE uses cos_meta stored in block
-                None,  # sin - unused, native TTNN RoPE uses sin_meta stored in block
-                attention_mask,
-                position_ids,
-                past_kv,
-                use_cache,
-                adarms_cond=adarms_cond,
-                precomputed_mod=block_mod,
-            )
-            if use_cache:
-                new_cache.append(new_kv)
-
-        # Final norm using TTNN
-        if precomputed_final_mod is not None:
-            scale_f, shift_f = precomputed_final_mod[0], precomputed_final_mod[1]
-            hidden_states = adarms_norm_precomputed(
-                hidden_states,
-                scale_f,
-                shift_f,
-                self.config.expert_config.rms_norm_eps,
-            )
-        elif self.use_expert_adarms and adarms_cond is not None:
-            hidden_states, _ = adarms_norm_ttnn(
-                hidden_states,
-                self.expert_norm_dense_weight,
-                self.expert_norm_dense_bias,
-                adarms_cond,
-                self.config.expert_config.rms_norm_eps,
-                self.device,
-                ones_weight=self._expert_norm_ones,
-            )
-        else:
-            hidden_states = rms_norm_ttnn(
-                hidden_states,
-                self.expert_norm,
-                self.config.expert_config.rms_norm_eps,
-            )
-
-        return hidden_states, new_cache
-
-    def forward_shared_attention(
-        self,
-        prefix_embs: ttnn.Tensor,
-        suffix_embs: ttnn.Tensor,
-        prefix_mask: Optional[ttnn.Tensor] = None,
-        suffix_mask: Optional[ttnn.Tensor] = None,
-        prefix_position_ids: Optional[ttnn.Tensor] = None,
-        suffix_position_ids: Optional[ttnn.Tensor] = None,
-    ) -> Tuple[ttnn.Tensor, ttnn.Tensor]:
-        """
-        Forward pass with shared attention between VLM and Expert (TTNN).
-
-        Args:
-            prefix_embs: VLM prefix embeddings (TTNN tensor)
-            suffix_embs: Expert suffix embeddings (TTNN tensor)
-            prefix_mask: Prefix attention mask
-            suffix_mask: Suffix attention mask
-            prefix_position_ids: Prefix positions
-            suffix_position_ids: Suffix positions
-
-        Returns:
-            Tuple of (vlm_output, expert_output)
-        """
-        # Process prefix through VLM
-        vlm_output, vlm_cache = self.forward_vlm(
-            prefix_embs,
-            prefix_mask,
-            prefix_position_ids,
-            use_cache=True,
-        )
-
-        # Process suffix through expert
-        expert_output, _ = self.forward_expert(
-            suffix_embs,
-            suffix_mask,
-            suffix_position_ids,
-            past_key_values=None,
-            use_cache=False,
-        )
-
-        return vlm_output, expert_output
 
 
 # Default export

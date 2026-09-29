@@ -2,11 +2,11 @@
 # SPDX-License-Identifier: Apache-2.0
 
 """
-Host-only (torch, no device, no ttnn tensors) proofs for the TT_FUSED=1 graph
+Host-only (torch, no device, no ttnn tensors) proofs for the fused device graph
 (``opt/pi05-base-p150-megakernel``).
 
 Every exact reformulation the fused device graph relies on is checked here against the reference
-math, plus the knob plumbing (``TT_FUSED=0`` -> legacy choices; unset = fused). Run with the host python of
+math, plus the knob plumbing (the fused graph is the only path; ``TT_FUSED=0`` is refused). Run with the host python of
 the model's tt-metal tree (torch 2.7.1, pytest 9):
 
     cd models/pi05-base-p150
@@ -52,27 +52,31 @@ def _assert_close(a: torch.Tensor, b: torch.Tensor, rtol: float, what: str):
 # =========================================================================================
 
 
-def test_knob_default_on_and_zero_selects_legacy():
-    # default ON since the device pass (2026-09-13); TT_FUSED=0 restores the legacy path bit-for-bit
-    assert FusedConfig.from_env({}).enabled is True
+def test_knob_tt_fused_zero_is_refused_and_unset_equals_one():
+    # the unfused path was removed: TT_FUSED unset / truthy -> the same (fused) config; falsy -> ValueError
     assert FusedConfig.from_env({}) == FusedConfig.from_env({"TT_FUSED": "1"})
-    for v in ("0", "false", "off", ""):
-        cfg = FusedConfig.from_env({"TT_FUSED": v})
-        assert cfg.enabled is False
-        assert cfg == FusedConfig.legacy()
-    # legacy choices when off, regardless of sub-knobs in the environment
-    off = FusedConfig.from_env({"TT_FUSED": "0", "PI05_FUSED_RESIDUAL": "bf16", "PI05_MLP_CHUNK": "0"})
-    assert off.expert_residual_weight_dtype() == "bfloat8_b"
-    assert off.expert_mlp_act_dtype() == "bfloat8_b"
-    assert off.action_out_weight_dtype() == "bfloat8_b"
-    assert off.keep_fused_gate_up_copy() is True
-    assert off.fused_residual is False
-    assert off.mlp_chunk == 256  # sub-knobs are not read when off
+    assert FusedConfig.from_env({}) == FusedConfig.from_env({"TT_FUSED": "true"})
+    assert FusedConfig.from_env({}) == FusedConfig.from_env({"TT_FUSED": "on"})
+    assert "enabled" not in FusedConfig.from_env({}).describe()
+    for v in ("0", "false", "off", "no", ""):
+        try:
+            FusedConfig.from_env({"TT_FUSED": v})
+        except ValueError as e:
+            assert "unfused path was removed" in str(e), str(e)
+        else:
+            raise AssertionError(f"TT_FUSED={v!r} should be refused")
+    # refused regardless of the sub-knobs in the environment
+    try:
+        FusedConfig.from_env({"TT_FUSED": "0", "PI05_FUSED_RESIDUAL": "legacy"})
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("TT_FUSED=0 should be refused")
 
 
 def test_knob_on_defaults_match_the_evaluation_recipe():
     cfg = FusedConfig.from_env({"TT_FUSED": "1"})
-    assert cfg.enabled and cfg.trace and cfg.trace_region_size == 160_000_000
+    assert cfg.trace and cfg.trace_region_size == 160_000_000
     assert (
         cfg.residual == "bf16" and cfg.mlp_chunk == 256 and cfg.vlm_down_pc == "mcast2d" and cfg.vlm_gateup_pc == "auto"
     )
@@ -87,7 +91,6 @@ def test_knob_on_defaults_match_the_evaluation_recipe():
     assert cfg.expert_residual_weight_dtype() == "bfloat16"
     assert cfg.expert_mlp_act_dtype() == "bfloat16"
     assert cfg.action_out_weight_dtype() == "bfloat16"
-    assert cfg.keep_fused_gate_up_copy() is False
     assert cfg.fused_residual is True
 
 
@@ -132,30 +135,14 @@ def test_knob_sub_modes_and_parsing():
     assert set(RESIDUAL_MODES) == {"bf16", "mixed", "legacy"}
 
 
-def test_knob_legacy_sample_actions_availability():
-    """The legacy expert block feeds a bf8 residual + mlp.down_proj into dit_minimal_matmul_addcmul_fused,
-    whose factory requires residual format == weight format: the legacy sample_actions can only run on a
-    model whose expert o_proj / down_proj stayed bf8 (TT_FUSED unset, or PI05_FUSED_RESIDUAL=legacy)."""
-    assert FusedConfig.legacy().legacy_sample_actions_available is True
-    assert FusedConfig.from_env({"TT_FUSED": "0"}).legacy_sample_actions_available is True
-    assert FusedConfig.from_env({}).legacy_sample_actions_available is False  # default = fused, bf16 expert weights
-    assert (
-        FusedConfig.from_env({"TT_FUSED": "1", "PI05_FUSED_RESIDUAL": "legacy"}).legacy_sample_actions_available is True
-    )
+def test_knob_residual_modes_and_rejects():
+    """``PI05_FUSED_RESIDUAL`` selects the expert residual weight format: bf16 for bf16 / mixed (the fused op
+    needs residual format == weight format), bf8 for the legacy numerics sub-mode."""
     for mode in ("bf16", "mixed"):
         cfg = FusedConfig.from_env({"TT_FUSED": "1", "PI05_FUSED_RESIDUAL": mode})
-        assert cfg.expert_residual_weight_dtype() == "bfloat16"
-        assert cfg.legacy_sample_actions_available is False
-    assert FusedConfig.from_env({"TT_FUSED": "1"}).legacy_sample_actions_available is False  # default bf16
-    # invariant the guard relies on: availability <=> bf8 expert residual weights
-    for env in (
-        {"TT_FUSED": "0"},
-        {"TT_FUSED": "1"},
-        {"TT_FUSED": "1", "PI05_FUSED_RESIDUAL": "mixed"},
-        {"TT_FUSED": "1", "PI05_FUSED_RESIDUAL": "legacy"},
-    ):
-        cfg = FusedConfig.from_env(env)
-        assert cfg.legacy_sample_actions_available == (cfg.expert_residual_weight_dtype() == "bfloat8_b")
+        assert cfg.expert_residual_weight_dtype() == "bfloat16" and cfg.fused_residual is True
+    cfg = FusedConfig.from_env({"PI05_FUSED_RESIDUAL": "legacy"})
+    assert cfg.expert_residual_weight_dtype() == "bfloat8_b" and cfg.fused_residual is False
     for bad in (
         {"TT_FUSED": "1", "PI05_FUSED_RESIDUAL": "fp32"},
         {"TT_FUSED": "1", "PI05_MLP_CHUNK": "100"},

@@ -1,0 +1,38 @@
+{
+ "label": "a_p150_pi05tree",
+ "time": "2026-09-29 14:45:05",
+ "build_s": 68.08754124201369,
+ "fused_cfg_resolved": {
+  "enabled": "True",
+  "trace": "True",
+  "trace_region_size": "160000000",
+  "residual": "bf16",
+  "mlp_chunk": "256",
+  "vlm_down_pc": "mcast2d",
+  "vlm_gateup_pc": "auto",
+  "vlm_attn_pc": "auto",
+  "siglip_pc": "auto",
+  "siglip_batched": "True",
+  "skip_vlm_tail": "True",
+  "sdpa_vlm": "None",
+  "sdpa_expert": "None",
+  "sdpa_siglip": "None",
+  "dit_blocks": "(1, 8, 4, 1, 4, 0, 2)",
+  "euler_dit_blocks": "(1, 8, 1, 1, 1, 0, 2)",
+  "expert_mm": "mcast1d_fp32",
+  "expert_mm_blocks": "(1, 8, 4, 1, 4, 0, 2)"
+ },
+ "first_call_ms": 19269.642227998702,
+ "traced": true,
+ "call_ms": {
+  "min": 125.6435310060624,
+  "median": 125.9461355075473,
+  "max": 130.16609000624157
+ },
+ "replay_ms": {
+  "min": 124.80851699365303,
+  "median": 124.84359749942087,
+  "max": 125.04067100235261
+ },
+ "bit_identical_repeats": true
+}

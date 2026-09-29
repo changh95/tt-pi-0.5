@@ -1,0 +1,9 @@
+RESULT {"seed": 3, "n_real": 12, "pcc": 0.938108066322809}
+RESULT {"seed": 3, "n_real": 224, "pcc": 0.9610770710547837}
+RESULT {"seed": 3, "n_real": 64, "pcc": 0.9765511102741845}
+RESULT {"seed": 7, "n_real": 12, "pcc": 0.9970670273076043}
+RESULT {"seed": 8, "n_real": 12, "pcc": 0.9958475639910911}
+RESULT {"seed": 9, "n_real": 12, "pcc": 0.9905516762367371}
+RESULT {"seed": 7, "n_real": 224, "pcc": 0.9961751497150556}
+RESULT {"seed": 8, "n_real": 224, "pcc": 0.998035455635181}
+RESULT {"seed": 9, "n_real": 224, "pcc": 0.995531577940749}

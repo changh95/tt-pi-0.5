@@ -1,0 +1,99 @@
+{
+ "shape": "libero 2x224^2, lang_len 32, H 10",
+ "traced": true,
+ "fused_cfg": {
+  "trace": "True",
+  "trace_region_size": "160000000",
+  "residual": "bf16",
+  "mlp_chunk": "256",
+  "vlm_down_pc": "mcast2d",
+  "vlm_gateup_pc": "mcast2d",
+  "vlm_attn_pc": "mcast2d",
+  "siglip_pc": "mcast2d",
+  "siglip_batched": "True",
+  "skip_vlm_tail": "True",
+  "sdpa_vlm": "None",
+  "sdpa_expert": "None",
+  "sdpa_siglip": "None",
+  "dit_blocks": "(1, 8, 4, 1, 4, 0, 2)",
+  "euler_dit_blocks": "(1, 8, 1, 1, 1, 0, 2)",
+  "expert_mm": "mcast1d_fp32",
+  "expert_mm_blocks": "(1, 8, 4, 1, 4, 0, 2)",
+  "tp": "1",
+  "ccl_topology": "ring",
+  "env_keys": "('PI05_WEIGHTS_DIR', 'TT_FUSED')",
+  "kv_dtype": "bf8",
+  "expert_geglu": "True",
+  "expert_attn": "fused",
+  "expert_norm_fold": "True"
+ },
+ "rows": [
+  {
+   "tag": "libero_spatial/t0/i0/call0/step10",
+   "n_lang": 20,
+   "pcc7": 0.999844992200279,
+   "pcc32": 0.9997875698173742,
+   "maxabs7": 0.027571886777877808
+  },
+  {
+   "tag": "libero_spatial/t0/i0/call12/step70",
+   "n_lang": 20,
+   "pcc7": 0.9997847897122235,
+   "pcc32": 0.9997890966547925,
+   "maxabs7": 0.03670163452625275
+  },
+  {
+   "tag": "libero_spatial/t3/i1/call0/step10",
+   "n_lang": 17,
+   "pcc7": 0.9998678648319074,
+   "pcc32": 0.9998021259803217,
+   "maxabs7": 0.0295238196849823
+  },
+  {
+   "tag": "libero_spatial/t3/i1/call12/step70",
+   "n_lang": 17,
+   "pcc7": 0.9999390987897641,
+   "pcc32": 0.9998949303841539,
+   "maxabs7": 0.024122893810272217
+  },
+  {
+   "tag": "libero_spatial/t6/i2/call0/step10",
+   "n_lang": 18,
+   "pcc7": 0.9997118086396971,
+   "pcc32": 0.999679169519781,
+   "maxabs7": 0.04902160167694092
+  },
+  {
+   "tag": "libero_spatial/t6/i2/call12/step70",
+   "n_lang": 18,
+   "pcc7": 0.9997768346291702,
+   "pcc32": 0.9997238327461023,
+   "maxabs7": 0.0642232596874237
+  },
+  {
+   "tag": "libero_spatial/t9/i3/call0/step10",
+   "n_lang": 17,
+   "pcc7": 0.9999170195323196,
+   "pcc32": 0.9998686606458713,
+   "maxabs7": 0.023668646812438965
+  },
+  {
+   "tag": "libero_spatial/t9/i3/call12/step70",
+   "n_lang": 17,
+   "pcc7": 0.9998659931618386,
+   "pcc32": 0.9998291761505599,
+   "maxabs7": 0.03916081786155701
+  }
+ ],
+ "pcc7_mean": 0.99983855018715,
+ "pcc7_min": 0.9997118086396971,
+ "ten_replays_bit_identical": true,
+ "latency": {
+  "runs": 60,
+  "call_ms_median": 76.89651199325453,
+  "call_ms_min": 76.53324998682365,
+  "replay_ms_median": 75.64346400613431,
+  "replay_ms_min": 75.60183099121787
+ },
+ "time": "2026-09-29 15:26:47"
+}

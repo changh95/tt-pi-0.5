@@ -2,16 +2,15 @@
 # SPDX-License-Identifier: Apache-2.0
 
 """
-Knobs for the fused / traced pi0.5 device graph (``TT_FUSED=1``).
+Knobs of the fused / traced pi0.5 device graph (``PI0ModelTTNN.sample_actions_fused``), the only
+inference path of this port.
 
-Everything new in the ``opt/pi05-base-p150-megakernel`` branch is opt-in behind ONE env knob
-that is read ONCE when the model is built (``PI0ModelTTNN.__init__`` -> ``FusedConfig.from_env``).
-``TT_FUSED`` unset / ``1`` -> ``FusedConfig.enabled == True`` (the DEFAULT since the device pass of
-2026-09-13); ``TT_FUSED=0`` -> every module runs the legacy code path untouched (bit-for-bit the
-behaviour shipped before that pass).
+The knobs are read ONCE when the model is built (``PI0ModelTTNN.__init__`` -> ``FusedConfig.from_env``).
+The unfused (legacy) path was removed: ``TT_FUSED`` unset or truthy is accepted and ignored;
+``TT_FUSED=0`` / ``false`` / ``off`` raises ``ValueError`` so an old manifest that asked for the
+unfused path cannot silently get the fused graph instead.
 
-Sub-knobs (only read when the fused path is enabled; every default is the recipe of
-``reports/megakernel/pi05-base-p150.md`` for the device pass):
+Sub-knobs (every default is the recipe of ``reports/megakernel/pi05-base-p150.md`` for the device pass):
 
 ``PI05_TRACE``              ``1`` (default): capture the whole device graph in one Metal trace during
                             the first ``sample_actions_fused`` call (the server's warm-up) and replay
@@ -27,14 +26,10 @@ Sub-knobs (only read when the fused path is enabled; every default is the recipe
                             (bf8 act x bf16 weight, path unexercised on Blackhole by this port).
                             ``legacy``: bf8 weights, linear + mac and the 3 typecasts (numerics of the
                             shipped path) while keeping the other fused levers.
-                            NOTE: with ``bf16`` / ``mixed`` the expert o_proj / down_proj are bf16 on
-                            the device, and the LEGACY ``sample_actions`` (which typecasts its
-                            residual / gate to bf8 before ``dit_minimal_matmul_addcmul_fused``) can no
-                            longer run on that model: the op requires the residual format == the
-                            weight format (``minimal_matmul_program_factory.cpp``
-                            ``TT_FATAL(ternary_a_data_format == in1_data_format)``). Only
-                            ``PI05_FUSED_RESIDUAL=legacy`` (or ``TT_FUSED`` unset) keeps the legacy
-                            entry points usable -- see ``legacy_sample_actions_available``.
+                            With ``bf16`` / ``mixed`` the expert o_proj / down_proj are bf16 on the
+                            device: ``dit_minimal_matmul_addcmul_fused`` requires the residual format ==
+                            the weight format (``minimal_matmul_program_factory.cpp``
+                            ``TT_FATAL(ternary_a_data_format == in1_data_format)``).
 ``PI05_MLP_CHUNK``          VLM MLP sequence chunk (default 256 = the legacy chunking; 384 / 512 / 0 were
                             measured far slower in the graph: the auto matmul program collapses above 8 M
                             tiles, and the unchunked path (``0``) also lowered the e2e PCC on 3 of 8
@@ -182,9 +177,8 @@ def _blocks(env: Mapping[str, str], name: str, default: Optional[Blocks]) -> Opt
 
 @dataclass(frozen=True)
 class FusedConfig:
-    """Resolved knobs. ``enabled=False`` means: legacy path everywhere, nothing else is consulted."""
+    """Resolved knobs of the fused graph."""
 
-    enabled: bool = False
     trace: bool = True
     trace_region_size: int = 160_000_000
     residual: str = "bf16"
@@ -258,18 +252,15 @@ class FusedConfig:
             raise ValueError(f"PI05_KV_DTYPE={self.kv_dtype!r} must be 'bf8' or 'bf16'")
 
     @classmethod
-    def legacy(cls) -> "FusedConfig":
-        return cls(enabled=False)
-
-    @classmethod
     def from_env(cls, env: Optional[Mapping[str, str]] = None) -> "FusedConfig":
         """Read the knobs once. ``env`` defaults to ``os.environ`` (tests pass a dict)."""
         env = os.environ if env is None else env
-        enabled = _bool(env, "TT_FUSED", True)  # default ON (device pass 2026-09-13); TT_FUSED=0 = legacy
-        if not enabled:
-            return cls.legacy()
+        if not _bool(env, "TT_FUSED", True):
+            raise ValueError(
+                f"TT_FUSED={env.get('TT_FUSED')!r}: the unfused path was removed; the fused graph is the only "
+                "inference path (unset TT_FUSED)"
+            )
         return cls(
-            enabled=True,
             trace=_bool(env, "PI05_TRACE", True),
             trace_region_size=_int(env, "PI05_TRACE_REGION_SIZE", 160_000_000, minimum=1),
             residual=env.get("PI05_FUSED_RESIDUAL", "bf16").strip().lower() or "bf16",
@@ -297,11 +288,9 @@ class FusedConfig:
         )
 
     def resolved(self, num_devices: int) -> "FusedConfig":
-        """``tp`` 0 (auto) -> the mesh size; a legacy (disabled) config is returned unchanged."""
+        """``tp`` 0 (auto) -> the mesh size, plus the layout defaults of the knobs not set explicitly."""
         from dataclasses import replace
 
-        if not self.enabled:
-            return self
         tp = self.tp if self.tp else max(1, int(num_devices))
         if tp > 1 and num_devices % tp != 0:
             raise ValueError(f"PI05_TP={tp} does not divide the mesh size {num_devices}")
@@ -352,34 +341,19 @@ class FusedConfig:
     @property
     def fused_residual(self) -> bool:
         """True when the expert gated residuals use the fused matmul+addcmul with a bf16 stream."""
-        return self.enabled and self.residual != "legacy"
+        return self.residual != "legacy"
 
     def expert_residual_weight_dtype(self) -> str:
         """dtype name of the expert o_proj / down_proj weights (the fused op needs residual == weight format)."""
         return "bfloat16" if self.fused_residual else "bfloat8_b"
 
-    @property
-    def legacy_sample_actions_available(self) -> bool:
-        """True when the legacy ``sample_actions`` / ``sample_actions_traced`` can run on a model built
-        with this config. The legacy expert block typecasts hidden + gate to bf8 and feeds them with
-        ``mlp.down_proj`` into ``dit_minimal_matmul_addcmul_fused``, whose program factory requires the
-        residual format == the weight format; with bf16 o_proj / down_proj (``fused_residual``) that is
-        a hard device failure, so the legacy path is only available with bf8 expert weights."""
-        return self.expert_residual_weight_dtype() == "bfloat8_b"
-
     def expert_mlp_act_dtype(self) -> str:
         """dtype name of the expert gate/up/gelu*up activations feeding the down-proj."""
-        if not self.enabled or self.residual == "legacy":
-            return "bfloat8_b"
         return "bfloat16" if self.residual == "bf16" else "bfloat8_b"
 
     def action_out_weight_dtype(self) -> str:
-        """The Euler+out-proj fused op needs x_t (bf16) == weight format -> bf16 when fused."""
-        return "bfloat16" if self.enabled else "bfloat8_b"
-
-    def keep_fused_gate_up_copy(self) -> bool:
-        """Legacy keeps a fused [hidden, 2*mlp] gate_up copy next to the separate weights; fused mode does not."""
-        return not self.enabled
+        """The Euler+out-proj fused op needs x_t (bf16) == weight format -> bf16."""
+        return "bfloat16"
 
     def describe(self) -> dict:
         return {f.name: getattr(self, f.name) for f in fields(self)}

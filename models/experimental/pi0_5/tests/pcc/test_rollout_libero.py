@@ -9,7 +9,7 @@ simulation episodes. For each (task, init_state) pair we reset the env to the
 canonical LIBERO initial state, then iterate:
 
     1. Build Pi0.5 inputs from the current obs (images + state + task text)
-    2. Sample an action chunk via model.sample_actions()
+    2. Sample an action chunk (torch: model.sample_actions(); TTNN: model.sample_actions_fused())
     3. Execute the first K actions in the env
     4. Check success; re-plan
 
@@ -292,56 +292,27 @@ class TTNNBackend:
     def __init__(self, weight_loader):
         import ttnn
 
+        from models.experimental.pi0_5.common.fused_config import FusedConfig
         from models.experimental.pi0_5.tt.ttnn_pi0_model import PI0ModelTTNN
 
         self.ttnn = ttnn
-        self.device = ttnn.open_device(device_id=0, l1_small_size=24576)
+        fused_cfg = FusedConfig.from_env()
+        kwargs = dict(device_id=0, l1_small_size=24576)
+        if fused_cfg.trace:
+            kwargs["trace_region_size"] = fused_cfg.trace_region_size
+        self.device = ttnn.open_device(**kwargs)
+        self.device.enable_program_cache()
         torch.manual_seed(BASE_SEED)
-        self.model = PI0ModelTTNN(create_pi05_config(), weight_loader, self.device)
+        self.model = PI0ModelTTNN(create_pi05_config(), weight_loader, self.device, fused=fused_cfg)
 
     def sample(self, img1, img2, img_masks, lang_tokens, lang_masks, state, x0):
-        ttnn = self.ttnn
-
-        # Pin x_0 for the denoising loop
-        self.model.x_t_ttnn = ttnn.from_torch(
-            x0,
-            dtype=ttnn.bfloat16,
-            layout=ttnn.TILE_LAYOUT,
-            device=self.device,
-            memory_config=ttnn.L1_MEMORY_CONFIG,
-        )
-
-        images_ttnn = [
-            ttnn.from_torch(
-                im,
-                dtype=ttnn.bfloat16,
-                layout=ttnn.TILE_LAYOUT,
-                device=self.device,
-                memory_config=ttnn.DRAM_MEMORY_CONFIG,
-            )
-            for im in (img1, img2)
-        ]
-        lang_tokens_ttnn = ttnn.from_torch(
-            lang_tokens, dtype=ttnn.uint32, layout=ttnn.ROW_MAJOR_LAYOUT, device=self.device
-        )
-        lang_masks_ttnn = ttnn.from_torch(
-            lang_masks.float(), dtype=ttnn.bfloat16, layout=ttnn.TILE_LAYOUT, device=self.device
-        )
-        state_ttnn = ttnn.from_torch(state, dtype=ttnn.bfloat16, layout=ttnn.TILE_LAYOUT, device=self.device)
-
+        # Fused graph: torch inputs, x_0 pinned via `noise`. The pi0.5 expert does not read the state and
+        # every camera is valid, so `state` / `img_masks` are not inputs of the graph.
         with torch.no_grad():
-            actions = self.model.sample_actions(
-                images=images_ttnn,
-                img_masks=img_masks,
-                lang_tokens=lang_tokens_ttnn,
-                lang_masks=lang_masks_ttnn,
-                state=state_ttnn,
-            )
-        if isinstance(actions, ttnn.Tensor):
-            actions = ttnn.to_torch(actions)
-        return actions
+            return self.model.sample_actions_fused([img1, img2], lang_tokens, noise=x0, lang_masks=lang_masks)
 
     def close(self):
+        self.model.release_trace()
         self.ttnn.close_device(self.device)
 
 

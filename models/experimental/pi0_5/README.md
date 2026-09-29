@@ -1,5 +1,11 @@
 # π0.5 on 2× Blackhole p300 (4 chips) — tensor-parallel prefix, replicated action expert, one Metal trace
 
+> **2026-09-29 (branch `fused-fix-2026-09-29` of tt-pi-0.5):** this tree now serves the single-chip p150a port.
+> The fused graph applies openpi's prompt padding mask and places the action tokens at RoPE positions
+> `n_valid + [0, H)` (both were missing); the unfused path and the disaggregated 2+2 pipeline
+> (`tt/ttnn_disagg.py`, `PI05_LAYOUT=pipeline`, described below) were removed. The numbers below are the p300x2
+> measurements taken BEFORE that fix. p150a results: `docs/FUSED_FIX_2026-09-29.md` at the repo root.
+
 Physical Intelligence's **π0.5** vision-language-action policy (`lerobot/pi05_base`: SigLIP-so400m + Gemma-2B
 VLM + Gemma-300M flow-matching action expert) running on **four Tenstorrent Blackhole chips** (two p300 boards,
 one 1×4 Ethernet ring) through TT-NN. Two 224×224 camera images + a ≤224-token prompt in, a 50-step chunk of
@@ -72,7 +78,8 @@ python models/experimental/pi0_5/server/smoke_test.py --url http://127.0.0.1:200
 Knobs (all read once at model build, `common/fused_config.py`): `PI05_TP` (0 = mesh size, 1 = replicate everything),
 `PI05_CCL_TOPOLOGY` (`ring` | `linear`), `PI05_MLP_CHUNK`, `PI05_VLM_GATEUP_PC`, `PI05_SDPA_EXPERT_CHUNKS`,
 `PI05_KV_DTYPE` (`bf8` | `bf16`), `PI05_EXPERT_GEGLU` (fused `[up|gate]` matmul + `ttnn.geglu`), plus the single-chip
-knobs of the original port (`TT_FUSED`, `PI05_TRACE`, `PI05_FUSED_RESIDUAL`, …).
+knobs of the original port (`PI05_TRACE`, `PI05_FUSED_RESIDUAL`, …). The unfused path was removed (2026-09-29):
+`TT_FUSED` unset or `1` is accepted, `TT_FUSED=0` raises a `ValueError`.
 
 Parallel single-chip jobs on this box: pass distinct `device_id`s. `TT_METAL_VISIBLE_DEVICES=<n>` renumbers the chip
 to 0 in every process, and the UMD `CHIP_IN_USE_0` lock then serialises them; a fabric mesh on a subset of the ring
@@ -87,7 +94,7 @@ pi0_5/
 ├── tt/       ttnn_pi0_model (fused graph + trace), ttnn_paligemma (backbone, KV caches, TP weight sharding),
 │             ttnn_gemma (VLM / expert blocks), ttnn_siglip (vision tower), ttnn_suffix / ttnn_prefix, ttnn_ccl (mesh helpers)
 ├── server/   FastAPI app (tt-model-manager `tt-dit-server`), smoke_test
-└── tests/    pcc/test_pcc_pi05_mesh.py, perf/test_perf_pi05_mesh.py (+ the single-chip fused / legacy tests)
+└── tests/    pcc/test_pcc_pi05_mesh.py, perf/test_perf_pi05_mesh.py (+ the single-chip fused tests)
 ```
 
 ## Caveats

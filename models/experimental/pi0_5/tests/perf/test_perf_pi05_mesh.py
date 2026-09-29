@@ -62,8 +62,6 @@ def main():
     args = ap.parse_args()
 
     fused_cfg = FusedConfig.from_env()
-    if not fused_cfg.enabled:
-        raise SystemExit("the mesh path needs the fused graph: unset TT_FUSED or set TT_FUSED=1")
     mesh_shape = parse_mesh(args.mesh)
     device = ttnn_ccl.open_mesh(fused_cfg, mesh_shape, l1_small_size=24576)
     try:
@@ -76,7 +74,7 @@ def main():
         )
         g = torch.Generator().manual_seed(1)
         images = [torch.rand(1, 3, 224, 224, generator=g) * 2 - 1 for _ in range(NUM_IMAGES)]
-        tokens = torch.randint(0, 256000, (1, TOKEN_LEN), generator=g)
+        tokens = torch.randint(1, 256000, (1, TOKEN_LEN), generator=g)
 
         t0 = time.perf_counter()
         out = model.sample_actions_fused(images, tokens)

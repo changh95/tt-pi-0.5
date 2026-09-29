@@ -47,7 +47,7 @@ def open_mesh(cfg, mesh_shape=(1, 4), l1_small_size: int = 24576, trace_region_s
     if rows * cols > 1:
         ttnn.set_fabric_config(fabric_config(cfg))
     kwargs = dict(l1_small_size=l1_small_size, num_command_queues=num_command_queues)
-    if cfg.enabled and cfg.trace:
+    if cfg.trace:
         kwargs["trace_region_size"] = cfg.trace_region_size if trace_region_size is None else trace_region_size
     mesh = ttnn.open_mesh_device(ttnn.MeshShape(rows, cols), **kwargs)
     mesh.enable_program_cache()

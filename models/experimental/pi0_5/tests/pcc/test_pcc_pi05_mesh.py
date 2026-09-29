@@ -60,7 +60,7 @@ def compute_pcc(a: torch.Tensor, b: torch.Tensor) -> float:
 def make_inputs(seed: int):
     g = torch.Generator().manual_seed(seed)
     images = [torch.rand(1, 3, 224, 224, generator=g) * 2 - 1 for _ in range(NUM_IMAGES)]
-    tokens = torch.randint(0, 256000, (1, TOKEN_LEN), generator=g)
+    tokens = torch.randint(1, 256000, (1, TOKEN_LEN), generator=g)
     noise = torch.randn(1, 50, 32, generator=g)
     return images, tokens, noise
 
@@ -76,8 +76,6 @@ def run_torch(model_torch: PI0ModelTorch, images, tokens, noise):
 @pytest.fixture(scope="module")
 def mesh():
     fused = FusedConfig.from_env()
-    if not fused.enabled:
-        pytest.skip("the mesh path needs TT_FUSED=1")
     dev = ttnn_ccl.open_mesh(fused, MESH, l1_small_size=24576)
     yield dev
     ttnn_ccl.close_mesh(dev)

@@ -5,11 +5,11 @@ robotics that combines a vision encoder, language model, and action expert for
 end-to-end robot control. This repository is a port of π0.5 to Tenstorrent
 hardware via TTNN, derived from `lerobot/pi05_base`.
 
-Since 2026-09-13 the port runs a **fused / traced device graph by default**
-(`TT_FUSED` unset or `1`): the whole SigLIP + VLM + 10-step action-expert graph is
-captured in one Metal trace and replayed per request. `TT_FUSED=0` restores the
-previous (legacy, untraced) path bit-for-bit. The hardware pass that measured it is
-documented in [`DEVICE_VALIDATION.md`](DEVICE_VALIDATION.md).
+Since 2026-09-13 the port runs a **fused / traced device graph**: the whole SigLIP + VLM +
+10-step action-expert graph is captured in one Metal trace and replayed per request. Since
+2026-09-29 it is the only inference path: the previous (legacy, untraced) path was removed from
+the code (`TT_FUSED=0` now fails with a `ValueError`); its numbers below are historical. The
+hardware pass that measured the fused graph is documented in [`DEVICE_VALIDATION.md`](DEVICE_VALIDATION.md).
 
 ## PCC Results
 
@@ -43,7 +43,7 @@ path is at or above legacy on 15 of the 16). The first `sample_actions_fused` ca
 cache JIT-compiles the fused kernels and captures the trace (8.4 s warm-up measured with the legacy
 kernels already cached).
 
-### Legacy path (`TT_FUSED=0`), 32-token port configuration
+### Legacy path (removed 2026-09-29; historical), 32-token port configuration
 
 Numbers as originally published (source-built tt-metal v0.65.1rc17); re-checked on 2026-09-13 with
 `TT_FUSED` unset on the tree above: `test_pcc_pi05_model.py` PCC 0.9928, `test_perf_pi05.py`
@@ -78,17 +78,13 @@ Reproduce (from the repo root, see *Quick Start* for the environment):
 ```bash
 # Fused / traced path (default): PCC vs torch on the served shape, then device timing
 pytest models/experimental/pi0_5/tests/pcc/test_pcc_pi05_fused.py -v -s
-python models/experimental/pi0_5/tests/perf/test_perf_pi05_fused.py --runs 10 --skip-legacy
-
-# Legacy path (32-token config): PCC (accuracy) and performance
-TT_FUSED=0 python models/experimental/pi0_5/tests/pcc/test_pcc_pi05_model.py
-TT_FUSED=0 python models/experimental/pi0_5/tests/perf/test_perf_pi05.py
+python models/experimental/pi0_5/tests/perf/test_perf_pi05_fused.py --runs 10
 ```
 
-## Fused / traced path (`TT_FUSED`)
+## Fused / traced path
 
-All fused levers live behind one env knob, read once when `PI0ModelTTNN` is built
-(`FusedConfig.from_env()` in `common/fused_config.py`). What the default path does:
+The knobs are read once when `PI0ModelTTNN` is built (`FusedConfig.from_env()` in
+`common/fused_config.py`). What the graph does:
 
 - persistent device inputs, a compile pass, then one `begin/end_trace_capture` of the whole graph;
   per call: `copy_host_to_device_tensor` + `execute_trace` (`sample_actions_fused`);
@@ -102,9 +98,10 @@ All fused levers live behind one env knob, read once when `PI0ModelTTNN` is buil
   with a precomputed positional table and fused biases;
 - expert qkv / up through a 1D-multicast matmul program with fp32 accumulation.
 
-`TT_FUSED=0` disables every one of them and runs the previously shipped code path bit-for-bit.
+`TT_FUSED` unset or `1` is accepted; `TT_FUSED=0` / `false` / `off` raises a `ValueError` (the
+unfused path was removed).
 
-Sub-knobs (read only when the fused path is enabled; defaults are the validated recipe -- the full
+Sub-knobs (defaults are the validated recipe -- the full
 description of each is the module docstring of `common/fused_config.py`, the measurements behind
 each default are in `DEVICE_VALIDATION.md`):
 
@@ -123,10 +120,7 @@ each default are in `DEVICE_VALIDATION.md`):
 | `PI05_SDPA_VLM_CHUNKS` / `PI05_SDPA_EXPERT_CHUNKS` / `PI05_SDPA_SIGLIP_CHUNKS` | legacy config | `q,k` chunk sizes for the three SDPA sites on the full grid |
 
 The fused graph is shape-bound: `PI05_NUM_IMAGES` (default 2) and `PI05_TOKEN_LEN` (default 224, a
-multiple of 32) are fixed when the trace is captured. With `PI05_FUSED_RESIDUAL=bf16` / `mixed` the
-expert weights are stored in bf16, so the legacy `sample_actions` / `sample_actions_traced` entry
-points raise a `RuntimeError` on that model; use `PI05_FUSED_RESIDUAL=legacy` for an in-process
-fused-vs-legacy comparison, or `TT_FUSED=0` for the true legacy baseline.
+multiple of 32) are fixed when the trace is captured.
 
 ### Fused-path tests
 
@@ -135,19 +129,13 @@ fused-vs-legacy comparison, or `TT_FUSED=0` for the true legacy baseline.
 pytest models/experimental/pi0_5/tests/test_fused_host.py -q
 # (also runs as a plain script: python models/experimental/pi0_5/tests/test_fused_host.py)
 
-# Device: fused vs torch (and vs the legacy ttnn path when PI05_FUSED_RESIDUAL=legacy)
+# Device: fused vs torch
 pytest models/experimental/pi0_5/tests/pcc/test_pcc_pi05_fused.py -v -s
 PI05_TRACE=0 PI05_FUSED_RESIDUAL=legacy PI05_SIGLIP_BATCHED=0 \
     pytest models/experimental/pi0_5/tests/pcc/test_pcc_pi05_fused.py -v -s   # exact levers, eager
 
-# Device: fused traced timing (min / median / max over --runs); --skip-legacy omits the
-# in-process legacy timing (which needs PI05_FUSED_RESIDUAL=legacy)
-python models/experimental/pi0_5/tests/perf/test_perf_pi05_fused.py --runs 10 --skip-legacy
-
-# Legacy regression (the model's own tests, TT_FUSED=0)
-TT_FUSED=0 pytest models/experimental/pi0_5/tests/pcc/test_pcc_pi05_model.py \
-    models/experimental/pi0_5/tests/pcc/test_pcc_pi05_multireplan.py \
-    models/experimental/pi0_5/tests/pcc/test_determinism_pi05.py -v -s
+# Device: fused traced timing (min / median / max over --runs)
+python models/experimental/pi0_5/tests/perf/test_perf_pi05_fused.py --runs 10
 ```
 
 The device tests take `PI05_WEIGHTS_DIR=<dir with model.safetensors + config.json>` (default: the
@@ -164,7 +152,7 @@ tt-pi-0.5/
 ├── models/experimental/pi0_5/
 │   ├── common/                     # Shared configs and utilities
 │   │   ├── configs.py              # Model configurations (GemmaConfig.use_adarms, etc.)
-│   │   ├── fused_config.py         # TT_FUSED / PI05_* knobs (FusedConfig, read once at build)
+│   │   ├── fused_config.py         # PI05_* knobs (FusedConfig, read once at build)
 │   │   ├── fused_host.py           # Torch reformulations used by the fused graph (im2col, Euler fold, ...)
 │   │   ├── weight_loader.py        # Checkpoint loading (pi05_base)
 │   │   └── utils.py                # Common utilities
@@ -176,8 +164,8 @@ tt-pi-0.5/
 │   │   ├── torch_prefix.py         # Prefix embedding
 │   │   ├── torch_suffix.py         # Suffix embedding
 │   │   └── torch_denoise.py        # Flow-matching denoising logic
-│   ├── tt/                         # TTNN implementation (legacy + fused paths)
-│   │   ├── ttnn_pi0_model.py       # Main π0.5 model (TTNN): sample_actions / sample_actions_fused
+│   ├── tt/                         # TTNN implementation (fused graph)
+│   │   ├── ttnn_pi0_model.py       # Main π0.5 model (TTNN): sample_actions_fused
 │   │   ├── ttnn_paligemma.py       # PaliGemma backbone (TTNN)
 │   │   ├── ttnn_siglip.py          # SigLIP vision tower (TTNN)
 │   │   ├── ttnn_gemma.py           # Gemma attention/MLP + adaRMS (TTNN)
@@ -186,10 +174,10 @@ tt-pi-0.5/
 │   │   └── ttnn_common.py          # Common TTNN utilities
 │   └── tests/
 │       ├── test_fused_host.py      # Torch-only proofs for the fused graph (no device)
-│       ├── pcc/                    # PCC (accuracy) tests, incl. test_pcc_pi05_model.py, test_pcc_pi05_fused.py
-│       ├── perf/                   # Performance benchmarks, incl. test_perf_pi05.py, test_perf_pi05_fused.py
+│       ├── pcc/                    # PCC (accuracy) tests, incl. test_pcc_pi05_fused.py
+│       ├── perf/                   # Performance benchmarks, incl. test_perf_pi05_fused.py
 │       ├── unit/                   # Component unit tests (adaRMS, suffix, time embedding)
-│       ├── demo/                   # Demo scripts with ALOHA (MuJoCo) / LIBERO datasets
+│       ├── demo/                   # Sample-image extraction from the ALOHA (MuJoCo) / LIBERO datasets
 │       └── download_pretrained_weights.py
 ├── DEVICE_VALIDATION.md            # Hardware pass of the fused path (plan, results, knobs, gates)
 └── Dockerfile
@@ -261,53 +249,12 @@ PyTorch reference.
 pytest models/experimental/pi0_5/tests/pcc/test_pcc_pi05_fused.py -v -s
 ```
 
-**Full π0.5 Model PCC Test (legacy path):**
-
-```bash
-TT_FUSED=0 pytest models/experimental/pi0_5/tests/pcc/test_pcc_pi05_model.py -v -s
-# or direct execution
-TT_FUSED=0 python models/experimental/pi0_5/tests/pcc/test_pcc_pi05_model.py
-```
-
-**Component PCC Tests:**
-
-```bash
-# Run all component tests
-python models/experimental/pi0_5/tests/pcc/run_all_pcc_tests.py
-
-# Individual component tests
-pytest models/experimental/pi0_5/tests/pcc/test_pcc_suffix.py -v
-pytest models/experimental/pi0_5/tests/pcc/test_pcc_prefix.py -v
-pytest models/experimental/pi0_5/tests/pcc/test_pcc_gemma.py -v
-pytest models/experimental/pi0_5/tests/pcc/test_pcc_siglip.py -v
-pytest models/experimental/pi0_5/tests/pcc/test_pcc_paligemma.py -v
-
-# Determinism, multi-replan responsiveness, per-step velocity PCC (legacy API)
-TT_FUSED=0 pytest models/experimental/pi0_5/tests/pcc/test_determinism_pi05.py \
-    models/experimental/pi0_5/tests/pcc/test_pcc_pi05_multireplan.py \
-    models/experimental/pi0_5/tests/pcc/test_pcc_pi05_per_step.py -v -s
-```
 
 ### Performance Tests (Benchmarking)
 
 ```bash
 # Fused / traced path: device time per 50-action chunk at the served shape
-python models/experimental/pi0_5/tests/perf/test_perf_pi05_fused.py --runs 10 --skip-legacy
-
-# Legacy π0.5 performance test (action throughput / latency, 32-token config)
-TT_FUSED=0 python models/experimental/pi0_5/tests/perf/test_perf_pi05.py
-
-# Legacy Metal Trace variant
-TT_FUSED=0 python models/experimental/pi0_5/tests/perf/test_perf_pi05_trace.py
-
-# Profiling helper
-python models/experimental/pi0_5/tests/perf/profile_pi05.py
-```
-
-### Performance Test (end-to-end 2CQ + Trace, legacy)
-
-```bash
-TT_FUSED=0 pytest models/experimental/pi0_5/tests/perf/test_perf_e2e.py
+python models/experimental/pi0_5/tests/perf/test_perf_pi05_fused.py --runs 10
 ```
 
 Recommended invocation (Blackhole p300c, device 2, source-built tt-metal):
@@ -317,12 +264,14 @@ TT_METAL_RUNTIME_ROOT=$TT_METAL_HOME/build_Release/libexec/tt-metalium \
 PI0_DEVICE_ID=2 \
 PYTHONPATH=$(pwd):$TT_METAL_HOME \
 TT_METAL_HOME=$TT_METAL_HOME \
-python models/experimental/pi0_5/tests/perf/test_perf_pi05_fused.py --runs 10 --skip-legacy
+python models/experimental/pi0_5/tests/perf/test_perf_pi05_fused.py --runs 10
 ```
 
 ## Demo Scripts
 
-Demo scripts visualize π0.5 inference on robotics datasets.
+The demo inference scripts (`run_aloha_sim_demo.py`, `run_libero_demo.py`, `visualize_demo.py`) were
+removed on 2026-09-29 with the legacy path: they built a π0 (`pi05=False`) model, which the fused graph
+does not support. The sample-image extractors remain.
 
 - **ALOHA sim** uses MuJoCo-based bimanual setups.
 - **LIBERO** uses the standard LIBERO benchmark suite.
@@ -354,19 +303,6 @@ sample_images/
     └── metadata.txt
 ```
 
-**Run Demos:**
-
-```bash
-# ALOHA (MuJoCo) simulation demo
-python models/experimental/pi0_5/tests/demo/run_aloha_sim_demo.py
-
-# LIBERO demo
-python models/experimental/pi0_5/tests/demo/run_libero_demo.py
-
-# Visualize results
-python models/experimental/pi0_5/tests/demo/visualize_demo.py
-```
-
 ## Troubleshooting
 
 ### `Checkpoint not found` / `No model.safetensors found`
@@ -379,11 +315,10 @@ huggingface-cli download lerobot/pi05_base \
     --local-dir models/experimental/pi0_5/weights/pi05_base
 ```
 
-### `PI0ModelTTNN.sample_actions is not available on a model built with TT_FUSED=1 ...`
+### `TT_FUSED='0': the unfused path was removed ...`
 
-The default `PI05_FUSED_RESIDUAL=bf16` stores the expert o_proj / down_proj in bf16, which the
-legacy expert block cannot consume. Call `sample_actions_fused`, or build the model with
-`TT_FUSED=0` (true legacy) / `PI05_FUSED_RESIDUAL=legacy` (fused levers with bf8 expert weights).
+The legacy entry points (`sample_actions`, `sample_actions_traced`) and `TT_FUSED=0` were removed on
+2026-09-29. Unset `TT_FUSED` and call `sample_actions_fused`.
 
 ### `Statically allocated circular buffers ... clash with L1 buffers`
 

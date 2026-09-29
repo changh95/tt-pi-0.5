@@ -6,8 +6,7 @@ Common utility functions for TTNN PI0 implementation.
 
 This module provides shared helper functions used across the PI0 model:
     - Sinusoidal positional embeddings for flow matching timesteps
-    - Safe tensor operations with dtype handling
-    - Device-aware computations
+    - 1D host tensor -> [1, N] TILE device tensor (biases, norm weights)
 """
 
 import math
@@ -15,25 +14,6 @@ from typing import Optional
 
 import torch
 import ttnn
-
-
-def get_ttnn_dtype(precision: str) -> ttnn.DataType:
-    """
-    Convert precision string to TTNN dtype.
-
-    Args:
-        precision: "bfloat16", "float32", "bfloat8_b", etc.
-
-    Returns:
-        TTNN data type
-    """
-    dtype_map = {
-        "bfloat16": ttnn.bfloat16,
-        "float32": ttnn.float32,
-        "bfloat8_b": ttnn.bfloat8_b,
-        "bfloat4_b": ttnn.bfloat4_b,
-    }
-    return dtype_map.get(precision, ttnn.bfloat16)
 
 
 def precompute_sinusoidal_scaling_factor(
@@ -123,104 +103,6 @@ def create_sinusoidal_pos_embedding_ttnn(
     return embeddings
 
 
-def safe_cat_ttnn(
-    tensors: list,
-    dim: int = -1,
-    memory_config: Optional[ttnn.MemoryConfig] = None,
-) -> ttnn.Tensor:
-    """
-    Safely concatenate TTNN tensors.
-
-    Args:
-        tensors: List of TTNN tensors to concatenate
-        dim: Dimension along which to concatenate
-        memory_config: Optional memory config for output
-
-    Returns:
-        Concatenated TTNN tensor
-    """
-    if len(tensors) == 0:
-        raise ValueError("Cannot concatenate empty list of tensors")
-
-    if memory_config is None:
-        memory_config = ttnn.L1_MEMORY_CONFIG
-
-    return ttnn.concat(tensors, dim=dim, memory_config=memory_config)
-
-
-def compute_position_ids_ttnn(
-    pad_masks: ttnn.Tensor,
-    device: Optional[ttnn.Device] = None,
-) -> ttnn.Tensor:
-    """
-    Compute position IDs from padding masks (TTNN version).
-
-    Args:
-        pad_masks: Boolean TTNN tensor (batch_size, seq_len)
-        device: TTNN device
-
-    Returns:
-        Position IDs TTNN tensor (batch_size, seq_len)
-    """
-    # Use moreh_cumsum for cumulative sum
-    cumsum = ttnn.moreh_cumsum(pad_masks, dim=1)
-
-    # Subtract 1 to get 0-indexed positions
-    ones = ttnn.ones_like(cumsum)
-    position_ids = ttnn.subtract(cumsum, ones)
-
-    return position_ids
-
-
-def ttnn_to_torch(tensor: ttnn.Tensor) -> torch.Tensor:
-    """
-    Convert TTNN tensor to PyTorch tensor.
-
-    Args:
-        tensor: TTNN tensor
-
-    Returns:
-        PyTorch tensor
-    """
-    return ttnn.to_torch(tensor)
-
-
-def torch_to_ttnn(
-    tensor: torch.Tensor,
-    device: ttnn.Device,
-    dtype: Optional[ttnn.DataType] = None,
-    layout: Optional[ttnn.Layout] = None,
-    memory_config: Optional[ttnn.MemoryConfig] = None,
-) -> ttnn.Tensor:
-    """
-    Convert PyTorch tensor to TTNN tensor.
-
-    Args:
-        tensor: PyTorch tensor
-        device: TTNN device
-        dtype: TTNN data type (default: bfloat16)
-        layout: TTNN layout (default: TILE_LAYOUT)
-        memory_config: Memory configuration (default: DRAM)
-
-    Returns:
-        TTNN tensor
-    """
-    if dtype is None:
-        dtype = ttnn.bfloat16
-    if layout is None:
-        layout = ttnn.TILE_LAYOUT
-    if memory_config is None:
-        memory_config = ttnn.DRAM_MEMORY_CONFIG
-
-    return ttnn.from_torch(
-        tensor,
-        dtype=dtype,
-        layout=layout,
-        device=device,
-        memory_config=memory_config,
-    )
-
-
 def tensor_1d_to_2d_ttnn(
     tensor: "torch.Tensor",
     device: ttnn.Device,
@@ -266,9 +148,3 @@ def tensor_1d_to_2d_ttnn(
     tensor_ttnn = ttnn.to_layout(tensor_ttnn, ttnn.TILE_LAYOUT)
 
     return tensor_ttnn
-
-
-# Default exports
-create_sinusoidal_pos_embedding = create_sinusoidal_pos_embedding_ttnn
-safe_cat = safe_cat_ttnn
-compute_position_ids = compute_position_ids_ttnn
