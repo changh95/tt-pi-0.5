@@ -1,0 +1,83 @@
+{
+ "schema": "pi05-op-profile-run/1",
+ "created": "2026-09-30T00:06:44+09:00",
+ "shape": "base",
+ "argv": [
+  "run",
+  "--shape",
+  "base",
+  "--replays",
+  "3",
+  "--run-json",
+  "/tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/mkprof/prof_base/run_base.json"
+ ],
+ "env": {
+  "TT_METAL_PROFILER_NO_CACHE_OP_INFO": "1",
+  "TT_METAL_PROFILER_CPP_POST_PROCESS": "1",
+  "TT_METAL_DEVICE_PROFILER": "1",
+  "TT_METAL_PROFILER_PROGRAM_SUPPORT_COUNT": "16000",
+  "TT_METAL_HOME": "/home/deepgadget/experiments/gr00t/tt-metal",
+  "TT_METAL_CACHE": "/home/deepgadget/.cache/tt-metal-cache-pi05-mkprof",
+  "TT_METAL_PROFILER_DIR": "/tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/mkprof/prof_base",
+  "TTNN_OP_PROFILER": "1",
+  "TT_METAL_PROFILER_TRACE_TRACKING": "1"
+ },
+ "device": {
+  "compute_grid": [
+   11,
+   10
+  ],
+  "num_cores": 110
+ },
+ "fused_cfg": {
+  "trace": "True",
+  "trace_region_size": "160000000",
+  "residual": "bf16",
+  "mlp_chunk": "256",
+  "vlm_down_pc": "mcast2d",
+  "vlm_gateup_pc": "auto",
+  "vlm_attn_pc": "auto",
+  "siglip_pc": "auto",
+  "siglip_batched": "True",
+  "skip_vlm_tail": "True",
+  "sdpa_vlm": "None",
+  "sdpa_expert": "None",
+  "sdpa_siglip": "None",
+  "dit_blocks": "(1, 8, 4, 1, 4, 0, 2)",
+  "euler_dit_blocks": "(1, 8, 1, 1, 1, 0, 2)",
+  "expert_mm": "mcast1d_fp32",
+  "expert_mm_blocks": "(1, 8, 4, 1, 4, 0, 2)",
+  "tp": "0",
+  "ccl_topology": "ring",
+  "env_keys": "()",
+  "kv_dtype": "bf8",
+  "expert_geglu": "False",
+  "expert_attn": "ttnn",
+  "expert_norm_fold": "False"
+ },
+ "meta": {
+  "weights": "/home/deepgadget/.cache/huggingface/hub/models--lerobot--pi05_base/snapshots/b211f3d44c36b6acfcf7ae94a64e8e96f75a64ba",
+  "token_len": 224,
+  "n_lang": 224,
+  "H": 50
+ },
+ "first_call_s": 27.346705524018034,
+ "eager_s": 0.2492543400148861,
+ "replay_wall_ms_profiled": {
+  "n": 3,
+  "median": 83.97541698650457,
+  "min": 83.93678400898352,
+  "max": 84.05941497767344,
+  "all": [
+   83.9368,
+   83.9754,
+   84.0594
+  ]
+ },
+ "replay_bit_identical_to_first_call": [
+  true,
+  true,
+  true
+ ],
+ "eager_equal_to_first_call": true
+}
