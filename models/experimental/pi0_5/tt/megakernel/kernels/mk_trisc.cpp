@@ -35,6 +35,19 @@
 #include "api/compute/reconfig_data_format.h"
 #include "api/compute/compute_kernel_hw_startup.h"
 #include "mk_defs.hpp"
+#ifdef MK_TRACE
+#include "api/debug/dprint.h"
+#define TR(tag, v)                                                          \
+    do {                                                                    \
+        DPRINT_UNPACK("U " tag " {}\n", (uint32_t)(v));                     \
+        DPRINT_MATH("M " tag " {}\n", (uint32_t)(v));                       \
+        DPRINT_PACK("P " tag " {}\n", (uint32_t)(v));                       \
+    } while (0)
+#else
+#define TR(tag, v) \
+    do {           \
+    } while (0)
+#endif
 
 #define NOINL __attribute__((noinline, noclone))
 
@@ -132,6 +145,7 @@ Me me;
 
 // ================================================================ pair: qkv + epilogue + RoPE
 NOINL void pair_qkv() {
+    TR("pair_qkv", 0);
     cb_wait_front(CB_IN0, IN0_PAGES);
     cb_wait_front(CB_W8, 8 * PAGE_TILES);
     cb_reserve_back(CB_QKVO, 2 * RT);
@@ -182,6 +196,7 @@ NOINL void pair_qkv() {
 
 // ================================================================ owner: step input -> fp32 residual
 NOINL void owner_load_x(bool has_res) {
+    TR("owner_load_x", 0);
     cb_wait_front(CB_IN0, IN0_PAGES);
     tile_regs_acquire();
     for (uint32_t r = 0; r < RT; ++r) {
@@ -217,6 +232,7 @@ NOINL void scores_into(uint32_t i, uint32_t t) {
 }
 
 NOINL void unit_attention() {
+    TR("unit_attention", 0);
     cb_wait_front(CB_Q, DH_T * RT);
     if (me.npre) {
         cb_wait_front(CB_KV, 2 * CHT * DH_T);
@@ -336,6 +352,7 @@ NOINL void unit_attention() {
 
 // ================================================================ merger: NCH parts -> ctx[r, head]
 NOINL void merge() {
+    TR("merge", 0);
     constexpr uint32_t NP = NCH;
     cb_wait_front(CB_PART, DH_T * (NCH - 1));
     cb_wait_front(CB_PM, NCH - 1);
@@ -441,6 +458,7 @@ NOINL void owner_residual(uint32_t gate_slot) {
 }
 
 NOINL void owner_oproj() {
+    TR("owner_oproj", 0);
     cb_wait_front(CB_IN0, IN0_PAGES);
     tile_regs_acquire();
     mm_init_f<HIFI2>(CB_IN0, CB_W16);
@@ -458,6 +476,7 @@ NOINL void owner_oproj() {
 }
 
 NOINL void owner_reduce() {
+    TR("owner_reduce", 0);
     cb_wait_front(CB_RED, 8 * RT);
     tile_regs_acquire();
     mm_init_f<HIFI4>(CB_CONST, CB_RED);
@@ -472,6 +491,7 @@ NOINL void owner_reduce() {
 
 // ================================================================ MLP: up|gate + GeGLU, down partial
 NOINL void mlp_upgate() {
+    TR("mlp_upgate", 0);
     cb_wait_front(CB_IN0, IN0_PAGES);
     cb_reserve_back(CB_H, 2 * RT);
     constexpr uint32_t RB = 2 * RT;  // r tiles at RB.., then c_u, c_g
@@ -522,6 +542,7 @@ NOINL void mlp_upgate() {
 }
 
 NOINL void mlp_down() {
+    TR("mlp_down", 0);
     cb_wait_front(CB_HG, 16 * RT);
     cb_reserve_back(CB_DP, 4 * RT);
     tile_regs_acquire();
@@ -550,6 +571,7 @@ NOINL void mlp_down() {
 // ================================================================ H0
 // r = rsqrt(mean(x^2) + eps) per row of CB_IN0's x (full tiles) -> `out_cb` tiles [0, RT)
 NOINL void h0_rms(uint32_t out_cb) {
+    TR("h0_rms", 0);
     cb_reserve_back(out_cb, RT);
     for (uint32_t r = 0; r < RT; ++r) {
         cb_reserve_back(CB_SCR, 1);
@@ -563,6 +585,7 @@ NOINL void h0_rms(uint32_t out_cb) {
         pack_to(0, CB_SCR, 0);
         tile_regs_release();
         cb_push_back(CB_SCR, 1);
+        TR("rms_scr", r);
         cb_wait_front(CB_SCR, 1);
         tile_regs_acquire();
         mm_init_f<HIFI4>(CB_SCR, CB_CONST);
@@ -580,8 +603,10 @@ NOINL void h0_rms(uint32_t out_cb) {
     cb_push_back(out_cb, RT);
 }
 
-// x_new = x_t @ W_in + b_in -> CB_IN0 (TRISC-produced; the BRISC multicasts it and pops it), then r_in -> CB_ROUT
+// x_new = x_t @ W_in + b_in -> row 0 in CB_PART, row 1 in CB_HG (TRISC -> BRISC; the BRISC multicasts them and copies
+// them into its own CB_IN0, which it pushes as for a gathered x), then r_in from CB_IN0 -> CB_ROUT
 NOINL void h0_inproj() {
+    TR("h0_inproj", 0);
     // x_t (fp32 state) -> bf16 in0
     cb_reserve_back(CB_SCR16, RT);
     cb_wait_front(CB_XRES, RT);
@@ -597,8 +622,12 @@ NOINL void h0_inproj() {
     tile_regs_release();
     cb_push_back(CB_SCR16, RT);
     cb_wait_front(CB_SCR16, RT);
-    cb_reserve_back(CB_IN0, IN0_PAGES);
+    cb_reserve_back(CB_PART, DH_T * (NCH - 1));
+    if (RT == 2) {
+        cb_reserve_back(CB_HG, 16 * RT);
+    }
     for (uint32_t nb = 0; nb < 4; ++nb) {
+        TR("inproj_nb", nb);
         cb_wait_front(CB_W16, 2 * PAGE_TILES);  // W_in tiles nb*8..+8 (one K tile each), then their b_in tiles
         for (uint32_t r = 0; r < RT; ++r) {
             for (uint32_t n0 = 0; n0 < 8; n0 += 4) {
@@ -616,24 +645,26 @@ NOINL void h0_inproj() {
                 tile_regs_commit();
                 tile_regs_wait();
                 for (uint32_t q = 0; q < 4; ++q) {
-                    pack_to(q, CB_IN0, r * 32 + nb * 8 + n0 + q);
+                    pack_to(q, r == 0 ? CB_PART : CB_HG, nb * 8 + n0 + q);
                 }
                 tile_regs_release();
             }
         }
         cb_pop_front(CB_W16, 2 * PAGE_TILES);
     }
-    cb_push_back(CB_IN0, IN0_PAGES);
+    cb_push_back(CB_PART, DH_T * (NCH - 1));
+    if (RT == 2) {
+        cb_push_back(CB_HG, 16 * RT);
+    }
     cb_pop_front(CB_SCR16, RT);
-    cb_wait_front(CB_IN0, IN0_PAGES);
+    cb_wait_front(CB_IN0, IN0_PAGES);  // the BRISC's copy of x_new
     h0_rms(CB_ROUT);
-    // not popped here: the BRISC pops CB_IN0 after its multicast and then pushes CB_RTOK
-    cb_wait_front(CB_RTOK, 1);
-    cb_pop_front(CB_RTOK, 1);
+    cb_pop_front(CB_IN0, IN0_PAGES);
 }
 
 // final adaRMS + out-projection + Euler on the gathered x (CB_IN0); `last` also packs x_t (bf16) -> CB_ROUT
 NOINL void h0_tail(bool last) {
+    TR("h0_tail", 0);
     cb_wait_front(CB_IN0, IN0_PAGES);
     h0_rms(CB_SCR16);
     cb_wait_front(CB_SCR16, RT);
@@ -687,6 +718,7 @@ NOINL void h0_tail(bool last) {
 
 // x_t (bf16) -> CB_ROUT without an Euler step (debug stop in the middle of a step)
 NOINL void h0_emit_xt() {
+    TR("h0_emit_xt", 0);
     cb_wait_front(CB_IN0, IN0_PAGES);
     cb_wait_front(CB_W16, 40);
     cb_pop_front(CB_W16, 40);
@@ -709,12 +741,12 @@ NOINL void h0_emit_xt() {
 }
 
 void run_h0(uint32_t ngen) {
-    // noise (bf16, loaded by the BRISC into CB_SCR16) -> x_t (fp32)
-    cb_wait_front(CB_SCR16, RT);
+    // noise (bf16, loaded by the BRISC into CB_Q: one producer RISC per CB) -> x_t (fp32)
+    cb_wait_front(CB_Q, RT);
     cb_reserve_back(CB_XRES, RT);
     tile_regs_acquire();
     for (uint32_t r = 0; r < RT; ++r) {
-        load(CB_SCR16, r, r);
+        load(CB_Q, r, r);
     }
     tile_regs_commit();
     tile_regs_wait();
@@ -723,8 +755,9 @@ void run_h0(uint32_t ngen) {
     }
     tile_regs_release();
     cb_push_back(CB_XRES, RT);
-    cb_pop_front(CB_SCR16, RT);
+    cb_pop_front(CB_Q, RT);
     for (uint32_t g = 0; g < ngen; ++g) {
+        TR("h0_gen", g);
         const uint32_t l = g % N_LAYERS;
         if (l == 0) {
             if (g > 0) {
@@ -776,6 +809,7 @@ void kernel_main() {
     }
     const bool has_wc = (me.bits & (R_PAIR | R_MLP | R_OWNER)) != 0;
     for (uint32_t g = 0; g < ngen; ++g) {
+        TR("gen", g);
         const uint32_t l = g % N_LAYERS;
         if (has_wc) {
             cb_wait_front(CB_WC, PAGE_TILES);

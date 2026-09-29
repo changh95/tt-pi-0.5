@@ -130,6 +130,49 @@ class PI0ModelTTNN:
 
         # Initialize components
         self._init_components()
+        self._init_megakernel()
+
+    def _init_megakernel(self):
+        """PI05_MEGAKERNEL (docs/megakernel/DESIGN.md §4.12): ``expert`` runs the whole 10 x 18 expert loop, the action
+        in / out projections and the Euler steps as ONE generic_op (tt/megakernel/) after the ttnn prefix. The stamp
+        (``megakernel_backend`` / ``megakernel_program``) is what tests assert; refusals raise, never fall back."""
+        self.megakernel_backend = self.fused_cfg.megakernel
+        self.megakernel_program = None
+        self._mk: Dict[str, object] = {}
+        self._mk_params = None
+        if self.megakernel_backend == "off":
+            return
+        if self.megakernel_backend == "whole":
+            raise RuntimeError("PI05_MEGAKERNEL=whole (phase 2: the whole sample_actions as one program) is not built yet")
+        if _is_mesh(self.device):
+            raise RuntimeError("PI05_MEGAKERNEL=expert is single-chip: TT_MESH_SHAPE must be 1x1")
+        from .megakernel.host_model import expert_params
+        from .megakernel.program import KERNEL_SOURCES, kernel_digest
+
+        cw = self.weight_loader.categorized_weights
+        self._mk_params = expert_params(cw["action_expert"], cw["pi0_projections"],
+                                        eps=self.config.expert_config.rms_norm_eps,
+                                        num_steps=self.denoise_config.num_steps)
+        self.megakernel_program = {"kernel_digest": kernel_digest(),
+                                   "sources": [os.path.basename(p) for p in KERNEL_SOURCES]}
+
+    def _megakernel_for(self, prefix_len: int, batch: int):
+        """The ExpertMegakernel of this serving shape (built once; the weight arenas are shared by the shapes)."""
+        from .megakernel import geometry as MG
+        from .megakernel.program import ExpertMegakernel
+
+        if batch != 1:
+            raise RuntimeError(f"PI05_MEGAKERNEL=expert serves batch 1 only (got batch {batch})")
+        shape = MG.shape_for(prefix_len, self._suffix_rows)
+        mk = self._mk.get(shape.name)
+        if mk is None:
+            arenas = None
+            for other in self._mk.values():
+                if other.plan.bank == MG.plan_banks(shape).bank:
+                    arenas = (other.w8, other.w16)
+            mk = ExpertMegakernel(self.device, self._mk_params, shape, arenas=arenas)
+            self._mk[shape.name] = mk
+        return mk
 
     def _init_components(self):
         """Initialize all model components."""
@@ -332,6 +375,8 @@ class PI0ModelTTNN:
     _ATTN_INPUTS_TTNN = {"vlm_mask": "dram", "sdpa_mask": "dram", "cos": "l1", "sin": "l1"}
 
     def _attn_input_names(self) -> Dict[str, str]:
+        if getattr(self, "megakernel_backend", "off") == "expert":
+            return self._ATTN_INPUTS_FUSED  # the megakernel reads exp_mask and the four q / k RoPE tables
         fused_attn = self.backbone.expert_blocks[0].attention._fused_attn is not None
         return self._ATTN_INPUTS_FUSED if fused_attn else self._ATTN_INPUTS_TTNN
 
@@ -414,6 +459,8 @@ class PI0ModelTTNN:
         num_images = sum(k[0] for k in key[0]) // batch  # cameras per request
         token_len = key[1][-1]
         plan = check_fused_shape_contract(num_images, token_len, self.config.action_horizon, batch=batch)
+        if self.megakernel_backend == "expert":
+            self._megakernel_for(plan["prefix_len"], batch)  # refusals (shape, batch) before any allocation
 
         device = self.device
         self._fused_in_im2col = [ttnn.to_device(t, device, memory_config=ttnn.DRAM_MEMORY_CONFIG) for t in im2col_hosts]
@@ -473,6 +520,10 @@ class PI0ModelTTNN:
         attn_in = self._fused_attn_in()
         prefix_embs = self.prefix_embedding.embed_prefix_fused(self._fused_in_im2col, self._fused_in_tokens)
         self.backbone.forward_vlm_fused(prefix_embs, attn_in["vlm_mask"])  # consumes prefix_embs, fills the KV caches
+
+        if self.megakernel_backend == "expert":
+            mk = self._megakernel_for(self.backbone.kv_cache_plan["prefix_len"], self.backbone.kv_cache_plan["batch"])
+            return mk.run(self.backbone.kv_caches, attn_in["exp_mask"], attn_in["tables"], self._fused_in_noise)
 
         num_steps = self.denoise_config.num_steps
         dts = euler_dts(num_steps)

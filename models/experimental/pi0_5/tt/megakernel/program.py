@@ -172,17 +172,18 @@ class ExpertMegakernel:
             if cb.fp32_unpack:
                 modes[cb.cb_id] = ttnn.UnpackToDestMode.UnpackToDestFp32
         cc.unpack_to_dest_mode = modes
+        defines = [("MK_TRACE", "1")] if os.environ.get("PI05_MK_TRACE", "0") == "1" else []
         fp = ttnn.KernelDescriptor.SourceType.FILE_PATH
         dm = ttnn.DataMovementConfigDescriptor
         kernels = [
             ttnn.KernelDescriptor(kernel_source=KERNELS["ncrisc"], source_type=fp, core_ranges=cores,
-                                  compile_time_args=ct, runtime_args=rt, common_runtime_args=common,
+                                  compile_time_args=ct, runtime_args=rt, common_runtime_args=common, defines=defines,
                                   config=dm(processor=ttnn.DataMovementProcessor.RISCV_1, noc=ttnn.NOC.NOC_0)),
             ttnn.KernelDescriptor(kernel_source=KERNELS["brisc"], source_type=fp, core_ranges=cores,
-                                  compile_time_args=ct, runtime_args=rt, common_runtime_args=common,
+                                  compile_time_args=ct, runtime_args=rt, common_runtime_args=common, defines=defines,
                                   config=dm(processor=ttnn.DataMovementProcessor.RISCV_0, noc=ttnn.NOC.NOC_1)),
             ttnn.KernelDescriptor(kernel_source=KERNELS["trisc"], source_type=fp, core_ranges=cores,
-                                  compile_time_args=ct, runtime_args=rt, common_runtime_args=common, config=cc),
+                                  compile_time_args=ct, runtime_args=rt, common_runtime_args=common, defines=defines, config=cc),
         ]
         sems = [ttnn.SemaphoreDescriptor(id=i, core_ranges=cores, initial_value=0) for i in (0, 1)]
         return ttnn.ProgramDescriptor(kernels=kernels, semaphores=sems, cbs=cbs)

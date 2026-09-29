@@ -64,13 +64,15 @@ def base_config() -> PI0ModelConfig:
 
 
 def open_device():
-    fused = FusedConfig.from_env()
-    kwargs = dict(device_id=int(os.environ.get("PI0_DEVICE_ID", "0")), l1_small_size=24576)
-    if fused.trace:
-        kwargs["trace_region_size"] = fused.trace_region_size
-    dev = ttnn.open_device(**kwargs)
-    dev.enable_program_cache()
-    return dev
+    from models.experimental.pi0_5.common.device_open import open_pi05_device
+
+    return open_pi05_device(FusedConfig.from_env(), device_id=int(os.environ.get("PI0_DEVICE_ID", "0")))
+
+
+def stamp_of(model) -> dict:
+    """The constructed model's backend stamp (DESIGN.md §4.12): read from the object, never from the env."""
+    return {"megakernel_backend": getattr(model, "megakernel_backend", "off"),
+            "megakernel_program": getattr(model, "megakernel_program", None)}
 
 
 @pytest.fixture(scope="module")
@@ -123,6 +125,7 @@ def run_libero(device):
         "shape": "libero 2x224^2, lang_len 32, H 10",
         "traced": model._fused_trace_id is not None,
         "fused_cfg": {k: str(v) for k, v in model.fused_cfg.describe().items()},
+        "stamp": stamp_of(model),
         "rows": rows,
         "pcc7_mean": sum(r["pcc7"] for r in rows) / len(rows),
         "pcc7_min": min(r["pcc7"] for r in rows),
@@ -170,6 +173,7 @@ def run_base(device):
         "shape": "base 2x224^2, 224 tokens, H 50",
         "n_real": list(N_REAL),
         "traced": model._fused_trace_id is not None,
+        "stamp": stamp_of(model),
         "fused_cfg": {k: str(v) for k, v in model.fused_cfg.describe().items()},
         "pcc_vs_reference": [pcc(o, r) for o, r in zip(outs, refs)],
         "masked_vs_unmasked_pcc": pcc(outs[0], unmasked),
@@ -187,6 +191,7 @@ def run_base(device):
 def test_libero_vs_openpi(device):
     res = run_libero(device)
     print(json.dumps({k: v for k, v in res.items() if k != "rows"}, indent=1))
+    assert res["stamp"]["megakernel_backend"] == FusedConfig.from_env().megakernel
     assert res["traced"] and res["ten_replays_bit_identical"]
     assert res["pcc7_mean"] >= PCC7_LIBERO_MEAN and res["pcc7_min"] >= PCC7_LIBERO_MIN
 
@@ -194,6 +199,7 @@ def test_libero_vs_openpi(device):
 def test_base_padded_vs_reference(device):
     res = run_base(device)
     print(json.dumps(res, indent=1))
+    assert res["stamp"]["megakernel_backend"] == FusedConfig.from_env().megakernel
     assert res["traced"] and res["ten_replays_bit_identical"]
     assert min(res["pcc_vs_reference"]) >= PCC_BASE_MIN
     assert sum(res["pcc_vs_reference"]) / len(res["pcc_vs_reference"]) >= PCC_BASE_MEAN

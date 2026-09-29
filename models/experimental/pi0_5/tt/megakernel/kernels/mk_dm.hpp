@@ -8,6 +8,14 @@
 #include "api/dataflow/dataflow_api.h"
 #include "api/debug/waypoint.h"
 #include "mk_defs.hpp"
+#ifdef MK_TRACE
+#include "api/debug/dprint.h"
+#define TRD(tag, a, b) DPRINT(tag " {} {}\n", (uint32_t)(a), (uint32_t)(b))
+#else
+#define TRD(tag, a, b) \
+    do {               \
+    } while (0)
+#endif
 
 namespace mk {
 
@@ -43,6 +51,7 @@ FORCE_INLINE uint32_t sync_read(uint32_t w) {
 
 // Debug words: (s, l, phase) of the last blocking wait entered, for post-mortem reads after a hang.
 FORCE_INLINE void dbg_mark(uint32_t g, uint32_t phase) {
+    TRD("B", g, phase);
     *sync_ptr(S_DBG) = g;
     *sync_ptr(S_DBG + 1) = phase;
 }

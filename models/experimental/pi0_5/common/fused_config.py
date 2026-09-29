@@ -224,8 +224,15 @@ class FusedConfig:
     #   per-row rsqrt is one small program and the fused attention / fused GeGLU apply it. -2 rms_norm launches and
     #   -1 geglu launch per layer.
     expert_norm_fold: bool = False
+    # ``megakernel`` (PI05_MEGAKERNEL): off | expert | whole. ``expert`` = phase 1 of docs/megakernel/DESIGN.md: the
+    #   whole 10 x 18 expert loop + action in / out projections + Euler as ONE persistent generic_op
+    #   (tt/megakernel/); the SigLIP / VLM prefix stays on the ttnn ops. ``whole`` (phase 2) is not built yet and
+    #   refuses. The device must be opened with the 64 KiB worker-L1 cut (common/device_open.py).
+    megakernel: str = "off"
 
     def __post_init__(self):
+        if self.megakernel not in ("off", "expert", "whole"):
+            raise ValueError(f"PI05_MEGAKERNEL={self.megakernel!r} must be 'off', 'expert' or 'whole'")
         if self.expert_attn not in ("ttnn", "fused"):
             raise ValueError(f"PI05_EXPERT_ATTN={self.expert_attn!r} must be 'ttnn' or 'fused'")
         if self.residual not in RESIDUAL_MODES:
@@ -285,6 +292,7 @@ class FusedConfig:
             expert_geglu=_bool(env, "PI05_EXPERT_GEGLU", False),
             expert_attn=env.get("PI05_EXPERT_ATTN", "ttnn").strip().lower() or "ttnn",
             expert_norm_fold=_bool(env, "PI05_EXPERT_NORM_FOLD", False),
+            megakernel=env.get("PI05_MEGAKERNEL", "off").strip().lower() or "off",
         )
 
     def resolved(self, num_devices: int) -> "FusedConfig":

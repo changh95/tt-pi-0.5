@@ -381,15 +381,36 @@ void run_h0() {
             if (g > 0) {
                 h0_gather(S_X_ARR, 32 * g);  // x_final of the previous step -> TRISC tail + in-proj
             }
+            // TRISC in-proj: x_new row 0 in CB_PART, row 1 in CB_HG (every CB has ONE producer RISC and ONE consumer
+            // RISC: the TRISC packer / unpacker keep local copies of the CB counters)
             WAYPOINT("H0IP");
-            cb_wait_front(CB_ROUT, RT);  // TRISC: x_new packed into CB_IN0, r_in into CB_ROUT
+            cb_wait_front(CB_PART, DH_T * (NCH - 1));
+            if (RT == 2) {
+                cb_wait_front(CB_HG, 16 * RT);
+            }
+            const uint32_t rows[2] = {cb_base(CB_PART), cb_base(CB_HG)};
+            cb_reserve_back(CB_IN0, IN0_PAGES);
+            for (uint32_t r = 0; r < RT; ++r) {  // own copy for the TRISC's r_in
+                write_to(rows[r], me.h0x, me.h0y, in0 + r * 32 * T16, 32 * T16);
+            }
+            noc_async_write_barrier();
+            cb_push_back(CB_IN0, IN0_PAGES);
             WAIT_GE(S_X_RDY, me.n_xrdy * (g + 1), "H0XR");
-            mcast_round(me.rx, in0, in0, X_TILES * T16, S_SRC0 + 0, S_X_FLAG, g + 1);
+            for (uint32_t r = 0; r < RT; ++r) {
+                noc_async_write_multicast(rows[r], mcast_addr(me.rx.x0, me.rx.y0, me.rx.x1, me.rx.y1, in0 + r * 32 * T16),
+                                          32 * T16, me.rx.n, true);
+            }
+            mcast_round(me.rx, 0, 0, 0, S_SRC0 + 0, S_X_FLAG, g + 1);
+            noc_async_write_barrier();
+            cb_pop_front(CB_PART, DH_T * (NCH - 1));
+            if (RT == 2) {
+                cb_pop_front(CB_HG, 16 * RT);
+            }
+            WAYPOINT("H0RI");
+            cb_wait_front(CB_ROUT, RT);
             mcast_round(me.rx, rout, in0 + X_TILES * T16, RT * T16, S_SRC0 + 1, S_R_FLAG, g + 1);
             noc_async_write_barrier();
             cb_pop_front(CB_ROUT, RT);
-            cb_pop_front(CB_IN0, IN0_PAGES);  // BRISC consumes the TRISC-produced x_new
-            cb_push_back(CB_RTOK, 1);        // ... and tells the TRISC so (it must not see x_new as the x_mid landing)
         } else {
             h0_gather(S_X_ARR, 32 * g);
             WAIT_GE(S_X_RDY, me.n_xrdy * (g + 1), "H0XR");
@@ -499,7 +520,7 @@ void kernel_main() {
         prefetch_kv(0);
     }
     if (me.has(R_H0)) {
-        read_tiles_into(CB_SCR16, RT, TensorAccessor(acc_noise, ct_arg(C_NOISE)), 0);
+        read_tiles_into(CB_Q, RT, TensorAccessor(acc_noise, ct_arg(C_NOISE)), 0);
         run_h0();
     } else if (me.has(R_H1)) {
         run_h1();

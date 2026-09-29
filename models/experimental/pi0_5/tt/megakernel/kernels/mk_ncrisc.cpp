@@ -49,6 +49,7 @@ struct Ring {
         noc_async_read_set_trid(trid);
         const uint64_t src = get_noc_addr_from_bank_id<true>(bank, addr + off + issued * page_bytes);
         noc_async_read(src, wr, page_bytes);
+        TRD("I", cb, issued);
         wr += page_bytes;
         if (wr >= end) {
             wr = base;
@@ -70,6 +71,7 @@ struct Ring {
         invalidate_l1_cache();
         asm volatile("" ::: "memory");
         cb_push_back(cb, PAGE_TILES);
+        TRD("N", cb, issued);
         done_slot = (done_slot + 1 == depth) ? 0 : done_slot + 1;
         --in_flight;
         return true;

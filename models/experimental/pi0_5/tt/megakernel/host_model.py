@@ -157,7 +157,8 @@ def loop_reference(p: ExpertParams, kv: Sequence[Tuple[torch.Tensor, torch.Tenso
 
 
 def loop_decomposed(p: ExpertParams, kv: Sequence[Tuple[torch.Tensor, torch.Tensor]], a: AttnInputs,
-                    noise: torch.Tensor, chunk_tiles: int, taps: Optional[Dict] = None) -> torch.Tensor:
+                    noise: torch.Tensor, chunk_tiles: int, taps: Optional[Dict] = None,
+                    ngen: int = N_STEPS * N_LAYERS, last: Optional[Dict] = None) -> torch.Tensor:
     """The kernel's decomposition in fp32: folds + r / c epilogues, per-chunk flash parts over [prefix | suffix] key
     tiles merged with diag(s_i) weights, the 2-D MLP (h columns kg*16 + 2 ng + {0, 1}, down K-split over 8 row
     groups reduced per owner column), fp32 residual and Euler."""
@@ -168,8 +169,12 @@ def loop_decomposed(p: ExpertParams, kv: Sequence[Tuple[torch.Tensor, torch.Tens
     nch = nkt // chunk_tiles
     x_t = noise.float().clone()
     for s in range(N_STEPS):
+        if s * N_LAYERS >= ngen:
+            break
         x = x_t @ p.w_in + p.b_in
         for l in range(N_LAYERS):
+            if s * N_LAYERS + l >= ngen:
+                break
             si, hi, gi, sp, hp, gp = p.mods[s][l]
             wq, cq = fold(p.wqkv[l], si, hi)
             r_in = rms(x, p.eps)
@@ -204,6 +209,10 @@ def loop_decomposed(p: ExpertParams, kv: Sequence[Tuple[torch.Tensor, torch.Tens
             x = x + gp * down
             if taps is not None and (s, l) in taps:
                 taps[(s, l)] = x.clone()
+            if last is not None:
+                last["x"] = x.clone()
+        if (s + 1) * N_LAYERS > ngen:
+            break
         sf, hf = p.final[s]
         wout, cout = fold(p.w_out, sf, hf)
         v = rms(x, p.eps) * (x @ wout) + cout + p.b_out
