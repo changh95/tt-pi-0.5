@@ -119,3 +119,34 @@ Key changes (numbers from mk_design_calc_v2.out):
   GR00T-realised range 2,522-5,079 us per VLM layer straddles TTNN 2,437 -> P2-1 decides.
 
 Open / next: WP-P1-0. Open question for the user (DESIGN.md §8): batch-1-only megakernel server acceptable?
+
+## 2026-09-30 01:55:20 KST -- session mk1-r0-s0: phase-1 implementation v1 (kernels + host), offline
+
+Read first: JOURNAL.md, DESIGN.md v2, GR00T allgather.hpp / weight_stream.hpp / row_layernorm.hpp (ln_llk fidelity
+wrappers), mk_k4 / f0 summaries, the memory notes named in the task. No device time yet in this session.
+
+Implementation v1 (models/experimental/pi0_5/tt/megakernel/): one generic_op over the whole 11x10 grid, three kernels
+(kernels/mk_ncrisc.cpp weight streams on NoC 0, mk_brisc.cpp every exchange on NoC 1, mk_trisc.cpp all arithmetic),
+constants shared through kernels/mk_defs.hpp which geometry.py parses (one source of truth). Deviations from DESIGN.md
+§4.2-4.8, each chosen to cut the number of distinct mechanisms for a first correct build (speed levers left for later):
+- qkv on 40 "pair" cores (x in 0..9, y in 0..3; each owns dh tiles j and j+4 of one Q head / K / V): RoPE is local, no
+  pair exchange (R2 pair step removed); 2x the per-core qkv compute (~4 us instead of ~2).
+- attention: 80 units (base) / 48 (LIBERO) as designed, but ONE merger per (head, row) (the kc = 0 unit) that folds the
+  NCH parts with diag(w_i / L) HiFi4 matmuls (D_i packed fp32) instead of the dh-split merge; m / l travel as full tiles.
+- ctx travels as bf16 (not bfp8): CB_IN0 is 64*RT bf16 pages; no two-format CB needed (L1 union allows it).
+- adaRMS r is a FULL tile (row value in every column) from H0 (sum of x^2 by fp32 DST mul-accumulate, then @ (1/1024)
+  tile, + eps, rsqrt); every epilogue (r*acc + c, gates, RoPE, GeGLU) runs on the SFPU in fp32 DST with row-broadcast
+  constant tiles streamed per (step, layer) in a third ring (CB_WC, one 8-tile page per layer).
+- landing CBs are used in full-capacity cycles only (every pointer at the base between transactions), so remote writers
+  address a peer's CB base (identical layout on every core). Multicast rounds carry explicit ready credits; the
+  point-to-point deposits rely on the layer's dependency chain (argument per buffer in mk_brisc.cpp header).
+- rings never let a waited region straddle the ring end (W8 16 pages: waits of 8 / 2 pages; W16 8 pages: page-by-page;
+  H0's per-step W16 stream padded to 16 pages).
+Host checks (CPU): host_model.loop_decomposed (the kernel's decomposition: folds, chunked flash + diag merge, 2-D MLP,
+fp32 residual, folded out-proj) vs loop_reference with the real pi05_base expert weights and random prefix K/V:
+fp64 PCC 1.0000000000000002, max |diff| 5.1e-14 (base shape); fp32 PCC 0.9999984 (base, round-off amplified over 180
+layers) / 0.99999999996 (LIBERO). Scratch: scratchpad/mk/host_check{,64}.{py,log}.
+Mock-cluster compile (size_check.py, private TT_METAL_CACHE): base 69,992 B, LIBERO 68,696 B incl. args / CB configs
+(brisc 18,192, ncrisc 2,224, trisc0 21,568, trisc1 18,384, trisc2 7,424) vs the 128 KB gate -> docs/megakernel/impl/
+size_check_v1_*.json. CB union per core: base 1177248 B (to be checked against measured free L1).
+Next: first device bring-up (debug stop after 1 generation, watcher on), then 18, then 180 generations.
