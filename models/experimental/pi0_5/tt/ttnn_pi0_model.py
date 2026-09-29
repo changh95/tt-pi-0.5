@@ -37,7 +37,7 @@ in bf16, which the legacy block's bf8 residual cannot feed into ``dit_minimal_ma
 """
 
 from pathlib import Path
-from typing import List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 import os
 import torch
@@ -52,7 +52,9 @@ from models.experimental.pi0_5.common.configs import (
 )
 from models.experimental.pi0_5.common.fused_config import FusedConfig
 from models.experimental.pi0_5.common.fused_host import (
+    attention_inputs,
     check_fused_shape_contract,
+    prefix_valid_mask,
     euler_dts,
     im2col_patches,
     pad_rows,
@@ -106,8 +108,11 @@ class PI0ModelTTNN:
         self._fused_in_im2col: List[ttnn.Tensor] = []
         self._fused_in_tokens = None
         self._fused_in_noise = None
+        self._fused_attn_dev: Dict[str, ttnn.Tensor] = {}  # persistent attention inputs (masks, RoPE rows)
+        self._fused_attn_key = None  # prefix validity the attention inputs were last written for
         self._fused_trace_id = None
         self._fused_out = None
+        self._expert_rope_host = None  # (cos, sin) host copies of the expert RoPE tables
 
         # Initialize denoising config
         self.denoise_config = DenoiseConfig(
@@ -184,7 +189,9 @@ class PI0ModelTTNN:
             max_seq_len=self.config.max_seq_len,
         )
         weights = self.weight_loader.categorized_weights
-        self.backbone = PaliGemmaBackboneTTNN(paligemma_config, weights, self.device, fused_cfg=self.fused_cfg)
+        self.backbone = PaliGemmaBackboneTTNN(
+            paligemma_config, weights, self.device, fused_cfg=self.fused_cfg, action_horizon=self.config.action_horizon
+        )
 
         # Pre-compute per-(step, layer) adaRMS modulations for Pi0.5.
         # For each denoising step, for each expert layer, the modulation tensor
@@ -588,7 +595,8 @@ class PI0ModelTTNN:
         images: List[torch.Tensor],
         lang_tokens: torch.Tensor,
         noise: Optional[torch.Tensor],
-    ) -> Tuple[List[ttnn.Tensor], ttnn.Tensor, ttnn.Tensor]:
+        lang_masks: Optional[torch.Tensor] = None,
+    ) -> Tuple[List[ttnn.Tensor], ttnn.Tensor, ttnn.Tensor, torch.Tensor]:
         """torch request data -> HOST ttnn tensors with the persistent inputs' shape / dtype / layout.
 
         images: B*N x [1, 3, 224, 224] float in [-1, 1] (the server's preprocessing), request-major
@@ -596,9 +604,12 @@ class PI0ModelTTNN:
         B = lang_tokens.shape[0] requests share the trace. The host im2col is the exact permutation the
         legacy device unfold performed, rounded to bf16 by the upload. One im2col tensor [B*N, 256, 608]
         when the cameras are batched (PI05_SIGLIP_BATCHED=1), else one per camera.
-        lang_tokens: [B, L] int ids -> uint32 ROW_MAJOR (same conversion as the legacy upload).
-        noise: [B, 50, 32] float (a [1, 50, 32] noise is repeated over B) or None (-> the model's seeded
-        default) -> zero-padded to 64 rows.
+        lang_tokens: [B, L] int ids, right-padded -> uint32 ROW_MAJOR (same conversion as the legacy upload).
+        lang_masks: [B, L] bool, True on the real tokens (a right-padded prefix of each row). None -> ``tokens != 0``
+        (PaliGemma ``<pad>`` = 0, never a prompt token). The padded tokens are hidden from every query.
+        noise: [B, H, 32] float (a [1, H, 32] noise is repeated over B) or None (-> the model's seeded
+        default) -> zero-padded to round_up(H) rows.
+        Returns the host tensors and the prefix validity ``[B, N*256 + L]`` (bool; every camera is valid).
         """
         if not images:
             raise ValueError("at least one image is required")
@@ -609,6 +620,16 @@ class PI0ModelTTNN:
         batch = int(lang_tokens.shape[0]) if lang_tokens.dim() > 1 else 1
         if len(images) % batch != 0:
             raise ValueError(f"{len(images)} images do not split over {batch} requests")
+        tokens = lang_tokens.reshape(batch, -1)
+        lmask = (tokens != 0) if lang_masks is None else torch.as_tensor(lang_masks).reshape(batch, -1).bool()
+        if lmask.shape != tokens.shape:
+            raise ValueError(f"lang_masks {tuple(lmask.shape)} != lang_tokens {tuple(tokens.shape)}")
+        n_lang = lmask.long().sum(dim=1)
+        right_padded = torch.arange(tokens.shape[1])[None, :] < n_lang[:, None]
+        if not torch.equal(lmask, right_padded):
+            # the prefix RoPE positions are 0..P-1, which equal openpi's cumsum(valid) - 1 only for right padding
+            raise ValueError("lang_masks must mark a right-padded prompt (real tokens first, then padding)")
+        valid = prefix_valid_mask(len(images) // batch, lmask)
         pixels = torch.cat([img.reshape(1, *img.shape[-3:]).float() for img in images], dim=0)
         patch = self.config.siglip_config.patch_size
         pad_to = self.backbone.vision_tower.patch_embed.in_features_padded
@@ -616,7 +637,7 @@ class PI0ModelTTNN:
         # On a MeshDevice every persistent input is replicated (identical on all chips); the
         # multi-device HOST tensors are built here so copy_host_to_device_tensor / to_device can
         # write all shards. Single chip: plain host tensors (mesh_mapper=None), as before.
-        mapper = ttnn.ReplicateTensorToMesh(self.device) if _is_mesh(self.device) else None
+        mapper = self._host_mapper()
         if self.fused_cfg.siglip_batched:
             im2col_hosts = [
                 ttnn.from_torch(im2col, dtype=ttnn.bfloat16, layout=ttnn.ROW_MAJOR_LAYOUT, mesh_mapper=mapper)
@@ -631,9 +652,7 @@ class PI0ModelTTNN:
                 )
                 for i in range(im2col.shape[0])
             ]
-        tokens_host = ttnn.from_torch(
-            lang_tokens.reshape(batch, -1), dtype=ttnn.uint32, layout=ttnn.ROW_MAJOR_LAYOUT, mesh_mapper=mapper
-        )
+        tokens_host = ttnn.from_torch(tokens, dtype=ttnn.uint32, layout=ttnn.ROW_MAJOR_LAYOUT, mesh_mapper=mapper)
         noise_t = self._default_noise_torch if noise is None else noise
         if isinstance(noise_t, ttnn.Tensor):
             raise TypeError("sample_actions_fused needs the noise as a torch tensor")
@@ -645,7 +664,45 @@ class PI0ModelTTNN:
         noise_host = ttnn.from_torch(
             pad_rows(noise_t, self._suffix_rows), dtype=ttnn.bfloat16, layout=ttnn.TILE_LAYOUT, mesh_mapper=mapper
         )
-        return im2col_hosts, tokens_host, noise_host
+        return im2col_hosts, tokens_host, noise_host, valid
+
+    def _host_mapper(self):
+        return ttnn.ReplicateTensorToMesh(self.device) if _is_mesh(self.device) else None
+
+    # Persistent attention inputs: name -> memory config. The masks and the expert RoPE rows depend on the
+    # prompt length, so they are trace inputs written before a replay (only when the prefix validity changed).
+    _ATTN_INPUTS_FUSED = {"vlm_mask": "dram", "exp_mask": "dram", "cosq": "l1", "sinq": "l1", "cosk": "l1", "sink": "l1"}
+    _ATTN_INPUTS_TTNN = {"vlm_mask": "dram", "sdpa_mask": "dram", "cos": "l1", "sin": "l1"}
+
+    def _attn_input_names(self) -> Dict[str, str]:
+        fused_attn = self.backbone.expert_blocks[0].attention._fused_attn is not None
+        return self._ATTN_INPUTS_FUSED if fused_attn else self._ATTN_INPUTS_TTNN
+
+    def _fused_attn_hosts(self, valid: torch.Tensor) -> Dict[str, ttnn.Tensor]:
+        """Prefix validity [B, P] -> HOST ttnn tensors of the attention inputs (``fused_host.attention_inputs``)."""
+        if self._expert_rope_host is None:
+            bb = self.backbone
+            self._expert_rope_host = (ttnn.to_torch(_chip0(bb.expert_cos_meta)).float(),
+                                      ttnn.to_torch(_chip0(bb.expert_sin_meta)).float())
+        cos, sin = self._expert_rope_host
+        att = attention_inputs(valid, self.backbone.kv_cache_plan, cos, sin,
+                               1.0 / float(self.config.expert_config.head_dim) ** 0.5)
+        names = self._attn_input_names()
+        if "cos" in names:  # ttnn rotary_embedding takes one [1, 1, S, dh] table for the whole batch
+            if int(att["n_valid"].min()) != int(att["n_valid"].max()):
+                raise ValueError(
+                    "PI05_EXPERT_ATTN=ttnn needs one prompt length per batch (n_valid %s); use the fused attention"
+                    % att["n_valid"].tolist())
+            att["cos"], att["sin"] = att["cos"][:1], att["sin"][:1]
+        mapper = self._host_mapper()
+        return {k: ttnn.from_torch(att[k], dtype=ttnn.bfloat16, layout=ttnn.TILE_LAYOUT, mesh_mapper=mapper) for k in names}
+
+    def _fused_attn_in(self) -> Dict[str, ttnn.Tensor]:
+        """The dict the backbone reads (``forward_expert_fused`` / ``GemmaAttentionTTNN.forward_fused_expert``)."""
+        d = dict(self._fused_attn_dev)
+        if "cosq" in d:
+            d["tables"] = (d["cosq"], d["sinq"], d["cosk"], d["sink"])
+        return d
 
     @staticmethod
     def _shape_key(im2col_hosts, tokens_host, noise_host):
@@ -659,14 +716,16 @@ class PI0ModelTTNN:
         for t in self._fused_in_im2col:
             ttnn.deallocate(t)
         self._fused_in_im2col = []
-        for t in (self._fused_in_tokens, self._fused_in_noise):
+        for t in [self._fused_in_tokens, self._fused_in_noise] + list(self._fused_attn_dev.values()):
             if t is not None:
                 ttnn.deallocate(t)
         self._fused_in_tokens = None
         self._fused_in_noise = None
+        self._fused_attn_dev = {}
+        self._fused_attn_key = None
         self._fused_shape_key = None
 
-    def _fused_prepare(self, im2col_hosts, tokens_host, noise_host) -> bool:
+    def _fused_prepare(self, im2col_hosts, tokens_host, noise_host, valid) -> bool:
         """First call for a shape: allocate the persistent inputs (uploading these host tensors) and
         the KV caches, run the graph once eagerly (kernel compile / program cache, constant slices and
         tables built outside the trace), then capture the trace (PI05_TRACE=1). Returns True when it
@@ -680,15 +739,18 @@ class PI0ModelTTNN:
             # e.g. one trace per batch size for a server that batches requests
             shapes[self._fused_shape_key] = dict(
                 im2col=self._fused_in_im2col, tokens=self._fused_in_tokens, noise=self._fused_in_noise,
+                attn=self._fused_attn_dev, attn_key=self._fused_attn_key,
                 trace_id=self._fused_trace_id, out=self._fused_out, plan=self.backbone.kv_cache_plan)
             entry = shapes.get(key)
             if entry is not None:
                 self._fused_in_im2col, self._fused_in_tokens, self._fused_in_noise = entry["im2col"], entry["tokens"], entry["noise"]
+                self._fused_attn_dev, self._fused_attn_key = entry["attn"], entry["attn_key"]
                 self._fused_trace_id, self._fused_out, self._fused_shape_key = entry["trace_id"], entry["out"], key
                 plan = entry["plan"]
                 self.backbone.allocate_kv_caches(plan["prefix_len"], self.config.action_horizon, batch=plan["batch"])
                 return False
             self._fused_in_im2col, self._fused_in_tokens, self._fused_in_noise = [], None, None
+            self._fused_attn_dev, self._fused_attn_key = {}, None
             self._fused_trace_id, self._fused_out, self._fused_shape_key = None, None, None
 
         batch = key[1][0]
@@ -701,6 +763,12 @@ class PI0ModelTTNN:
         self._fused_in_tokens = ttnn.to_device(tokens_host, device, memory_config=ttnn.DRAM_MEMORY_CONFIG)
         self._fused_in_noise = ttnn.to_device(noise_host, device, memory_config=ttnn.L1_MEMORY_CONFIG)
         self.backbone.allocate_kv_caches(plan["prefix_len"], self.config.action_horizon, batch=batch)
+        mem = {"dram": ttnn.DRAM_MEMORY_CONFIG, "l1": ttnn.L1_MEMORY_CONFIG}
+        names = self._attn_input_names()
+        self._fused_attn_dev = {
+            k: ttnn.to_device(t, device, memory_config=mem[names[k]]) for k, t in self._fused_attn_hosts(valid).items()
+        }
+        self._fused_attn_key = valid.numpy().tobytes()
         self._fused_shape_key = key
 
         # Compile pass (eager): program cache, cos/sin slices, SigLIP pos table -- all outside the trace
@@ -729,26 +797,33 @@ class PI0ModelTTNN:
             self._fused_trace_id = trace_id
         return True
 
-    def _fused_write_inputs(self, im2col_hosts, tokens_host, noise_host) -> None:
-        """Per request: host -> the persistent device buffers (the only host->device traffic)."""
+    def _fused_write_inputs(self, im2col_hosts, tokens_host, noise_host, valid) -> None:
+        """Per request: host -> the persistent device buffers (the only host->device traffic). The attention inputs
+        are rewritten only when the prefix validity (the prompt length) differs from the last call's."""
         for host, dev in zip(im2col_hosts, self._fused_in_im2col):
             ttnn.copy_host_to_device_tensor(host, dev, cq_id=0)
         ttnn.copy_host_to_device_tensor(tokens_host, self._fused_in_tokens, cq_id=0)
         ttnn.copy_host_to_device_tensor(noise_host, self._fused_in_noise, cq_id=0)
+        attn_key = valid.numpy().tobytes()
+        if attn_key != self._fused_attn_key:
+            for k, host in self._fused_attn_hosts(valid).items():
+                ttnn.copy_host_to_device_tensor(host, self._fused_attn_dev[k], cq_id=0)
+            self._fused_attn_key = attn_key
 
     def _fused_device_graph(self) -> ttnn.Tensor:
-        """The whole device graph, reading only the persistent inputs; returns x_T [1, 64, 32] bf16 (L1).
+        """The whole device graph, reading only the persistent inputs; returns x_T [B, round_up(H), 32] bf16 (L1).
         Captured as-is into the trace, so nothing in here may touch the host."""
+        attn_in = self._fused_attn_in()
         prefix_embs = self.prefix_embedding.embed_prefix_fused(self._fused_in_im2col, self._fused_in_tokens)
-        self.backbone.forward_vlm_fused(prefix_embs)  # consumes prefix_embs, fills the KV caches
+        self.backbone.forward_vlm_fused(prefix_embs, attn_in["vlm_mask"])  # consumes prefix_embs, fills the KV caches
 
         num_steps = self.denoise_config.num_steps
         dts = euler_dts(num_steps)
         x_t = self._fused_in_noise
         for i in range(num_steps):
-            suffix_embs = self.suffix_embedding.embed_actions_fused(x_t)  # [1, 64, width] bf16 DRAM
+            suffix_embs = self.suffix_embedding.embed_actions_fused(x_t)  # [B, S, width] bf16 DRAM
             expert_out = self.backbone.forward_expert_fused(
-                suffix_embs, self._precomputed_block_mods[i], self._precomputed_final_mod[i], step=i
+                suffix_embs, self._precomputed_block_mods[i], self._precomputed_final_mod[i], attn_in, step=i
             )  # consumes suffix_embs
             x_next = self.suffix_embedding.euler_step_fused(expert_out, x_t, dts[i])
             ttnn.deallocate(expert_out)
@@ -762,17 +837,19 @@ class PI0ModelTTNN:
         images: List[torch.Tensor],
         lang_tokens: torch.Tensor,
         noise: Optional[torch.Tensor] = None,
+        lang_masks: Optional[torch.Tensor] = None,
     ) -> torch.Tensor:
-        """Whole-graph fused (and traced) inference. torch in -> torch ``[1, action_horizon, action_dim]``
-        float32 out. First call for a shape: allocate + compile + capture (the server's warm-up)."""
+        """Whole-graph fused (and traced) inference. torch in -> torch ``[B, action_horizon, action_dim]``
+        float32 out. ``lang_masks`` [B, L] marks the real (right-padded) prompt tokens; None -> ``tokens != 0``.
+        First call for a shape: allocate + compile + capture (the server's warm-up)."""
         if not self.fused:
             raise RuntimeError("sample_actions_fused needs TT_FUSED=1 (FusedConfig.enabled)")
         if self._precomputed_block_mods is None or self._precomputed_final_mod is None:
             raise RuntimeError("fused path needs the precomputed pi0.5 adaRMS modulations")
-        im2col_hosts, tokens_host, noise_host = self._fused_host_inputs(images, lang_tokens, noise)
-        prepared = self._fused_prepare(im2col_hosts, tokens_host, noise_host)
+        im2col_hosts, tokens_host, noise_host, valid = self._fused_host_inputs(images, lang_tokens, noise, lang_masks)
+        prepared = self._fused_prepare(im2col_hosts, tokens_host, noise_host, valid)
         if not prepared:
-            self._fused_write_inputs(im2col_hosts, tokens_host, noise_host)
+            self._fused_write_inputs(im2col_hosts, tokens_host, noise_host, valid)
 
         if self._fused_trace_id is not None:
             ttnn.execute_trace(self.device, self._fused_trace_id, cq_id=0, blocking=True)

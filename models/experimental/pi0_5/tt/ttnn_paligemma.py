@@ -67,6 +67,7 @@ class PaliGemmaBackboneTTNN:
         weights: Dict[str, Dict[str, torch.Tensor]],
         device: ttnn.Device,
         fused_cfg: Optional[FusedConfig] = None,
+        action_horizon: int = 50,
     ):
         """
         Initialize PaliGemma backbone with TTNN.
@@ -76,6 +77,7 @@ class PaliGemmaBackboneTTNN:
             weights: Categorized PyTorch weights
             device: TTNN device
             fused_cfg: TT_FUSED knobs (None / disabled -> legacy weights, dtypes and forwards)
+            action_horizon: action tokens per request (the expert's suffix; tile-padded on the device)
         """
         self.config = config
         self.device = device
@@ -196,7 +198,7 @@ class PaliGemmaBackboneTTNN:
         # Initialize Expert transformer blocks (18 layers for Gemma 300M)
         # Expert always processes suffix_len = action_horizon (50 for Pi0.5)
         # Pre-slice RoPE for this known length to save 2 slice ops per layer per step
-        expert_seq_len = 50  # action_horizon for Pi0.5
+        expert_seq_len = int(action_horizon)
         self.expert_blocks = []
         for i in range(config.expert_config.depth):
             block_weights = self._get_expert_block_weights_ttnn(weights["action_expert"], i)
@@ -532,7 +534,7 @@ class PaliGemmaBackboneTTNN:
         # (multi-shape serving) only the batch-1 set stays in L1.
         kv_mem = ttnn.L1_MEMORY_CONFIG if (plan["batch"] == 1 or (plan["batch"] <= 2 and not sets)) else ttnn.DRAM_MEMORY_CONFIG
         for _ in self.expert_blocks:
-            shape = [plan["batch"], cfg.num_kv_heads, plan["logical_len"], cfg.head_dim]
+            shape = [plan["batch"], cfg.num_kv_heads, plan["cache_len"], cfg.head_dim]
             k = ttnn.zeros(
                 shape,
                 dtype=kv_dtype,
@@ -552,9 +554,10 @@ class PaliGemmaBackboneTTNN:
         sets[plan["batch"]] = (self.kv_caches, plan)
         return plan
 
-    def forward_vlm_fused(self, prefix_embs: ttnn.Tensor) -> None:
+    def forward_vlm_fused(self, prefix_embs: ttnn.Tensor, attn_mask: Optional[ttnn.Tensor] = None) -> None:
         """VLM prefill whose only product is the prefix K/V written into ``self.kv_caches`` (rows 0..S-1
-        of every layer). Consumes ``prefix_embs``. With ``skip_vlm_tail`` the last layer stops after
+        of every layer). Consumes ``prefix_embs``. ``attn_mask`` [B, 1, S, S] hides the prompt's pad keys
+        (openpi's prefix padding mask). With ``skip_vlm_tail`` the last layer stops after
         its K/V write and the final norm is skipped (their outputs are never read by sample_actions)."""
         if self.kv_caches is None:
             raise RuntimeError("allocate_kv_caches() must run before forward_vlm_fused()")
@@ -564,10 +567,10 @@ class PaliGemmaBackboneTTNN:
         for i, block in enumerate(self.vlm_blocks):
             cache_k, cache_v = self.kv_caches[i]
             if skip_tail and i == last:
-                block.forward_fused_vlm(hidden_states, cache_k, cache_v, kv_only=True)
+                block.forward_fused_vlm(hidden_states, cache_k, cache_v, kv_only=True, attn_mask=attn_mask)
                 ttnn.deallocate(hidden_states)
                 return None
-            new_hidden = block.forward_fused_vlm(hidden_states, cache_k, cache_v)
+            new_hidden = block.forward_fused_vlm(hidden_states, cache_k, cache_v, attn_mask=attn_mask)
             ttnn.deallocate(hidden_states)
             hidden_states = new_hidden
         # PI05_SKIP_VLM_TAIL=0: compute the legacy final norm too (A/B parity), result unused
@@ -595,15 +598,17 @@ class PaliGemmaBackboneTTNN:
         hidden_states: ttnn.Tensor,
         precomputed_block_mods: List[Tuple],
         precomputed_final_mod: Tuple,
+        attn_in: Dict[str, ttnn.Tensor],
         step: Optional[int] = None,
     ) -> ttnn.Tensor:
-        """Expert on the 64-row suffix reading the backbone-owned caches; consumes ``hidden_states`` and
-        returns the final adaRMS-normed hidden ``[1, 64, width]`` bf16 (L1)."""
+        """Expert on the tile-padded suffix reading the backbone-owned caches; consumes ``hidden_states`` and
+        returns the final adaRMS-normed hidden ``[B, S, width]`` bf16 (L1). ``attn_in``: the graph's persistent
+        attention inputs (key masks, RoPE rows at n_valid + [0, S)), see ``GemmaAttentionTTNN.forward_fused_expert``."""
         prefix_len = self.kv_cache_plan["prefix_len"]
         for i, block in enumerate(self.expert_blocks):
             cache_k, cache_v = self.kv_caches[i]
             hidden_states = block.forward_fused_expert(
-                hidden_states, precomputed_block_mods[i], cache_k, cache_v, prefix_len, step=step
+                hidden_states, precomputed_block_mods[i], cache_k, cache_v, prefix_len, attn_in, step=step
             )
         scale_f, shift_f = precomputed_final_mod[0], precomputed_final_mod[1]
         out = adarms_norm_precomputed(hidden_states, scale_f, shift_f, self.config.expert_config.rms_norm_eps)

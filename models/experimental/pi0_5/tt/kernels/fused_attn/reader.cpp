@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 // Fused expert attention, reader (one core per (request b, head h, query tile-row r)): this core's q tiles, the KV head's
-// k and v suffix tiles (all suffix rows), the RoPE tables (scale folded into the q tables, rotate-half sign folded
-// into the sin tables), the key mask tile and the reduce scaler tile, then the K and V PREFIX rows of the caches.
+// k and v suffix tiles (all suffix rows), request b's RoPE tables (rows n_valid_b + [0, S); scale folded into the q
+// tables, rotate-half sign folded into the sin tables), request b's additive key mask row (NKt tiles: prefix pad keys
+// and suffix pad rows masked) and the reduce scaler tile, then the K and V PREFIX rows of the caches.
 #include <stdint.h>
 #include "api/dataflow/dataflow_api.h"
 
@@ -30,6 +31,8 @@ void kernel_main() {
     const uint32_t kv_bstride = get_arg_val<uint32_t>(i++);    // tiles per request in a cache (padded rows/32 * DHt)
     const uint32_t xb = b * xqkv_bstride;
     const uint32_t kb = b * kv_bstride;
+    const uint32_t rb = b * St * DHt;    // request b's RoPE table rows (tables [B, 1, St*32, dh])
+    const uint32_t mb = b * (Pt + St);   // request b's key-mask tiles (mask [B, 1, 32, NKt*32])
 #ifdef RC_PROLOGUE
     const uint32_t r_addr = get_arg_val<uint32_t>(i++);  // row rsqrt tiles [rows, 32] (tile b*St + s)
     const uint32_t c_addr = get_arg_val<uint32_t>(i++);  // folded bias row [1, 1, 32, (H+2)*dh]
@@ -75,9 +78,9 @@ void kernel_main() {
     read_pages(cb_q, DHt, [&](uint32_t t) { return xb + r * NQKV_T + h * DHt + t; }, s_xqkv);
     read_pages(cb_k, St * DHt, [&](uint32_t j) { return xb + (j / DHt) * NQKV_T + NH * DHt + (j % DHt); }, s_xqkv);
     read_pages(cb_v, St * DHt, [&](uint32_t j) { return xb + (j / DHt) * NQKV_T + (NH + 1) * DHt + (j % DHt); }, s_xqkv);
-    read_pages(cb_cosq, DHt, [&](uint32_t t) { return r * DHt + t; }, s_cosq);
-    read_pages(cb_sinq, DHt, [&](uint32_t t) { return r * DHt + t; }, s_sinq);
-    read_pages(cb_mask, 1, [&](uint32_t) { return 0u; }, s_mask);
+    read_pages(cb_cosq, DHt, [&](uint32_t t) { return rb + r * DHt + t; }, s_cosq);
+    read_pages(cb_sinq, DHt, [&](uint32_t t) { return rb + r * DHt + t; }, s_sinq);
+    read_pages(cb_mask, Pt + St, [&](uint32_t n) { return mb + n; }, s_mask);
     read_pages(cb_scaler, 1, [&](uint32_t) { return 0u; }, s_scaler);
 #ifdef RC_PROLOGUE
     read_pages(cb_r, St, [&](uint32_t s) { return b * St + s; }, s_r);
@@ -91,7 +94,7 @@ void kernel_main() {
     cb_push_back(cb_v, St * DHt);
     cb_push_back(cb_cosq, DHt);
     cb_push_back(cb_sinq, DHt);
-    cb_push_back(cb_mask, 1);
+    cb_push_back(cb_mask, Pt + St);
     cb_push_back(cb_scaler, 1);
 #ifdef RC_PROLOGUE
     cb_push_back(cb_r, St);
@@ -101,8 +104,8 @@ void kernel_main() {
 #endif
     // RoPE tables for the k suffix rows, one row at a time (the CBs hold one row; compute pops after each row)
     for (uint32_t s = 0; s < St; ++s) {
-        read_pages(cb_cosk, DHt, [&](uint32_t t) { return s * DHt + t; }, s_cosk);
-        read_pages(cb_sink, DHt, [&](uint32_t t) { return s * DHt + t; }, s_sink);
+        read_pages(cb_cosk, DHt, [&](uint32_t t) { return rb + s * DHt + t; }, s_cosk);
+        read_pages(cb_sink, DHt, [&](uint32_t t) { return rb + s * DHt + t; }, s_sink);
         noc_async_read_barrier();
         cb_push_back(cb_cosk, DHt);
         cb_push_back(cb_sink, DHt);

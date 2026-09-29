@@ -6,10 +6,15 @@ Replaces, per expert layer and denoising step, ``nlp_create_qkv_heads`` + ``rota
 cache fills + ``scaled_dot_product_attention`` + ``nlp_concat_heads`` (128.8 us in-trace on one Blackhole chip) by a
 single launch on ``num_heads x suffix_tile_rows`` cores (40 us; PCC 0.9996 vs the ttnn path, 2026-09-17).
 
-Per core (head ``h``, query tile-row ``r``): RoPE of q (the 1/sqrt(dh) scale is folded into the q tables, the
-rotate-half sign into the sin tables), RoPE of the KV head's suffix k rows, S = q K^T over the cache PREFIX rows plus
-the local suffix rows (the suffix is never written to the cache: nothing else reads it), key mask on the last key
-tile, row softmax, P V, 1/rowsum. Output: the head-concatenated context ``[1, 1, S, H*dh]`` in the cache dtype.
+Per core (request ``b``, head ``h``, query tile-row ``r``): RoPE of q (the 1/sqrt(dh) scale is folded into the q
+tables, the rotate-half sign into the sin tables), RoPE of the KV head's suffix k rows, S = q K^T over the cache
+PREFIX rows plus the local suffix rows (the suffix is never written to the cache: nothing else reads it), plus the
+request's additive key mask (prefix pad keys and the suffix's tile-padding rows), row softmax, P V, 1/rowsum. Output:
+the head-concatenated context ``[B, 1, S, H*dh]`` in the cache dtype.
+
+The RoPE tables (rows ``n_valid_b + [0, S)``: openpi's action-token positions) and the key mask are per request
+and change with the prompt length, so they are operands (persistent inputs of the traced graph written by the host
+before each replay, ``fused_host.attention_inputs``), not constants.
 """
 from __future__ import annotations
 
@@ -67,9 +72,7 @@ class FusedExpertAttention:
         self.dht = head_dim // TILE
         self.st = self.seq_len // TILE  # query tile-rows = core rows (bug 2026-09-17: seq_len // TILE gave 1 for 50)
         self.scale = 1.0 / math.sqrt(head_dim)
-        self._const: Optional[Tuple[ttnn.Tensor, ...]] = None  # cosq, sinq, cosk, sink, scaler
-        self._mask_cache = {}
-        self._compile_cache = {}
+        self._scaler: Optional[ttnn.Tensor] = None
 
     # ---- constants ----
     def _device_tensor(self, t: torch.Tensor, dtype) -> ttnn.Tensor:
@@ -80,37 +83,13 @@ class FusedExpertAttention:
             t, dtype=dtype, layout=ttnn.TILE_LAYOUT, device=self.device, memory_config=ttnn.L1_MEMORY_CONFIG, **kw
         )
 
-    def _constants(self, cos: ttnn.Tensor, sin: ttnn.Tensor):
-        if self._const is None:
-            key = (id(self.device), "rope", self.seq_len, self.head_dim, round(self.scale, 8))
+    def _constant_scaler(self) -> ttnn.Tensor:
+        if self._scaler is None:
+            key = (id(self.device), "scaler")
             if key not in _CONST_CACHE:
-                c = _to_torch_any(cos).float().reshape(1, 1, self.seq_len, self.head_dim)
-                s = _to_torch_any(sin).float().reshape(1, 1, self.seq_len, self.head_dim)
-                half = self.head_dim // 2
-                s_signed = torch.cat([-s[..., :half], s[..., half:]], dim=-1)  # rotate_half: (-x2, x1)
-                _CONST_CACHE[key] = (
-                    self._device_tensor(c * self.scale, ttnn.bfloat16),
-                    self._device_tensor(s_signed * self.scale, ttnn.bfloat16),
-                    self._device_tensor(c, ttnn.bfloat16),
-                    self._device_tensor(s_signed, ttnn.bfloat16),
-                    self._device_tensor(torch.ones(1, 1, TILE, TILE), ttnn.bfloat16),
-                )
-            self._const = _CONST_CACHE[key]
-        return self._const
-
-    def _mask(self, prefix_len: int, valid_len: int) -> ttnn.Tensor:
-        """Additive mask for the LAST key tile: keys >= valid_len get -30000 (exp -> 0)."""
-        key = (id(self.device), "mask", prefix_len, valid_len, self.st)
-        if key not in _CONST_CACHE:
-            nkt = prefix_len // TILE + self.st
-            first_masked = valid_len - (nkt - 1) * TILE
-            if first_masked < 0:
-                raise ValueError("fused expert attention: more than one key tile would need masking")
-            m = torch.zeros(1, 1, TILE, TILE)
-            if first_masked < TILE:
-                m[..., first_masked:] = -30000.0
-            _CONST_CACHE[key] = self._device_tensor(m, ttnn.bfloat16)
-        return _CONST_CACHE[key]
+                _CONST_CACHE[key] = self._device_tensor(torch.ones(1, 1, TILE, TILE), ttnn.bfloat16)
+            self._scaler = _CONST_CACHE[key]
+        return self._scaler
 
     # ---- program ----
     def __call__(
@@ -119,34 +98,40 @@ class FusedExpertAttention:
         cache_k: ttnn.Tensor,
         cache_v: ttnn.Tensor,
         prefix_len: int,
-        cos: ttnn.Tensor,
-        sin: ttnn.Tensor,
+        tables: Tuple[ttnn.Tensor, ttnn.Tensor, ttnn.Tensor, ttnn.Tensor],
+        mask: ttnn.Tensor,
         r: Optional[ttnn.Tensor] = None,
         c: Optional[ttnn.Tensor] = None,
     ) -> ttnn.Tensor:
-        """``xqkv`` [B, 1, S, (H+2)*dh] (q heads | k | v), caches [B, 1, logical_len, dh] whose rows
-        ``0..prefix_len-1`` hold each request's prefix K/V; returns ctx [B, 1, S, H*dh] in the cache dtype (new L1
-        tensor). Core grid: x = head, y = request * St + query tile-row."""
+        """``xqkv`` [B, 1, S, (H+2)*dh] (q heads | k | v), caches [B, 1, cache_len, dh] whose rows
+        ``0..prefix_len-1`` hold each request's prefix K/V, ``tables`` = (cosq, sinq, cosk, sink) [B, 1, S, dh] bf16
+        and ``mask`` [B, 1, 32, prefix_len + S] bf16 (``fused_host.attention_inputs``); returns ctx [B, 1, S, H*dh]
+        in the cache dtype (new L1 tensor). Core grid: x = head, y = request * St + query tile-row."""
         if prefix_len % TILE:
             raise ValueError("prefix_len must be a tile multiple")
         rows = int(xqkv.padded_shape[-2]) if hasattr(xqkv, "padded_shape") else int(xqkv.shape[-2])
-        if rows != self.seq_len or int(cos.padded_shape[-2] if hasattr(cos, "padded_shape") else cos.shape[-2]) != self.seq_len:
+        if rows != self.seq_len:
             raise ValueError(f"fused expert attention built for {self.seq_len} suffix rows, got xqkv rows {rows}")
         batch = int(xqkv.shape[0])
         if int(cache_k.shape[0]) != batch:
             raise ValueError("xqkv batch and cache batch differ")
+        want_t = (batch, 1, self.seq_len, self.head_dim)
+        if any(tuple(int(d) for d in t.shape) != want_t for t in tables):
+            raise ValueError(f"RoPE tables must be {want_t}, got {[tuple(t.shape) for t in tables]}")
+        want_m = (batch, 1, TILE, prefix_len + self.seq_len)
+        if tuple(int(d) for d in mask.shape) != want_m:
+            raise ValueError(f"key mask must be {want_m}, got {tuple(mask.shape)}")
         grid = self.device.compute_with_storage_grid_size()
         if batch * self.st > grid.y or self.num_heads > grid.x:
             raise ValueError(f"batch {batch}: {self.num_heads} x {batch * self.st} cores exceed the {grid.x} x {grid.y} grid")
-        cosq, sinq, cosk, sink, scaler = self._constants(cos, sin)
-        valid_len = int(cache_k.shape[-2])
-        padded_rows = int(cache_k.padded_shape[-2]) if hasattr(cache_k, "padded_shape") else valid_len
+        cosq, sinq, cosk, sink = tables
+        scaler = self._constant_scaler()
+        padded_rows = int(cache_k.padded_shape[-2]) if hasattr(cache_k, "padded_shape") else int(cache_k.shape[-2])
         if prefix_len + self.seq_len > padded_rows:
             raise ValueError("prefix + suffix rows exceed the padded cache")
         # the reader streams the prefix in chunks of 4 tile rows (compute.cpp CH) and may read up to the chunk end
         if -(-(prefix_len // TILE) // 4) * 4 * TILE > padded_rows:
             raise ValueError("the last 4-row prefix chunk would read past the padded cache")
-        mask = self._mask(prefix_len, valid_len)
         pt = prefix_len // TILE
         nqkv_t = int(xqkv.shape[-1]) // TILE
         nh, dht, st = self.num_heads, self.dht, self.st
@@ -172,15 +157,16 @@ class FusedExpertAttention:
         # CH = 4), the k RoPE tables come one row at a time, the RoPE temporaries hold one row, and P is written in
         # place of S (CB 17; no CB 19). The whole-prefix version (773 KB) clashed with the L1 buffers of the
         # disaggregated expert chips (socket FIFOs); the 2 x 8-row ring version (620 KB) still did with 512 KB FIFOs.
+        # The key mask row (CB 7) adds NKt bf16 tiles (25 tiles = 50 KB at 2 cameras + 224 tokens, 50 actions).
         kv_ring = 3 * 4 * dht
         cbs = [
             cb(0, dht, q_dt), cb(1, st * dht, q_dt), cb(2, st * dht, q_dt),
             cb(3, dht, bf16), cb(4, dht, bf16), cb(5, dht, bf16), cb(6, dht, bf16),
-            cb(7, 1, bf16), cb(8, 1, bf16),
+            cb(7, nkt, bf16), cb(8, 1, bf16),
             cb(9, kv_ring, kv_dt), cb(10, st * dht, kv_dt), cb(11, kv_ring, kv_dt),
             cb(13, dht, bf16), cb(14, dht, bf16), cb(15, dht, bf16), cb(16, dht, kv_dt),
             cb(17, nkt, bf16), cb(18, 1, bf16), cb(20, 1, bf16), cb(21, dht, bf16),
-            cb(22, 1, bf16), cb(23, 1, bf16),
+            cb(23, 1, bf16),
         ]
         rc = r is not None
         if rc:

@@ -43,7 +43,6 @@ legacy ``forward`` methods are untouched):
 import math
 import os
 
-_FA_CHECKS = [0]  # debug counter for PI05_FUSED_ATTN_CHECK (compile pass only)
 from typing import Dict, Optional, Tuple
 
 import torch
@@ -781,8 +780,13 @@ class GemmaAttentionTTNN:
         cache_k: ttnn.Tensor,
         cache_v: ttnn.Tensor,
         need_output: bool = True,
+        attn_mask: Optional[ttnn.Tensor] = None,
     ) -> Optional[ttnn.Tensor]:
         """VLM (prefill) attention that also fills the backbone-owned KV cache.
+
+        ``attn_mask`` [B, 1, S, S] bf16 additive (``fused_host.attention_inputs``): hides the prompt's pad keys from
+        every query (openpi's prefix padding mask). The RoPE positions of the prefix are ``0..S-1``: for a
+        right-padded prompt they equal openpi's ``cumsum(valid) - 1`` on every valid token.
 
         Rotated K and V of the ``S`` prefix rows are written to rows ``0..S-1`` of ``cache_k`` /
         ``cache_v`` (``fill_cache`` at update_idx 0: same dtype bf8, S % 32 == 0). The SDPA runs on the
@@ -815,7 +819,7 @@ class GemmaAttentionTTNN:
             q_rope,
             k_rope,
             v,
-            attn_mask=None,
+            attn_mask=attn_mask,
             is_causal=False,
             scale=self.scale,
             program_config=self._sdpa_config_fused,
@@ -848,73 +852,38 @@ class GemmaAttentionTTNN:
         cache_k: ttnn.Tensor,
         cache_v: ttnn.Tensor,
         prefix_len: int,
+        attn_in: Dict[str, ttnn.Tensor],
     ) -> ttnn.Tensor:
-        """Expert attention on the tile-padded suffix (``S`` = 64 rows for action_horizon 50).
+        """Expert attention on the tile-padded suffix (``S`` = round_up(action_horizon) rows).
 
-        K is rotated and written to ``cache_k`` rows ``prefix_len..prefix_len+S-1`` by the fork's
-        ``rotary_embedding_to_cache`` (update_idx % 32 == 0, same dtype bf8, prefix_len + S <= padded
-        cache rows), V by ``fill_cache``; the SDPA attends over the whole cache whose LOGICAL row count
-        is prefix_len + action_horizon, so rows beyond it (the zero-padded suffix rows) are masked by the
-        kernel exactly as the legacy 786-row concat buffer was. No slice(q): rotary_embedding returns the
-        tile-padded rows and every downstream op is row-independent (rows 0..49 are bit-identical).
-        Returns the head-concatenated context ``[B, 1, S, H*dh]`` bf8 (L1); the caller owns the o_proj.
+        openpi semantics: the action tokens attend every valid prefix key and every real action token (``attn_in``
+        masks hide the prompt's pad keys and the tile-padding suffix rows) and are rotated at positions
+        ``n_valid + [0, S)`` (``attn_in`` RoPE rows). ``attn_in`` holds the graph's persistent attention inputs
+        (``PI0ModelTTNN._fused_attn_inputs``).
+
+        Fused attention (``PI05_EXPERT_ATTN=fused``, default): one generic_op program (RoPE + masked attention over
+        the cache prefix + local suffix + head concat); the suffix K/V are never written to the cache.
+        ttnn ops (``PI05_EXPERT_ATTN=ttnn``): K is rotated and written to ``cache_k`` rows ``prefix_len..`` by
+        ``rotary_embedding_to_cache`` (update_idx % 32 == 0), V by ``fill_cache``; the SDPA attends the whole cache
+        under ``attn_in["sdpa_mask"]``. Returns the head-concatenated context ``[B, 1, S, H*dh]`` (L1); the caller
+        owns the o_proj.
         """
-        seq_len = hidden_states.shape[1]
-        cos_sliced, sin_sliced = self._rope(seq_len)
         if self._fused_attn is not None:
-            # PI05_EXPERT_ATTN=fused: one generic_op program for the whole batch (RoPE + masked attention over the
-            # cache prefix + local suffix + head concat); the suffix K/V are never written to the cache.
             xqkv = self._qkv_proj(hidden_states)
-            ctx = self._fused_attn(xqkv, cache_k, cache_v, prefix_len, cos_sliced, sin_sliced)
-            if os.environ.get("PI05_FUSED_ATTN_CHECK") and getattr(self, "_fa_checks", 0) < 1 and _FA_CHECKS[0] < 18:
-                _FA_CHECKS[0] += 1
-                # debug (eager compile pass only): PCC of the fused program vs the ttnn ops on the same inputs
-                self._fa_checks = getattr(self, "_fa_checks", 0) + 1
-                from .ttnn_fused_attn import _to_torch_any
-
-                q, k, v = ttnn.experimental.nlp_create_qkv_heads(
-                    xqkv, num_heads=self.num_heads, num_kv_heads=self.num_kv_heads, transpose_k_heads=False,
-                    memory_config=ttnn.L1_MEMORY_CONFIG)
-                q_rope = ttnn.experimental.rotary_embedding(q, cos_sliced, sin_sliced)
-                rotary_embedding_to_cache(k, cos_sliced, sin_sliced, cache_k, prefix_len)
-                _fill_cache_batched(cache_v, v, prefix_len)
-                ref = ttnn.transformer.scaled_dot_product_attention(
-                    q_rope, cache_k, cache_v, attn_mask=None, is_causal=False, scale=self.scale,
-                    program_config=self._sdpa_config_fused)
-                ref = ttnn.experimental.nlp_concat_heads(ref, memory_config=ttnn.L1_MEMORY_CONFIG)
-                a = _to_torch_any(ctx).float().flatten(); b = _to_torch_any(ref).float().flatten()
-                pcc = (torch.mean((a - a.mean()) * (b - b.mean())) / (a.std() * b.std())).item()
-                # second run of the fused program on the same operands: transient (race) or deterministic?
-                ctx_again = self._fused_attn(xqkv, cache_k, cache_v, prefix_len, cos_sliced, sin_sliced)
-                a2 = _to_torch_any(ctx_again).float().flatten(); ttnn.deallocate(ctx_again)
-                pcc2 = (torch.mean((a2 - a2.mean()) * (b - b.mean())) / (a2.std() * b.std())).item()
-                a_r = a.reshape(-1, 2048)[:64]; b_r = b.reshape(-1, 2048)[:64]
-                def _p(x, y): return (torch.mean((x - x.mean()) * (y - y.mean())) / (x.std() * y.std())).item()
-                print("[fused-attn check] second run PCC %.5f | rows 0-31 PCC %.5f rows 32-63 PCC %.5f | non-finite run1 %d run2 %d" % (
-                    pcc2, _p(a_r[:32].flatten(), b_r[:32].flatten()), _p(a_r[32:].flatten(), b_r[32:].flatten()),
-                    (~torch.isfinite(a)).sum().item(), (~torch.isfinite(a2)).sum().item()), flush=True)
-                print("[fused-attn check %2d] prefix_len=%d xqkv %s %s cache %s %s %s cos %s | PCC vs ttnn path %.5f  max|diff| %.4f |ref| %.4f" % (
-                    self._fa_checks, prefix_len, tuple(xqkv.shape), xqkv.dtype, tuple(cache_k.shape), tuple(cache_k.padded_shape), cache_k.dtype,
-                    tuple(cos_sliced.shape), pcc, (a - b).abs().max().item(), b.abs().mean().item()), flush=True)
-                dump = os.environ.get("PI05_FUSED_ATTN_DUMP")
-                if dump and self._fa_checks == 1:
-                    torch.save({"xqkv": _to_torch_any(xqkv).float(), "cos": _to_torch_any(cos_sliced).float(),
-                                "sin": _to_torch_any(sin_sliced).float(), "cache_k": _to_torch_any(cache_k).float(),
-                                "cache_v": _to_torch_any(cache_v).float(), "ref": _to_torch_any(ref).float(),
-                                "ctx": _to_torch_any(ctx).float(), "prefix_len": prefix_len, "scale": self.scale}, dump)
-                    print("[fused-attn check] dumped layer-0 operands to", dump, flush=True)
-                for t in (q, k, v, q_rope, ref):
-                    ttnn.deallocate(t)
+            ctx = self._fused_attn(xqkv, cache_k, cache_v, prefix_len, attn_in["tables"], attn_in["exp_mask"])
             ttnn.deallocate(xqkv)
             return ctx
+        cos, sin = attn_in.get("cos"), attn_in.get("sin")
+        if cos is None:
+            raise ValueError("PI05_EXPERT_ATTN=ttnn rotates every request with one RoPE table: the batch needs one n_valid")
         q, k, v = self._qkv_heads(hidden_states)
 
-        q_rope = ttnn.experimental.rotary_embedding(q, cos_sliced, sin_sliced)
+        q_rope = ttnn.experimental.rotary_embedding(q, cos, sin)
         ttnn.deallocate(q)
         if int(k.shape[0]) == 1:
-            rotary_embedding_to_cache(k, cos_sliced, sin_sliced, cache_k, prefix_len)
+            rotary_embedding_to_cache(k, cos, sin, cache_k, prefix_len)
         else:  # B requests: rotate once, then one fill per request (fill_cache writes one batch entry)
-            k_rope = ttnn.experimental.rotary_embedding(k, cos_sliced, sin_sliced)
+            k_rope = ttnn.experimental.rotary_embedding(k, cos, sin)
             _fill_cache_batched(cache_k, k_rope, prefix_len)
             ttnn.deallocate(k_rope)
         _fill_cache_batched(cache_v, v, prefix_len)
@@ -925,7 +894,7 @@ class GemmaAttentionTTNN:
             q_rope,
             cache_k,
             cache_v,
-            attn_mask=None,
+            attn_mask=attn_in["sdpa_mask"],
             is_causal=False,
             scale=self.scale,
             program_config=self._sdpa_config_fused,
@@ -1609,6 +1578,7 @@ class GemmaBlockTTNN:
         cache_k: ttnn.Tensor,
         cache_v: ttnn.Tensor,
         kv_only: bool = False,
+        attn_mask: Optional[ttnn.Tensor] = None,
     ) -> Optional[ttnn.Tensor]:
         """VLM block (plain RMSNorm, ungated residuals) that fills the KV cache of this layer.
 
@@ -1618,7 +1588,7 @@ class GemmaBlockTTNN:
         """
         tp = self.fused_cfg.tp if self.fused_cfg is not None else 1
         normed = rms_norm_ttnn(hidden_states, self.input_layernorm_weight, self.config.rms_norm_eps)
-        attn_output = self.attention.forward_fused_vlm(normed, cache_k, cache_v, need_output=not kv_only)
+        attn_output = self.attention.forward_fused_vlm(normed, cache_k, cache_v, need_output=not kv_only, attn_mask=attn_mask)
         ttnn.deallocate(normed)
         if kv_only:
             return None
@@ -1644,6 +1614,7 @@ class GemmaBlockTTNN:
         cache_k: ttnn.Tensor,
         cache_v: ttnn.Tensor,
         prefix_len: int,
+        attn_in: Dict[str, ttnn.Tensor],
         step: Optional[int] = None,
     ) -> ttnn.Tensor:
         """Expert block on the 64-row suffix with precomputed adaRMS modulations (owned by the model).
@@ -1658,7 +1629,7 @@ class GemmaBlockTTNN:
         Consumes (frees) ``hidden_states``; returns the new hidden ``[B, S, D]`` bf16.
         """
         if self._folded is not None and step is not None and self.attention._fused_attn is not None and self.fused_cfg.residual != "legacy":
-            return self._forward_fused_expert_folded(hidden_states, precomputed_mod, cache_k, cache_v, prefix_len, step)
+            return self._forward_fused_expert_folded(hidden_states, precomputed_mod, cache_k, cache_v, prefix_len, attn_in, step)
         scale_in, shift_in, attn_gate, scale_post, shift_post, mlp_gate = precomputed_mod
         eps = self.config.rms_norm_eps
         mode = self.fused_cfg.residual
@@ -1666,7 +1637,7 @@ class GemmaBlockTTNN:
 
         # ---- attention + gated residual ----
         normed = adarms_norm_precomputed(hidden_states, scale_in, shift_in, eps)
-        attn_concat = self.attention.forward_fused_expert(normed, cache_k, cache_v, prefix_len)
+        attn_concat = self.attention.forward_fused_expert(normed, cache_k, cache_v, prefix_len, attn_in)
         ttnn.deallocate(normed)
         attn_concat = ttnn.reshape(attn_concat, (batch_size, seq_len, attn_concat.shape[-1]))
         if mode == "legacy":
@@ -1726,7 +1697,8 @@ class GemmaBlockTTNN:
         self._geglu_rc = GegluRC(self.device, self.config.mlp_dim)
 
     def _forward_fused_expert_folded(
-        self, hidden_states: ttnn.Tensor, precomputed_mod: Tuple, cache_k: ttnn.Tensor, cache_v: ttnn.Tensor, prefix_len: int, step: int
+        self, hidden_states: ttnn.Tensor, precomputed_mod: Tuple, cache_k: ttnn.Tensor, cache_v: ttnn.Tensor, prefix_len: int,
+        attn_in: Dict[str, ttnn.Tensor], step: int
     ) -> ttnn.Tensor:
         """Expert block with both adaRMS norms folded into the step's qkv / up|gate weights:
         [adaRMS_in -> qkv linear -> fused attention] -> o_proj gated residual ->
@@ -1739,15 +1711,15 @@ class GemmaBlockTTNN:
         attn = self.attention
 
         if self._folded.fold_attn:
-            cos_sliced, sin_sliced = attn._rope(seq_len)
             r_in = self._row_rsqrt(hidden_states)
             xqkv = attn._qkv_proj(hidden_states, weight=self._folded.wqkv[step])
-            ctx = attn._fused_attn(xqkv, cache_k, cache_v, prefix_len, cos_sliced, sin_sliced, r=r_in, c=self._folded.cqkv[step])
+            ctx = attn._fused_attn(xqkv, cache_k, cache_v, prefix_len, attn_in["tables"], attn_in["exp_mask"], r=r_in,
+                                   c=self._folded.cqkv[step])
             ttnn.deallocate(xqkv)
             ttnn.deallocate(r_in)
         else:
             normed = adarms_norm_precomputed(hidden_states, scale_in, shift_in, self.config.rms_norm_eps)
-            ctx = attn.forward_fused_expert(normed, cache_k, cache_v, prefix_len)
+            ctx = attn.forward_fused_expert(normed, cache_k, cache_v, prefix_len, attn_in)
             ttnn.deallocate(normed)
         ctx = ttnn.reshape(ctx, (batch_size, seq_len, ctx.shape[-1]))
         if mode == "bf16" and ctx.dtype != ttnn.bfloat16:

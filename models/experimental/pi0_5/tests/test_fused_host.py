@@ -369,11 +369,15 @@ def test_kv_cache_plan_and_constraints():
         "prefix_len": 736,
         "action_horizon": 50,
         "logical_len": 786,
+        "cache_len": 800,
         "padded_len": 800,
         "suffix_rows": 64,
         "expert_update_idx": 736,
         "vlm_update_idx": 0,
     }
+    # LIBERO shape (32 tokens, H = 10): the fused attention reads the prefix in 4-tile-row chunks -> 20 tiles = 640
+    libero = fh.kv_cache_plan(544, 10)
+    assert libero["suffix_rows"] == 32 and libero["cache_len"] == 640 and libero["logical_len"] == 554
     # rotary_embedding_to_cache / fill_cache: update_idx % 32 == 0 and update_idx + rows <= padded rows
     assert plan["expert_update_idx"] % 32 == 0 and plan["vlm_update_idx"] % 32 == 0
     assert plan["expert_update_idx"] + plan["suffix_rows"] <= plan["padded_len"]
@@ -542,11 +546,63 @@ def test_vlm_tail_skip_leaves_the_kv_cache_unchanged():
     assert not torch.equal(caches_s[-1][0], caches_ref[-1][0])
 
 
-def test_expert_positions_start_at_zero_for_the_padded_suffix():
-    """The expert's cos/sin slice grows 50 -> 64 rows: rows 0..49 are the same positions (the reference
-    uses cos[:seq_len], positions 0..seq_len-1), rows 50..63 only touch masked keys / discarded queries."""
-    cos, sin = precompute_freqs_cis(256, 2048)
-    assert torch.equal(cos[:64][:50], cos[:50]) and torch.equal(sin[:64][:50], sin[:50])
+def test_expert_attention_inputs_match_openpi_attention():
+    """The fused expert attention's operands (``attention_inputs``: rotate-half tables with the sign / scale folded,
+    the additive key row) reproduce the reference attention with openpi's mask and positions: action tokens at
+    ``n_valid + [0, H)`` attending the valid prefix keys and the H real action rows. Emulates the kernel's math
+    (x * cos + swap_halves(x) * sin_signed; S = q K^T + mask; softmax; P V) in fp64 for right-padded prompts,
+    batch 2 with different prompt lengths."""
+    from models.experimental.pi0_5.reference.torch_gemma import apply_rotary_emb
+
+    H, dh, heads = 50, 256, 8
+    plan = fh.kv_cache_plan(2 * 256 + 224, H, batch=2)
+    P, S = plan["prefix_len"], plan["suffix_rows"]
+    lang = torch.zeros(2, 224, dtype=torch.bool)
+    lang[0, :40] = True
+    lang[1, :97] = True
+    valid = fh.prefix_valid_mask(2, lang)
+    c_half, s_half = precompute_freqs_cis(dh, 2048)
+    cos_full, sin_full = torch.cat([c_half, c_half], -1), torch.cat([s_half, s_half], -1)  # rotary_embedding layout
+    att = fh.attention_inputs(valid, plan, cos_full, sin_full, 1.0 / math.sqrt(dh))
+    assert att["n_valid"].tolist() == [552, 609]
+    q = torch.randn(2, heads, S, dh, dtype=F64)
+    k = torch.randn(2, 1, S, dh, dtype=F64)
+    v = torch.randn(2, 1, S, dh, dtype=F64)
+    kp = torch.randn(2, 1, P, dh, dtype=F64)  # the cache prefix (already rotated by the VLM)
+    vp = torch.randn(2, 1, P, dh, dtype=F64)
+
+    def swap(x):
+        return torch.cat([x[..., dh // 2:], x[..., : dh // 2]], dim=-1)
+
+    qr = q * att["cosq"].double() + swap(q) * att["sinq"].double()
+    kr = k * att["cosk"].double() + swap(k) * att["sink"].double()
+    scores = qr @ torch.cat([kp, kr], 2).transpose(-1, -2) + att["exp_mask"].double()[:, :, :1]
+    fused = torch.softmax(scores, -1) @ torch.cat([vp, v], 2)
+
+    pos = att["n_valid"][:, None] + torch.arange(H)[None]
+    qh, kh = apply_rotary_emb(q[:, :, :H], k[:, :, :H], c_half.double(), s_half.double(), pos)
+    key_bias = torch.where(valid, 0.0, -1e9).double()
+    mask = torch.cat([key_bias, torch.zeros(2, H, dtype=F64)], 1)[:, None, None]
+    ref_scores = qh @ torch.cat([kp, kh], 2).transpose(-1, -2) / math.sqrt(dh) + mask
+    ref = torch.softmax(ref_scores, -1) @ torch.cat([vp, v[:, :, :H]], 2)
+    _assert_close(fused[:, :, :H], ref, 1e-10, "fused expert attention vs openpi attention")
+    # the ttnn-path mask covers the whole cache: rows beyond prefix + H are hidden
+    assert att["sdpa_mask"].shape == (2, 1, S, plan["cache_len"])
+    assert (att["sdpa_mask"][..., P + H:] < -1e4).all() and (att["sdpa_mask"][0, 0, 0, :552] == 0).all()
+    # VLM mask: every query sees exactly the valid keys
+    assert torch.equal(att["vlm_mask"][1, 0, 5] == 0, valid[1])
+
+
+def test_attention_inputs_reject_bad_prefixes():
+    plan = fh.kv_cache_plan(544, 10)
+    cos = torch.zeros(2048, 256)
+    for bad in (torch.zeros(1, 544, dtype=torch.bool), torch.ones(1, 512, dtype=torch.bool)):
+        try:
+            fh.attention_inputs(bad, plan, cos, cos, 1.0)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("expected ValueError")
 
 
 def test_language_embedding_scale_is_layout_independent():

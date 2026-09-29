@@ -15,6 +15,31 @@ from typing import List, Optional, Tuple
 
 import torch
 
+# Additive bias of a masked key (openpi masks with a large negative logit before the softmax)
+MASK_NEG = -1.0e9
+
+
+def prefix_attention_inputs(prefix_pad_masks: torch.Tensor, action_horizon: int):
+    """openpi pi0.5 attention inputs from the prefix validity mask ``[B, P]`` (bool).
+
+    The prefix is bidirectional (every prefix ar_mask is 0), so a prefix query attends every VALID prefix key;
+    pad keys (padded language tokens, masked cameras) are hidden. Prefix positions are ``cumsum(valid) - 1``.
+    The action tokens (pi0.5: no state token; first action ar_mask 1, the rest 0) attend every valid prefix key and
+    every action token, and sit at positions ``n_valid + [0, H)``.
+
+    Returns ``(vlm_mask [B,1,P,P], vlm_pos [B,P], expert_mask [B,1,H,P+H], expert_pos [B,H])``, masks additive fp32.
+    """
+    valid = prefix_pad_masks.bool()
+    b, p = valid.shape
+    key_bias = torch.where(valid, 0.0, MASK_NEG).to(torch.float32)  # [B, P]
+    vlm_mask = key_bias[:, None, None, :].expand(b, 1, p, p)
+    vlm_pos = torch.cumsum(valid.long(), dim=1) - 1
+    exp_bias = torch.cat([key_bias, torch.zeros(b, action_horizon)], dim=1)
+    expert_mask = exp_bias[:, None, None, :].expand(b, 1, action_horizon, p + action_horizon)
+    n_valid = valid.long().sum(dim=1, keepdim=True)
+    expert_pos = n_valid + torch.arange(action_horizon)[None, :]
+    return vlm_mask, vlm_pos.clamp(min=0), expert_mask, expert_pos
+
 from models.experimental.pi0_5.common.configs import (
     PI0ModelConfig,
     SuffixConfig,
@@ -111,6 +136,8 @@ class PI0Model:
         timestep: torch.Tensor,
         kv_cache: Optional[List[Tuple[torch.Tensor, torch.Tensor]]] = None,
         state: Optional[torch.Tensor] = None,
+        attention_mask: Optional[torch.Tensor] = None,
+        position_ids: Optional[torch.Tensor] = None,
         **kwargs,
     ) -> torch.Tensor:
         """Forward pass for denoising (predicts velocity)."""
@@ -124,6 +151,8 @@ class PI0Model:
         # Forward through expert (pass adarms_cond for Pi0.5)
         expert_output, _ = self.backbone.forward_expert(
             suffix_embs,
+            attention_mask=attention_mask,
+            position_ids=position_ids,
             past_key_values=kv_cache,
             adarms_cond=adarms_cond,
         )
@@ -174,11 +203,17 @@ class PI0Model:
         batch_size = state.shape[0]
         device = state.device
 
-        # Prefill: process prefix and cache KV
-        prefix_embs, _, _ = self.embed_prefix(images, img_masks, lang_tokens, lang_masks)
+        # Prefill: process prefix and cache KV. Pad keys are masked and the action tokens are placed at positions
+        # n_valid + [0, H), as openpi does (prefix_attention_inputs).
+        prefix_embs, prefix_pad_masks, _ = self.embed_prefix(images, img_masks, lang_tokens, lang_masks)
+        vlm_mask, vlm_pos, expert_mask, expert_pos = prefix_attention_inputs(
+            prefix_pad_masks.reshape(batch_size, -1), self.config.action_horizon
+        )
 
         _, vlm_cache = self.backbone.forward_vlm(
             prefix_embs,
+            attention_mask=vlm_mask.to(prefix_embs.dtype),
+            position_ids=vlm_pos,
             use_cache=True,
         )
 
@@ -188,6 +223,8 @@ class PI0Model:
             prefix_kv_cache=vlm_cache,
             device=device,
             state=state,
+            attention_mask=expert_mask.to(prefix_embs.dtype),
+            position_ids=expert_pos,
         )
 
         return actions

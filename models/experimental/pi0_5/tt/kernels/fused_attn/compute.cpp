@@ -3,7 +3,8 @@
 //
 // Fused expert attention, compute (one core per (head, query tile-row)):
 //   q_rot = RoPE(q) (scale folded into the tables), k_rot = RoPE(k suffix rows)
-//   S = q_rot @ [K_prefix ; k_rot]^T   (NKt key tiles; the last tile gets the key mask)
+//   S = q_rot @ [K_prefix ; k_rot]^T + mask   (NKt key tiles; the additive mask hides prefix pad keys and the
+//                                             tile-padding suffix rows)
 //   P = softmax_rows(S)                (row max, exp, row sum, reciprocal)
 //   out = (P @ [V_prefix ; v]) * (1/rowsum) -> DHt tiles (bf8) for the writer
 // Small-footprint variant: K/V prefix rings of 3 x 4 rows, P in place of S, per-row k RoPE tables (~440 KB of L1 per core).
@@ -27,7 +28,7 @@ namespace {
 constexpr uint32_t cb_q = 0, cb_k = 1, cb_v = 2, cb_cosq = 3, cb_sinq = 4, cb_cosk = 5, cb_sink = 6, cb_mask = 7;
 constexpr uint32_t cb_scaler = 8, cb_kpre = 9, cb_krot = 10, cb_vpre = 11;
 constexpr uint32_t cb_qrot = 13, cb_tmp1 = 14, cb_tmp2 = 15, cb_out = 16, cb_s = 17, cb_max = 18, cb_p = 17;  // P overwrites S
-constexpr uint32_t cb_sum = 20, cb_o = 21, cb_slast = 22, cb_rsum = 23;
+constexpr uint32_t cb_sum = 20, cb_o = 21, cb_rsum = 23;
 constexpr uint32_t DST = 8;  // dest tiles per acquire (16-bit, half sync)
 #ifdef RC_PROLOGUE
 // adaRMS folded into the qkv weights: q/k/v tiles arrive as x @ (diag(scale) W) and get r (row rsqrt, bcast over
@@ -128,7 +129,7 @@ void kernel_main() {
     cb_wait_front(cb_v, St * DHt);
     cb_wait_front(cb_cosq, DHt);
     cb_wait_front(cb_sinq, DHt);
-    cb_wait_front(cb_mask, 1);
+    cb_wait_front(cb_mask, NKt);
     cb_wait_front(cb_scaler, 1);
 #ifdef RC_PROLOGUE
     // 0. r / c on q (this core's query tile-row R), k and v (all St suffix rows of the KV head)
@@ -186,19 +187,24 @@ void kernel_main() {
     cb_push_back(cb_s, NKt);
     cb_wait_front(cb_s, NKt);
 
-    // 3. key mask on the last tile
+    // 3. S += mask (request b's key mask row, one tile per key tile), in place like 4b: pop the consumed S tiles and
+    //    push the masked ones into the same CB (it holds exactly NKt tiles)
     reconfig_data_format(cb_s, cb_mask);
     add_init(cb_s, cb_mask);
-    pack_reconfig_data_format(cb_slast);
-    cb_reserve_back(cb_slast, 1);
-    tile_regs_acquire();
-    add_tiles(cb_s, cb_mask, NKt - 1, 0, 0);
-    tile_regs_commit();
-    tile_regs_wait();
-    pack_tile(0, cb_slast);
-    tile_regs_release();
-    cb_push_back(cb_slast, 1);
-    cb_wait_front(cb_slast, 1);
+    pack_reconfig_data_format(cb_s);
+    for (uint32_t n0 = 0; n0 < NKt; n0 += DST) {
+        const uint32_t cnt = (NKt - n0 < DST) ? (NKt - n0) : DST;
+        tile_regs_acquire();
+        for (uint32_t j = 0; j < cnt; ++j) add_tiles(cb_s, cb_mask, j, n0 + j, j);
+        tile_regs_commit();
+        cb_pop_front(cb_s, cnt);
+        cb_reserve_back(cb_s, cnt);
+        tile_regs_wait();
+        for (uint32_t j = 0; j < cnt; ++j) pack_tile(j, cb_s);
+        tile_regs_release();
+        cb_push_back(cb_s, cnt);
+    }
+    cb_wait_front(cb_s, NKt);
 
     // 4a. row max
     reconfig_data_format(cb_s, cb_scaler);
@@ -206,8 +212,7 @@ void kernel_main() {
     pack_reconfig_data_format(cb_max);
     cb_reserve_back(cb_max, 1);
     tile_regs_acquire();
-    for (uint32_t n = 0; n + 1 < NKt; ++n) reduce_tile<PoolType::MAX, ReduceDim::REDUCE_ROW>(cb_s, cb_scaler, n, 0, 0);
-    reduce_tile<PoolType::MAX, ReduceDim::REDUCE_ROW>(cb_slast, cb_scaler, 0, 0, 0);
+    for (uint32_t n = 0; n < NKt; ++n) reduce_tile<PoolType::MAX, ReduceDim::REDUCE_ROW>(cb_s, cb_scaler, n, 0, 0);
     tile_regs_commit();
     tile_regs_wait();
     pack_tile(0, cb_max);
@@ -226,12 +231,7 @@ void kernel_main() {
         const uint32_t cnt = (NKt - n0 < DST) ? (NKt - n0) : DST;
         tile_regs_acquire();
         for (uint32_t j = 0; j < cnt; ++j) {
-            const uint32_t n = n0 + j;
-            if (n + 1 < NKt) {
-                sub_tiles_bcast_cols(cb_s, cb_max, j, 0, j);  // S tiles of this round sit at the CB front
-            } else {
-                sub_tiles_bcast_cols(cb_slast, cb_max, 0, 0, j);
-            }
+            sub_tiles_bcast_cols(cb_s, cb_max, j, 0, j);  // S tiles of this round sit at the CB front
             exp_tile(j);
         }
         tile_regs_commit();

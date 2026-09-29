@@ -473,7 +473,7 @@ def run_inference(
     device = STATE["device"]
     model = STATE["model"]
     if getattr(model, "fused", False):
-        return model.sample_actions_fused(images=images, lang_tokens=lang_tokens, noise=noise)
+        return model.sample_actions_fused(images=images, lang_tokens=lang_tokens, noise=noise, lang_masks=lang_masks)
 
     dev_tensors = []
     out = None
