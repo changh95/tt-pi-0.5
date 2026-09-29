@@ -73,3 +73,49 @@ Open / next:
   before any layer code.
 - Open questions for the user (DESIGN.md §8): larger L1 cut for the phase-2 program only if its binary cannot fit
   136,192 B; batch > 1 is out of the gates.
+
+## 2026-09-30 00:58:14 KST -- review "kernel feasibility" of DESIGN.md v1 (reviewer agent, no device time)
+
+Verdict: NOT ACCEPTED as is; 3 blocking spec defects, all cheap to fix before WP-P1-0 encodes the tables.
+- B1 cb_in0 (DESIGN.md:282) holds bf16 x/x_mid AND bfp8 ctx under one CB id, contradicting :223 (one format per CB).
+  Fix: one CBDescriptor with two format_descriptors (two ids, one buffer; tt-metal program_descriptors.hpp:75), which also
+  retires the "not demonstrated" aliasing risk of :482. A separate ctx CB instead would cost 139,264 B > the 117,170 headroom.
+- B2 weight rings (:223-226) are smaller than one op's share (w8 87,040 < ug 139,264 per core) and the stream is ONE in-order
+  cursor, so DRAM idles during attention and Wd cannot prefetch. Fluid model docs/megakernel/design/review_stream_sim.py
+  (validated: unbounded rings reproduce 76.8 / 55.2): layer base 82.4 us (84.0 at 414 GB/s) vs 76.8 claimed, LIBERO 67.5
+  (69.1) vs 55.4 claimed. w8 = 139,264 (+52,224 B) restores 76.8 / 55.2 (58.7 at 414).
+- B3 R3 merge (:195) is a "tree of depth 3" but cb_part / part_arrive exist only on the merger (:297, :330), and the cost counts
+  one part send for three levels (1.5 + 3 x 3.5 = 12.0; three sends -> 15.0); GR00T's 3.5 us merge had 4 O tiles, here 8.
+Non-blocking items (numbers, sources): see the review result returned to the orchestrator.
+
+## 2026-09-30 01:13:32 KST -- phase "design-revise" DONE -> docs/megakernel/DESIGN.md v2
+
+Input: the two v1 reviews (kernel feasibility R-K: B1 cb_in0 formats, B2 rings, B3 merge + 10 items; goal / integration
+R-G: B1 no structural gate, B2 cb_in0 + 9 items). All resolved, none rejected; DESIGN.md §10 is the item-by-item table.
+Arithmetic: docs/megakernel/design/mk_design_calc_v2.py -> mk_design_calc_v2.out (imports the reviewer's
+review_stream_sim.py, now committed). No device time.
+
+Key changes (numbers from mk_design_calc_v2.out):
+- cb_in0 = ONE tensor-backed CBDescriptor with two format descriptors, ids 0 bf16 / 29 bfp8, 139,264 B. Evidence read in
+  tt-metal: circular_buffer_config.cpp:65-100 binds the buffer then processes each CBFormatDescriptor; nanobind exposes
+  format_descriptors read-write. Device proof + 2 named fallbacks in WP-P1-0.
+- cb_w8 16 x 8,704 = 139,264 B (>= the up|gate share). Layer time = the reviewer's per-core ring-constrained timeline:
+  base 76.8 / LIBERO 61.1 us at 414-464 GB/s (v1 rings: 84.1 / 76.9 at 414). The stream no longer binds at either shape.
+- R3 = flat dh-split merge (4 slice mergers per (h, r), 2 dh tiles each), priced per tile-op at T_E = 0.125 us (A, from
+  GR00T's 3.5 us / 28 tile-ops): base 9.0 us, LIBERO 10.75. RoPE moved to the Q / K producers (pair exchange d ^ 4); KL
+  multicasts only after the 8 Q column multicasts (kl_qdone). Attention priced at the 1.87 us/key-tile slope.
+- Chain base 76.8 us (unchanged by offsetting corrections), LIBERO 52.3 -> 61.1 (no ad-hoc LIBERO scaling any more).
+  Expert loop base 13.91 / 18.92 / 23.37 ms, LIBERO 11.08 / 15.07 / 18.62; whole call base 66.7 / 71.7 / 76.2, LIBERO
+  59.8 / 63.8 / 67.4.
+- L1: union 1,101,952 B base / 790,656 LIBERO; KV co-tenant 78,336 B per core (whole pages per bank); allocatable
+  1,371,136 (l1_small 24,576); headroom 170,848 base. CB ids 30 of 64 (Blackhole).
+- Sync words: cumulative counters keyed on (what, slot, peer), generation in the value; full table in §4.8; explicit ready
+  credits for every leader multicast incl. non-source receivers.
+- Goal lens: structural exit gates (phase 1: one device op after the VLM; phase 2: exactly one device op per replay),
+  PI05_MEGAKERNEL knob (default off until phase-2 exit), model stamp asserted in test_pcc_pi05_fused.py, refusals (shape,
+  B>1, mesh/dp/pipeline, no L1 cut), replay L1 guard, server WPs P1-6 / P2-5, LIBERO speed gates binding, prompt-length
+  edge cases, size <= 128 KB gates in P1-3/4/5. Phase 1 is intermediate; phase-2 failure = needs_user.
+- Phase 2: pad rows never enter the resident KV region (25 / 18 key-tile chunking stands); "upper" column is not a bound;
+  GR00T-realised range 2,522-5,079 us per VLM layer straddles TTNN 2,437 -> P2-1 decides.
+
+Open / next: WP-P1-0. Open question for the user (DESIGN.md §8): batch-1-only megakernel server acceptable?

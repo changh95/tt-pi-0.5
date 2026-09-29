@@ -1,0 +1,117 @@
+rates: T_MM 0.029  T_E 0.125  T_KEY 1.871 (slope; the average 43.0/25 = 1.72)
+
+base chain per layer 76.8 us
+  R1 x round                   6.50
+  C1 qkv                       1.86
+  R2 pair+RoPE+Q/KV dist       5.25
+  C2 attention chunk          10.36
+  R3 dh-split merge            9.00
+  R4 ctx round                 6.50
+  C3 o_proj                    4.21
+  R5 x_mid round               6.50
+  C4 up|gate + GeGLU          13.42
+  R6 h row exchange            4.00
+  C5 down partial              3.71
+  R7 reduce to owners          5.50
+  timeline layer us: 414 76.8 | 440 76.8 | 464 76.8 | v1 rings @414 84.1
+  layer 76.8  step 1391.1 us  loop 13.91 ms  x1.36 18.92  x1.68 23.37
+
+libero chain per layer 61.1 us
+  R1 x round                   6.50
+  C1 qkv                       0.93
+  R2 pair+RoPE+Q/KV dist       4.88
+  C2 attention chunk           6.61
+  R3 dh-split merge           10.75
+  R4 ctx round                 6.50
+  C3 o_proj                    2.36
+  R5 x_mid round               6.50
+  C4 up|gate + GeGLU           6.71
+  R6 h row exchange            4.00
+  C5 down partial              1.86
+  R7 reduce to owners          3.50
+  timeline layer us: 414 61.1 | 440 61.1 | 464 61.1 | v1 rings @414 76.9
+  layer 61.1  step 1108.2 us  loop 11.08 ms  x1.36 15.07  x1.68 18.62
+base whole call: 66.7 / 71.7 / 76.2 ms (today 84.21; stage subtracted 31.430, profiled basis)
+libero whole call: 59.8 / 63.8 / 67.4 ms (today 76.77; stage subtracted 28.008, profiled basis)
+break-even realisation base: 2.25x of the timeline layer (173.1 us today)
+break-even realisation libero: 2.52x (153.8 us today)
+
+base L1 union 1101952 B (29 CBDescriptors; ids 0..28 plus the bfp8 alias id 29 on cb_in0 = 30 ids)
+   0 cb_in0 bf16 x/x_mid + id 29 bfp8 ctx (one CBDescriptor, two formats)   139264
+   1 cb_w8 16 x 8,704                                                     139264
+   2 cb_w16 8 x 16,384                                                    131072
+   3 cb_acc fp32                                                           32768
+   4 cb_out bf16 (qkv out; O part staging 8 dh)                            16384
+   5 cb_q Q[h] landing (roped)                                             32768
+   6 cb_rpart RoPE partner tile landing                                     4096
+   7 cb_rtmp RoPE scratch                                                   4096
+   8 cb_rope cos/sin own tile, own rows                                     8192
+   9 cb_kv chunk double buffer bfp8                                       174080
+  10 cb_ksuf roped K_s | V_s                                               65536
+  11 cb_mask                                                               10240
+  12 cb_s scores fp32                                                      20480
+  13 cb_oacc fp32                                                          32768
+  14 cb_ml m, l fp32 (+ ping-pong)                                         16384
+  15 cb_part slice-merger landing                                          49152
+  16 cb_ctx 2 dh slice bfp8                                                 2176
+  17 cb_r                                                                   4096
+  18 cb_bias c / gate tiles                                                12288
+  19 cb_ug fp32                                                            16384
+  20 cb_h                                                                   8192
+  21 cb_hg row h slice                                                     65536
+  22 cb_dpart fp32                                                         32768
+  23 cb_red owner landing fp32                                             57344
+  24 cb_x fp32 residual                                                     8192
+  25 cb_xs send staging                                                     4096
+  26 cb_const                                                               8192
+  27 cb_fence                                                               4096
+  28 cb_sync 128 words x 16 B                                               2048
+  allocatable 1371136, KV caches per bank 78336 (200 tiles each, ceil/110 = 2 pages), other co-tenants 20,000
+  headroom 170848
+
+libero L1 union 790656 B (29 CBDescriptors; ids 0..28 plus the bfp8 alias id 29 on cb_in0 = 30 ids)
+   0 cb_in0 bf16 x/x_mid + id 29 bfp8 ctx (one CBDescriptor, two formats)    69632
+   1 cb_w8 16 x 8,704                                                     139264
+   2 cb_w16 8 x 16,384                                                    131072
+   3 cb_acc fp32                                                           16384
+   4 cb_out bf16 (qkv out; O part staging 8 dh)                            16384
+   5 cb_q Q[h] landing (roped)                                             16384
+   6 cb_rpart RoPE partner tile landing                                     2048
+   7 cb_rtmp RoPE scratch                                                   2048
+   8 cb_rope cos/sin own tile, own rows                                     4096
+   9 cb_kv chunk double buffer bfp8                                       104448
+  10 cb_ksuf roped K_s | V_s                                               32768
+  11 cb_mask                                                                6144
+  12 cb_s scores fp32                                                      12288
+  13 cb_oacc fp32                                                          32768
+  14 cb_ml m, l fp32 (+ ping-pong)                                         16384
+  15 cb_part slice-merger landing                                          61440
+  16 cb_ctx 2 dh slice bfp8                                                 2176
+  17 cb_r                                                                   2048
+  18 cb_bias c / gate tiles                                                12288
+  19 cb_ug fp32                                                             8192
+  20 cb_h                                                                   4096
+  21 cb_hg row h slice                                                     32768
+  22 cb_dpart fp32                                                         16384
+  23 cb_red owner landing fp32                                             28672
+  24 cb_x fp32 residual                                                     4096
+  25 cb_xs send staging                                                     2048
+  26 cb_const                                                               8192
+  27 cb_fence                                                               4096
+  28 cb_sync 128 words x 16 B                                               2048
+  allocatable 1371136, KV caches per bank 78336 (160 tiles each, ceil/110 = 2 pages), other co-tenants 20,000
+  headroom 482144
+v1 separate-ctx-CB check: 1,154,560 + 139,264 = 1293824
+
+phase 2 VLM layer 162.07 GFLOP; GELU tiles per core (88 cores) 139.6
+  lower (v2 geometry) 1217 us: {'qkv': 32.9, 'o': 26.2, 'gu': 588.0, 'gelu': 81.0, 'mul': 14.0, 'dn': 200.0, 'attn': 159.6, 'norms': 30.6, 'exch': 84.7}
+  GR00T-realised  7 % of peak (42.6 TFLOP/s): matmuls 3804 + other 285 + exchanges 26 % 989 = 5079 us
+  GR00T-realised 15 % of peak (91.3 TFLOP/s): matmuls 1775 + other 285 + exchanges 26 % 462 = 2522 us
+  gate+up alone at 7 %: 2319 us (TTNN layer 2,437 M)
+  VLM stack (17 full layers + 0.1 ms KV-only, as v1): lower 20.8 ms
+  VLM stack at  7 % of peak: 86.4 ms (TTNN 41.54 M)
+  VLM stack at 15 % of peak: 43.0 ms (TTNN 41.54 M)
+  phase-2 whole call base, low: 42.7 ms
+  base resident KV: 6624 tiles, 61 per core -> 66368 B per core
+  libero resident KV: 4896 tiles, 45 per core -> 48960 B per core
+  VLM MLP phase L1 (base): 1225792 + resident KV 66368 = 1292160 of 1371136, headroom 78976
