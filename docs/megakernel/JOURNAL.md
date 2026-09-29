@@ -148,5 +148,5 @@ fp64 PCC 1.0000000000000002, max |diff| 5.1e-14 (base shape); fp32 PCC 0.9999984
 layers) / 0.99999999996 (LIBERO). Scratch: scratchpad/mk/host_check{,64}.{py,log}.
 Mock-cluster compile (size_check.py, private TT_METAL_CACHE): base 69,992 B, LIBERO 68,696 B incl. args / CB configs
 (brisc 18,192, ncrisc 2,224, trisc0 21,568, trisc1 18,384, trisc2 7,424) vs the 128 KB gate -> docs/megakernel/impl/
-size_check_v1_*.json. CB union per core: base 1177248 B (to be checked against measured free L1).
+size_check_v1_*.json. CB union per core (geometry.cb_union_bytes): base 1,156,768 B, LIBERO 851,616 B (to be checked against measured free L1).
 Next: first device bring-up (debug stop after 1 generation, watcher on), then 18, then 180 generations.
