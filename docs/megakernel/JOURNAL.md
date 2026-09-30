@@ -661,3 +661,16 @@ weight feeders (VLM matmuls look feeder-bound: gate|up 2.95 us per 34.8 KB page 
   compiled at 20:41 from the edited sources (arms off by default, default code unchanged, but the rule was broken).
 Next: precision (VLM matmuls HiFi2 A/B; the per-seed gate over >= 18 seeds), speed (norms 8 ms -> FPU stats + batched
 apply; attention 9.7 ms; feeders), then the full gate set.
+
+### 2026-09-30 21:55:13 P2 SigLIP single-chunk attention, HiFi2 VLM default, FPU norms, progressive in0, K/V multicast
+- Commits the uncommitted work of the previous context: VLM matmuls HiFi2 by default (PE_VLM_LOFI arm = LoFi; 22-seed gate
+  HiFi2 22/22 vs LoFi 18/22, docs/megakernel/p2/results/seeds_{hifi2,lofi}.json), FPU LN/RMS statistics, progressive in0
+  (per-K-piece flags), K/V multicast by 4 feeders, TRISC arg trim.
+- SigLIP attention: one chunk of all 8 key tiles, 96 items (16 heads x {3,3,2} q row tiles x 2 images), l shared through
+  P_PL and normalised in DST (flash_part(..., single)). Mock size base 130,624 B / libero 129,584 B, gate 131,072
+  (p2/results/mock19.json).
+- Device (b29, p2/results/b29.json): sig0_attn PCC 0.9999885; SATTN 134 -> 89.6 us; SigLIP layer 494 -> 450.1 us
+  (LN1 43.0, QKV 52.5, ATTN 89.6, O 40.2, LN2 43.0, FC1 92.4, FC2 89.2). VLM layer 1.726 ms unchanged.
+- Whole prefix (p2/results/b29_prefix.json): 41.8 ms/rep (was 43.0); K/V vs host fp32 min PCC 0.994709.
+- P2-2 still open: 450 us > 394.7 stop line. Next levers: fuse LN into the producer (O / FC2 epilogue emits the LN'd
+  bf16 copy -> removes 2 x 43 us minus epilogue cost), QKV / FC1 / FC2 matmul efficiency.

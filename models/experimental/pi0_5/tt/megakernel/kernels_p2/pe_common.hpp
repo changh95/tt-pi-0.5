@@ -34,10 +34,10 @@ static_assert(MT % RV == 0, "VLM bands must split the row tiles evenly");
 static_assert(MT == PTV + 1, "exactly one pad row tile (base 736 -> 768, LIBERO 544 -> 576)");
 
 constexpr uint32_t T16 = 2048, T8 = 1088, T32 = 4096;
-#ifdef PE_VLM_HIFI2
-constexpr uint32_t VLM_FID_HI = 1;  // A/B knob: VLM qkv / o / gate|up at HiFi2 (default LoFi, as the shipped path)
-#else
-constexpr uint32_t VLM_FID_HI = 0;
+#ifdef PE_VLM_LOFI
+constexpr uint32_t VLM_FID_HI = 0;  // A/B arm: VLM matmuls at LoFi (the shipped path's fidelity): fails the amended
+#else                               // per-seed gate on 4 / 22 seeds (p2/results/seeds_lofi.json)
+constexpr uint32_t VLM_FID_HI = 1;  // default: HiFi2 (22 / 22 seeds closer to the fp32 reference than shipped, seeds_hifi2.json)
 #endif
 
 // Re-point a CB at [addr, addr + pages * page_bytes) of the arena (byte address; every RISC keeps its own interface copy,
@@ -164,7 +164,7 @@ PE_OS Op describe(uint32_t op) {
             break;
         case W_SATTN:
             o.kind = K_ATTN;
-            o.items = 2 * S_HEADS * 4;  // (image, head, pair of q row tiles)
+            o.items = 2 * S_HEADS * 3;  // (image, head, q row group {0..2, 3..5, 6..7}): <= one item per core
             break;
         case W_VATTN:
             o.kind = K_ATTN;
@@ -183,6 +183,15 @@ PE_OS Op describe(uint32_t op) {
 }
 
 #endif
+
+// SigLIP attention item -> (image, head, first q row tile, row count)
+FORCE_INLINE void s_attn_item(uint32_t it, uint32_t& img, uint32_t& h, uint32_t& r0, uint32_t& nr) {
+    img = it / (S_HEADS * 3);
+    const uint32_t rem = it % (S_HEADS * 3), g = rem % 3;
+    h = rem / 3;
+    r0 = img * S_IMG + g * 3;
+    nr = g < 2 ? 3 : 2;
+}
 
 // matmul: this core's band / column shares
 FORCE_INLINE uint32_t mm_pairs(const Op& o, uint32_t x) { return split_n(o.np, x); }
@@ -303,7 +312,7 @@ PE_OS Lay layout(const Op& o) {
         y.o32 = take(4 * rp * T32);
         y.part = o.mode == MM_S ? take(3 * 2 * rp * T32) : 0;
         // feeders stage in their own arena (they compute nothing in a matmul op)
-        y.stage_bytes = mm_page_bytes(o) > IN0_CHUNK * T16 ? mm_page_bytes(o) : IN0_CHUNK * T16;
+        y.stage_bytes = mm_page_bytes(o) > rp * o.piece * T16 ? mm_page_bytes(o) : rp * o.piece * T16;
         if (o.mode == MM_S && mm_in0_page_tiles(o) * T8 > y.stage_bytes) {
             y.stage_bytes = mm_in0_page_tiles(o) * T8;
         }
@@ -317,7 +326,7 @@ PE_OS Lay layout(const Op& o) {
         y.cst = take(PC_N * T16);
     } else if (o.kind == K_ATTN) {
         const bool v = o.what == W_VATTN;
-        y.q = take((v ? 2 * V_DH : 2 * S_DH) * T16);
+        y.q = take((v ? 2 * V_DH : 3 * S_DH) * T16);
         y.kv = v ? take(2 * PTV * V_DH * T8) : take(2 * S_NK * S_DH * T16);
         y.msk = take((v ? PTV : 1) * T16);
         y.ss = take(8 * T16);

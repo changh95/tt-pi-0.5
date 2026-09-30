@@ -191,9 +191,8 @@ class WholeMegakernel:
             c[P.PA_WS + i] = addr(ten)
         for i, ten in enumerate(t.wv):
             c[P.PA_WV + i] = addr(ten)
-        for l in range(G.N_LAYERS):
-            c[P.PA_KC + l] = addr(kv[l][0])
-            c[P.PA_VC + l] = addr(kv[l][1])
+        for l in range(G.N_LAYERS):  # the prefix writes the caches phase 1 reads (its C_K_ADDR / C_V_ADDR)
+            assert c[G.C_K_ADDR + l] == addr(kv[l][0]) and c[G.C_V_ADDR + l] == addr(kv[l][1])
         c[P.PA_OPFIRST] = int(first)
         c[P.PA_DBGSTOP] = int(stop)
         c[P.PA_REPS] = int(reps)
@@ -236,9 +235,12 @@ class WholeMegakernel:
         ct.extend(ttnn.TensorAccessorArgs(kv[0][0]).get_compile_time_args())
         common = self.common_args(mk.common_args(kv, mask, tables, noise, out, ngen), kv, first, stop, reps)
         rt = ttnn.RuntimeArgs()
+        rt_t = ttnn.RuntimeArgs()  # the TRISC reads phase 1's per-core args only
         for x in range(G.GRID[0]):
             for y in range(G.GRID[1]):
-                rt[x][y] = self.core_args((x, y))
+                a_ = self.core_args((x, y))
+                rt[x][y] = a_
+                rt_t[x][y] = a_[:G.N_RT_ARGS]
         cc = ttnn.ComputeConfigDescriptor(math_fidelity=ttnn.MathFidelity.HiFi2, fp32_dest_acc_en=True,
                                           dst_full_sync_en=True, math_approx_mode=False)
         modes = [ttnn.UnpackToDestMode.Default] * 64
@@ -266,8 +268,8 @@ class WholeMegakernel:
                                   compile_time_args=ct, runtime_args=rt, common_runtime_args=common, defines=defines,
                                   config=dm(processor=ttnn.DataMovementProcessor.RISCV_0, noc=ttnn.NOC.NOC_1)),
             ttnn.KernelDescriptor(kernel_source=KERNELS2["trisc"], source_type=fp, core_ranges=cores,
-                                  compile_time_args=ct, runtime_args=rt, common_runtime_args=common, defines=defines,
-                                  config=cc),
+                                  compile_time_args=ct, runtime_args=rt_t, common_runtime_args=common[:P.PA_TRISC_N],
+                                  defines=defines, config=cc),
         ]
         sems = [ttnn.SemaphoreDescriptor(id=i, core_ranges=cores, initial_value=0) for i in (0, 1, 2, 3)]
         return ttnn.ProgramDescriptor(kernels=kernels, semaphores=sems, cbs=cbs)

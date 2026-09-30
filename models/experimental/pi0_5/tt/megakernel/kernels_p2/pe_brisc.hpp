@@ -47,7 +47,7 @@ PE_OS void write_pair(const Op& o, uint32_t p, uint32_t r0) {
                     noc_async_write_page((h * MT + row) * V_DH + d, bdram(PA_Q_V, T16), src);
                 } else if (row < PTV) {  // pad query rows never become keys
                     const uint32_t d = (p - 32) % 4 + 4 * t;
-                    const uint32_t arg = (p < 36 ? PA_KC : PA_VC) + o.layer;
+                    const uint32_t arg = (p < 36 ? mk::C_K_ADDR : mk::C_V_ADDR) + o.layer;
                     noc_async_write_page(row * V_DH + d, TensorAccessor(bacc_l1, cra(arg), T8), src);
                 }
                 break;
@@ -91,35 +91,36 @@ PE_OS void feed_in0(const Op& o, const Core& c, const Lay& L, uint32_t A, uint32
     const uint32_t s0 = A + L.stage, dst = A + L.in0;
     const uint32_t x0 = c.rowx0, x1 = c.rowx1, y = c.rowy;
     if (o.mode == MM_R) {
+        // the resident band in K-piece order: piece q = rows r, tiles [q * pc, (q + 1) * pc), one flag per piece, so
+        // the receivers' first output pair starts on piece 0 while the rest of the band is still in flight
         const auto src = bdram(in0_arg(o), T16);
-        const uint32_t tiles = rp * kt, nch = (tiles + IN0_CHUNK - 1) / IN0_CHUNK;
-        auto read_chunk = [&](uint32_t ch) {
-            const uint32_t t0 = ch * IN0_CHUNK, n = tiles - t0 < IN0_CHUNK ? tiles - t0 : IN0_CHUNK;
-            const uint32_t buf = s0 + (ch & 1) * IN0_CHUNK * T16;
-            for (uint32_t i = 0; i < n; ++i) {
-                const uint32_t t = t0 + i;
-                noc_async_read_page((r0 + t / kt) * kt + t % kt, src, buf + i * T16);
+        const uint32_t pc = o.piece, nq = kt / pc, pb = rp * pc * T16;
+        auto read_piece = [&](uint32_t q) {
+            const uint32_t buf = s0 + (q & 1) * pb;
+            for (uint32_t r = 0; r < rp; ++r) {
+                for (uint32_t kk = 0; kk < pc; ++kk) {
+                    noc_async_read_page((r0 + r) * kt + q * pc + kk, src, buf + (r * pc + kk) * T16);
+                }
             }
-            return n;
         };
         ps_dbg(o.op, 2, st.ibase[0] + 1);
         WAYPOINT("PICR");
         wait_credits(PS_I_RDY0, nr, st.ibase, 1);
-        uint32_t n = read_chunk(0);
+        read_piece(0);
         noc_async_read_barrier();
-        for (uint32_t ch = 0; ch < nch; ++ch) {
-            noc_async_write_multicast(s0 + (ch & 1) * IN0_CHUNK * T16, pmcast(x0, y, x1, y, dst + ch * IN0_CHUNK * T16),
-                                      n * T16, nr, false);
-            uint32_t n_next = 0;
-            if (ch + 1 < nch) {
-                n_next = read_chunk(ch + 1);
+        for (uint32_t q = 0; q < nq; ++q) {
+            const uint32_t buf = s0 + (q & 1) * pb;
+            for (uint32_t r = 0; r < rp; ++r) {
+                noc_async_write_multicast(buf + r * pc * T16, pmcast(x0, y, x1, y, dst + (r * kt + q * pc) * T16),
+                                          pc * T16, nr, false);
+            }
+            if (q + 1 < nq) {
+                read_piece(q + 1);
                 noc_async_read_barrier();
             }
-            noc_async_writes_flushed();
-            n = n_next;
+            noc_async_write_barrier();  // piece q landed everywhere before its flag
+            mcast_flag(x0, y, x1, y, nr, 0, 0, 0, PS_SRC_I, PS_I_VAL, (k << 16) + q + 1);
         }
-        noc_async_write_barrier();  // every chunk landed before the flag
-        mcast_flag(x0, y, x1, y, nr, 0, 0, 0, PS_SRC_I, PS_I_VAL, (k << 16) + 1);
         for (uint32_t r = 0; r < nr; ++r) {
             st.ibase[r] += 1;
         }
@@ -177,14 +178,17 @@ PE_OS void attn_write(const Op& o, const Core& c, const Lay& L, uint32_t A) {
     cb_point(P_O16, A + L.o16, 2 * dh, T16);
     const auto out = bdram(v ? PA_CTX_V : PA_CTX_S, T16);
     for (uint32_t it = c.lin; it < o.items; it += NCORES) {
-        for (uint32_t hh = 0; hh < 2; ++hh) {
+        uint32_t img = 0, sh = 0, r0 = 0, nr = 2;
+        if (!v) {
+            s_attn_item(it, img, sh, r0, nr);
+        }
+        for (uint32_t hh = 0; hh < nr; ++hh) {
             uint32_t base;
             if (v) {
                 const uint32_t r = it / 4, h = 2 * (it % 4) + hh;
                 base = r * V_D + h * V_DH;
             } else {
-                const uint32_t img = it / 64, h = (it / 4) % S_HEADS, qb = it % 4;
-                base = (img * S_IMG + qb * 2 + hh) * S_DCTX + h * S_DH;
+                base = (r0 + hh) * S_DCTX + sh * S_DH;
             }
             cb_wait_front(P_O16, dh);
             const uint32_t l1 = get_read_ptr(P_O16);

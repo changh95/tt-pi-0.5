@@ -150,7 +150,7 @@ def describe(op: int, ps: PShape) -> Op:
     elif what in (W_VRMS1, W_VRMS2):
         o.kind, o.nkind, o.nk, o.items = K_NORM, N_RMS, V_D, ps.mt
     elif what == W_SATTN:
-        o.kind, o.items = K_ATTN, 2 * S_HEADS * 4
+        o.kind, o.items = K_ATTN, 2 * S_HEADS * 3
     elif what == W_VATTN:
         o.kind, o.items = K_ATTN, ps.mt * (V_H // 2)
     elif what == W_EMBED:
@@ -268,7 +268,7 @@ def layout(o: Op, ps: PShape) -> Dict[str, int]:
         take("o32", 4 * rp * T32)
         if o.mode == MM_S:
             take("part", 3 * 2 * rp * T32)
-        stage = max(mm_page_bytes(o), IN0_CHUNK * T16)
+        stage = max(mm_page_bytes(o), rp * o.piece * T16)
         if o.mode == MM_S:
             stage = max(stage, mm_in0_page_tiles(o) * T8)
         y["stage_bytes"] = stage
@@ -282,7 +282,7 @@ def layout(o: Op, ps: PShape) -> Dict[str, int]:
         take("cst", PC_N * T16)
     elif o.kind == K_ATTN:
         v = o.what == W_VATTN
-        take("q", (2 * V_DH if v else 2 * S_DH) * T16)
+        take("q", (2 * V_DH if v else 3 * S_DH) * T16)
         take("kv", 2 * ps.ptv * V_DH * T8 if v else 2 * S_NK * S_DH * T16)
         take("msk", (ps.ptv if v else 1) * T16)
         take("ss", 8 * T16)
@@ -328,7 +328,7 @@ PFMT = {
 }
 # P_SYNC, P_OPD (static) and P_TAIL (the arena extension) are declared separately (pe_program.py)
 # UnpackToDestFp32 (exact fp32 copies into DST; never FPU operands)
-P_FP32_UNPACK = (P_S32, P_PART, P_R, P_L, P_PL)
+P_FP32_UNPACK = (P_S32, P_PART, P_L, P_PL)  # P_R, P_X32, P_SCR are FPU operands of the norms (default unpack)
 PSYNC_BYTES = 48 * PSTRIDE  # sync words (PS_N) + diagnostics staging (PS_DIAG..)
 
 

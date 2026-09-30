@@ -111,10 +111,11 @@ def mock_compile(shape_name: str, whole: bool) -> Dict[str, object]:
 
 
 def footprint2(elfs) -> Dict[str, object]:
+    from . import geometry as G
     from . import pe_geometry as P
 
     bins = {r: (s + 15) // 16 * 16 for r, (s, _) in elfs.items()}
-    args = 3 * 4 * (P.PR_N + P.PA_N)
+    args = 4 * (2 * (P.PR_N + P.PA_N) + G.N_RT_ARGS + P.PA_TRISC_N)  # BRISC + NCRISC full lists, TRISC cut
     cbs = 16 * (P.P_LAST + 1)
     sems = 16 * 4
     total = sum(bins.values()) + args + cbs + sems

@@ -209,47 +209,51 @@ constexpr uint32_t PS_DBG = 10;      // 10..13 NCRISC (op, phase, a, b), 14..15 
 // laggard is still reading (ring depth > 1; reproduced 2026-09-30 on the VLM down op, bands far from the feeders).
 constexpr uint32_t PS_W_RDY0 = 16;   // weight feeder of column x: 16 + y = credits of receiver (x, y), y < 8
 constexpr uint32_t PS_I_RDY0 = 24;   // in0 feeder of band b: 24 + x = credits of receiver (x, b), x < 11
-constexpr uint32_t PS_N = 36;
+constexpr uint32_t PS_SRC_KV = 35;   // K / V feeder-local source of the valid multicast
+constexpr uint32_t PS_KV_VAL0 = 36;  // 36..39: every core: VLM K / V quarter f landed ((op << 16) | 1)
+constexpr uint32_t KVF_X0 = 7;       // the 4 VLM K / V feeders: (7..10, IF_Y) (linear index >= 106: never an attention item)
+constexpr uint32_t PS_N = 40;
 constexpr uint32_t PS_DIAG = 40;     // 40..43: diagnostics staging (8 words, written once at the end)
 constexpr uint32_t PS_TSTAMP = 44;   // 44..47: the hub's time-stamp record staging (16 B)
 
 // ---------------------------------------------------------------- common runtime args (appended after phase 1's)
+// The TRISC reads only phase 1's and PA_OPFIRST..PA_REPS, so its list is cut at PA_TRISC_N (ring bytes). The VLM K / V
+// cache addresses are phase 1's own C_K_ADDR / C_V_ADDR (the prefix writes the caches the expert reads).
 constexpr uint32_t PA0 = 100;
-constexpr uint32_t PA_X_S = 100;     // fp32  [512, 1152]   SigLIP residual
-constexpr uint32_t PA_XN_S = 101;    // bf16  [512, 1152]   normalised (LN out)
-constexpr uint32_t PA_QKV_S = 102;   // bf16  [512, 4608]
-constexpr uint32_t PA_CTX_S = 103;   // bf16  [512, 1536]
-constexpr uint32_t PA_H_S = 104;     // bf16  [512, 4352]
-constexpr uint32_t PA_X_V = 105;     // fp32  [MT*32, 2048] VLM residual
-constexpr uint32_t PA_XN_V = 106;    // bf16  [MT*32, 2048]
-constexpr uint32_t PA_Q_V = 107;     // bf16  [8 heads][MT][8] tiles
-constexpr uint32_t PA_CTX_V = 108;   // bf16  [MT*32, 2048]
-constexpr uint32_t PA_H_V = 109;     // bfp8  [MT*32, 16384]
-constexpr uint32_t PA_IM2COL = 110;  // bf16  [512, 608] TILE (host im2col, the request's pixels)
-constexpr uint32_t PA_TOK = 111;     // uint32 [1, NTOK] ROW_MAJOR (the request's token ids)
-constexpr uint32_t PA_EMB = 112;     // bf16  [vocab, 2048] ROW_MAJOR (embedding table)
-constexpr uint32_t PA_VMASK = 113;   // bf16  [32, P] TILE: row-broadcast key bias of the VLM (the request's mask)
-constexpr uint32_t PA_COSQ = 114;    // bf16  [MT*32, 256] TILE: VLM q RoPE cos (x 1/16)
-constexpr uint32_t PA_SINQ = 115;    //                        signed sin (x 1/16)
-constexpr uint32_t PA_COSK = 116;
-constexpr uint32_t PA_SINK = 117;
-constexpr uint32_t PA_POS = 118;     // bf16  [256, 1152] position table + patch bias
-constexpr uint32_t PA_SVEC = 119;    // bf16  per SigLIP layer: row-broadcast vectors (see pe_common.hpp SV_*)
-constexpr uint32_t PA_VVEC = 120;    // bf16  per VLM layer: 1 + w of both RMS norms (row-broadcast)
-constexpr uint32_t PA_GVEC = 121;    // bf16  post-LN w, b, projector bias (row-broadcast)
-constexpr uint32_t PA_CONST = 122;   // bf16  [32, 32 * PC_N] constants
-constexpr uint32_t PA_WPATCH = 123;  // bf16  patch-embed weight arena (bank-striped pages)
-constexpr uint32_t PA_WPROJ = 124;   // bfp8  projector weight arena
-constexpr uint32_t PA_DBGSTOP = 125; // first op NOT executed (N_OPS = everything)
-constexpr uint32_t PA_OPFIRST = 126; // first op executed (0 = from the start)
-constexpr uint32_t PA_DIAG = 127;    // uint32 [110 pages of 64 B] per-core diagnostics (arena bounds, ops run)
-constexpr uint32_t PA_WS = 128;      // 128..154: SigLIP layer weight arenas (bfp8, bank-striped pages)
-constexpr uint32_t PA_WV = 155;      // 155..172: VLM layer weight arenas
-constexpr uint32_t PA_KC = 173;      // 173..190: VLM layer K caches (L1, bfp8) -- the expert's inputs
-constexpr uint32_t PA_VC = 191;      // 191..208: V caches
-constexpr uint32_t PA_REPS = 209;    // the op range [OPFIRST, DBGSTOP) runs this many times (timing; 1 in production)
-constexpr uint32_t PA_TIMES = 210;   // uint32 [4096, 16] ROW_MAJOR: the hub stamps (wall clock, k, op) at every go
-constexpr uint32_t PA_N = 211;       // common args in total
+constexpr uint32_t PA_OPFIRST = 100; // first op executed (0 = from the start)
+constexpr uint32_t PA_DBGSTOP = 101; // first op NOT executed (N_OPS = everything)
+constexpr uint32_t PA_REPS = 102;  // the op range [OPFIRST, DBGSTOP) runs this many times (timing; 1 in production)
+constexpr uint32_t PA_TRISC_N = 103;  // the TRISC's common-arg list length
+constexpr uint32_t PA_X_S = 103;   // fp32  [512, 1152]   SigLIP residual
+constexpr uint32_t PA_XN_S = 104;  // bf16  [512, 1152]   normalised (LN out)
+constexpr uint32_t PA_QKV_S = 105; // bf16  [512, 4608]
+constexpr uint32_t PA_CTX_S = 106; // bf16  [512, 1536]
+constexpr uint32_t PA_H_S = 107;   // bf16  [512, 4352]
+constexpr uint32_t PA_X_V = 108;   // fp32  [MT*32, 2048] VLM residual
+constexpr uint32_t PA_XN_V = 109;  // bf16  [MT*32, 2048]
+constexpr uint32_t PA_Q_V = 110;   // bf16  [8 heads][MT][8] tiles
+constexpr uint32_t PA_CTX_V = 111; // bf16  [MT*32, 2048]
+constexpr uint32_t PA_H_V = 112;   // bfp8  [MT*32, 16384]
+constexpr uint32_t PA_IM2COL = 113; // bf16  [512, 608] TILE (host im2col, the request's pixels)
+constexpr uint32_t PA_TOK = 114;   // uint32 [1, NTOK] ROW_MAJOR (the request's token ids)
+constexpr uint32_t PA_EMB = 115;   // bf16  [vocab, 2048] ROW_MAJOR (embedding table)
+constexpr uint32_t PA_VMASK = 116; // bf16  [32, P] TILE: row-broadcast key bias of the VLM (the request's mask)
+constexpr uint32_t PA_COSQ = 117;  // bf16  [MT*32, 256] TILE: VLM q RoPE cos (x 1/16)
+constexpr uint32_t PA_SINQ = 118;  // signed sin (x 1/16)
+constexpr uint32_t PA_COSK = 119;  
+constexpr uint32_t PA_SINK = 120;  
+constexpr uint32_t PA_POS = 121;   // bf16  [256, 1152] position table + patch bias
+constexpr uint32_t PA_SVEC = 122;  // bf16  per SigLIP layer: row-broadcast vectors (see pe_common.hpp SV_*)
+constexpr uint32_t PA_VVEC = 123;  // bf16  per VLM layer: 1 + w of both RMS norms (row-broadcast)
+constexpr uint32_t PA_GVEC = 124;  // bf16  post-LN w, b, projector bias (row-broadcast)
+constexpr uint32_t PA_CONST = 125; // bf16  [32, 32 * PC_N] constants
+constexpr uint32_t PA_WPATCH = 126; // bf16  patch-embed weight arena (bank-striped pages)
+constexpr uint32_t PA_WPROJ = 127; // bfp8  projector weight arena
+constexpr uint32_t PA_DIAG = 128;  // uint32 [110 pages of 64 B] per-core diagnostics (arena bounds, ops run)
+constexpr uint32_t PA_TIMES = 129; // uint32 [4096, 16] ROW_MAJOR: the hub stamps (wall clock, k, op) at every go
+constexpr uint32_t PA_WS = 130;      // SigLIP layer weight arenas (27, bfp8, bank-striped pages)
+constexpr uint32_t PA_WV = 157;      // VLM layer weight arenas (18)
+constexpr uint32_t PA_N = 175;       // common args in total
 
 // ---------------------------------------------------------------- per-core runtime args (appended after phase 1's)
 constexpr uint32_t PR0 = 48;

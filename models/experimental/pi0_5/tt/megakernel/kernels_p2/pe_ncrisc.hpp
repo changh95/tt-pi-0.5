@@ -104,11 +104,11 @@ PE_OS void mm_receive(const Op& o, const Core& c, const Lay& L, uint32_t A, uint
     const uint32_t wcb = o.wbf16 ? P_W16 : P_W8, pt = mm_page_tiles(o), wpages = np * nq;
     cb_point(wcb, A + L.w, L.w_slots * pt, mm_wtile(o));
     const uint32_t icb = o.mode == MM_S ? P_IN08 : P_IN0;
-    const uint32_t ipages = mm_in0_pages(o), itiles = mm_in0_page_tiles(o);
+    const uint32_t ipages = mm_nq(o), itiles = o.rpb * o.piece;  // R: K pieces of the band; S: K blocks
     if (o.mode == MM_S) {
         cb_point(P_IN08, A + L.in0, IN0_SLOTS * itiles, T8);
     } else {
-        cb_point(P_IN0, A + L.in0, itiles, T16);
+        cb_point(P_IN0, A + L.in0, ipages * itiles, T16);
     }
     cb_point(P_S16, A + L.s16, 24, T16);
     cb_point(P_S32, A + L.s32, 4 * rp, T32);
@@ -137,7 +137,13 @@ PE_OS void mm_receive(const Op& o, const Core& c, const Lay& L, uint32_t A, uint
         } else
 #endif
         {
-        if (ic < ipages && cb_free(icb) >= (ic - ip + 1) * itiles) {
+        if (o.mode == MM_R) {
+            // the resident band: ONE credit (the whole band's room), then one push per K piece as its flag lands
+            if (ic == 0 && cb_free(icb) >= ipages * itiles) {
+                inc_word(c.ifx, c.ify, PS_I_RDY0 + c.x);
+                ic = ipages;
+            }
+        } else if (ic < ipages && cb_free(icb) >= (ic - ip + 1) * itiles) {
             inc_word(c.ifx, c.ify, PS_I_RDY0 + c.x);
             ++ic;
         }
@@ -225,7 +231,7 @@ PE_OS void read_consts(uint32_t A, const Lay& L) {
 PE_OS void norm_read(const Op& o, const Core& c, const Lay& L, uint32_t A) {
     const bool ln = o.nkind == N_LN;
     const uint32_t nk = o.nk;
-    cb_point(P_S32, A + L.x32, nk, T32);
+    cb_point(P_X32, A + L.x32, nk, T32);
     cb_point(P_S16, A + L.s16, 2 * nk, T16);
     read_consts(A, L);
     uint32_t gw = 0, gb = 0, garg = PA_VVEC;
@@ -241,13 +247,13 @@ PE_OS void norm_read(const Op& o, const Core& c, const Lay& L, uint32_t A) {
     for (uint32_t r = c.lin; r < o.items; r += NCORES) {
         for (uint32_t t0 = 0; t0 < nk; t0 += 8) {  // x in chunks of 8 tiles (the TRISC's statistics start on the first)
             const uint32_t n = nk - t0 < 8 ? nk - t0 : 8;
-            cb_reserve_back(P_S32, n);
-            const uint32_t ax = get_write_ptr(P_S32);
+            cb_reserve_back(P_X32, n);
+            const uint32_t ax = get_write_ptr(P_X32);
             for (uint32_t t = 0; t < n; ++t) {
                 noc_async_read_page(r * nk + t0 + t, x, ax + t * T32);
             }
             noc_async_read_barrier();
-            cb_push_back(P_S32, n);
+            cb_push_back(P_X32, n);
         }
         cb_reserve_back(P_S16, ln ? 2 * nk : nk);
         const uint32_t ag = get_write_ptr(P_S16);
@@ -262,10 +268,11 @@ PE_OS void norm_read(const Op& o, const Core& c, const Lay& L, uint32_t A) {
     }
 }
 
-PE_OS void attn_read(const Op& o, const Core& c, const Lay& L, uint32_t A) {
+PE_OS void attn_read(const Op& o, const Core& c, const Lay& L, uint32_t A, uint32_t k) {
     const bool v = o.what == W_VATTN;
     const uint32_t dh = v ? V_DH : S_DH, nk = v ? PTV : S_NK;
-    cb_point(P_Q, A + L.q, 2 * dh, T16);
+    const uint32_t qn = v ? 2 * V_DH : 3 * S_DH;
+    cb_point(P_Q, A + L.q, qn, T16);
     if (v) {
         cb_point(P_KV8, A + L.kv, 2 * PTV * V_DH, T8);
         cb_point(P_MSK, A + L.msk, PTV, T16);
@@ -282,10 +289,21 @@ PE_OS void attn_read(const Op& o, const Core& c, const Lay& L, uint32_t A) {
         noc_async_read_barrier();
         cb_push_back(P_MSK, PTV);
     }
+    if (v) {  // the layer's K / V: multicast once per op into every core by the 4 K / V feeders (feed_kv)
+        WAYPOINT("PKVW");
+        for (uint32_t f = 0; f < 4; ++f) {
+            while (ps_read(PS_KV_VAL0 + f) < (k << 16) + 1) {
+            }
+        }
+        cb_reserve_back(P_KV8, 2 * PTV * V_DH);
+        cb_push_back(P_KV8, 2 * PTV * V_DH);
+    }
     for (uint32_t it = c.lin; it < o.items; it += NCORES) {
-        cb_reserve_back(P_Q, 2 * dh);
-        const uint32_t kvcb = v ? P_KV8 : P_KV16;
-        cb_reserve_back(kvcb, 2 * nk * dh);
+        cb_reserve_back(P_Q, qn);
+        const uint32_t kvcb = P_KV16;
+        if (!v) {
+            cb_reserve_back(kvcb, 2 * nk * dh);
+        }
         const uint32_t aq = get_write_ptr(P_Q), akv = get_write_ptr(kvcb);
         if (v) {
             const uint32_t r = it / 4, hp = it % 4;
@@ -296,17 +314,13 @@ PE_OS void attn_read(const Op& o, const Core& c, const Lay& L, uint32_t A) {
                     noc_async_read_page((h * MT + r) * V_DH + d, q, aq + (hh * V_DH + d) * T16);
                 }
             }
-            const auto kc = TensorAccessor(acc_l1, cra(PA_KC + o.layer), T8);
-            const auto vc = TensorAccessor(acc_l1, cra(PA_VC + o.layer), T8);
-            for (uint32_t t = 0; t < PTV * V_DH; ++t) {
-                noc_async_read_page(t, kc, akv + t * T8);
-                noc_async_read_page(t, vc, akv + (PTV * V_DH + t) * T8);
-            }
+
         } else {
-            const uint32_t img = it / 64, h = (it / 4) % S_HEADS, qb = it % 4;
+            uint32_t img, h, r0, nr;
+            s_attn_item(it, img, h, r0, nr);
             const auto qkv = dram(PA_QKV_S, T16);
-            for (uint32_t rr = 0; rr < 2; ++rr) {
-                const uint32_t r = img * S_IMG + qb * 2 + rr;
+            for (uint32_t rr = 0; rr < nr; ++rr) {
+                const uint32_t r = r0 + rr;
                 for (uint32_t d = 0; d < S_DH; ++d) {
                     noc_async_read_page(r * S_NQKV + h * S_DH + d, qkv, aq + (rr * S_DH + d) * T16);
                 }
@@ -321,9 +335,34 @@ PE_OS void attn_read(const Op& o, const Core& c, const Lay& L, uint32_t A) {
             }
         }
         noc_async_read_barrier();
-        cb_push_back(P_Q, 2 * dh);
-        cb_push_back(kvcb, 2 * nk * dh);
+        cb_push_back(P_Q, qn);
+        if (!v) {
+            cb_push_back(kvcb, 2 * nk * dh);
+        }
     }
+}
+
+// VLM attention: feeder f of 4 reads its quarter of the layer's K | V pages (the expert's L1 caches) into its own
+// P_KV8 region and multicasts it to the same region of every core (the regions are free: the op just passed its
+// barrier, so no credits), then its flag PS_KV_VAL0 + f.
+PE_OS void feed_kv(const Op& o, const Core& c, const Lay& L, uint32_t A, uint32_t k) {
+    const uint32_t f = c.x - KVF_X0, half = PTV * V_DH, per = 2 * half / 4, p0 = f * per;
+    const auto kc = TensorAccessor(acc_l1, cra(mk::C_K_ADDR + o.layer), T8);
+    const auto vc = TensorAccessor(acc_l1, cra(mk::C_V_ADDR + o.layer), T8);
+    const uint32_t base = A + L.kv;
+    constexpr uint32_t CH = 16;
+    for (uint32_t q0 = 0; q0 < per; q0 += CH) {
+        const uint32_t n = per - q0 < CH ? per - q0 : CH;
+        for (uint32_t i = 0; i < n; ++i) {
+            const uint32_t p = p0 + q0 + i;
+            noc_async_read_page(p < half ? p : p - half, p < half ? kc : vc, base + p * T8);
+        }
+        noc_async_read_barrier();
+        noc_async_write_multicast(base + (p0 + q0) * T8, pmcast(c.gx0, c.gy0, c.gx1, c.gy1, base + (p0 + q0) * T8),
+                                  n * T8, NCORES - 1, false);
+    }
+    noc_async_write_barrier();
+    mcast_flag(c.gx0, c.gy0, c.gx1, c.gy1, NCORES - 1, 0, 0, 0, PS_SRC_KV, PS_KV_VAL0 + f, (k << 16) + 1);
 }
 
 // language rows: 32 token rows x 16 tiles (one quarter of the 2048 columns) gathered row-major into the P_RM region,
@@ -443,8 +482,10 @@ PE_OS void run_ncrisc() {
                 }
                 break;
             case K_ATTN:
-                if (c.lin < o.items) {
-                    attn_read(o, c, L, A);
+                if (o.what == W_VATTN && c.y == IF_Y && c.x >= KVF_X0) {
+                    feed_kv(o, c, L, A, k);
+                } else if (c.lin < o.items) {
+                    attn_read(o, c, L, A, k);
                 }
                 break;
             case K_EMBED:

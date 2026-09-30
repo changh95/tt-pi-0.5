@@ -16,7 +16,8 @@ namespace pe {
 // One output pair (rp x 2 tiles in DST 0 .. 2 rp - 1) accumulates nq weight pages of pc K tiles each; in0 tile of
 // (row r, k) at q * pc + k + r * kt. The fidelity is a runtime switch on the MATH thread only (the unpacker and the
 // packer code is shared: one copy of the loop per binary).
-NOINL void mm_k(uint32_t in0, uint32_t w_cb, uint32_t rp, uint32_t kt, uint32_t pc, uint32_t nq, uint32_t fid_hi) {
+NOINL void mm_k(uint32_t in0, uint32_t w_cb, uint32_t rp, uint32_t kt, uint32_t pc, uint32_t nq, uint32_t fid_hi,
+                bool wait_in0) {
     reconfig_data_format(w_cb, in0);  // matmul: SrcA <- in1, SrcB <- in0
     if (fid_hi) {
         MATH((llk_math_matmul_init<MathFidelity::HiFi2, MM_THROTTLE>(in0, w_cb, 0, 2, rp)));
@@ -26,6 +27,9 @@ NOINL void mm_k(uint32_t in0, uint32_t w_cb, uint32_t rp, uint32_t kt, uint32_t 
     UNPACK((llk_unpack_AB_matmul_init(in0, w_cb, 0, 2, rp, kt)));
     const uint32_t pt = 2 * pc;
     for (uint32_t q = 0; q < nq; ++q) {
+        if (wait_in0) {
+            cb_wait_front(in0, rp * pc * (q + 1));  // mode R, first pair: the band arrives piece by piece
+        }
         cb_wait_front(w_cb, pt);
 #ifndef PE_DBG_NO_MATH
         for (uint32_t k = 0; k < pc; ++k) {
@@ -104,7 +108,6 @@ PE_OS void epilogue(const TOp& o, uint32_t p) {
 // ================================================================ matmul, mode R (resident in0 band, N-outer)
 PE_OS void mm_r(const TOp& o, uint32_t w_cb, uint32_t p0, uint32_t npairs) {
     const uint32_t rp = o.rpb, kt = o.kt;
-    cb_wait_front(P_IN0, rp * kt);
     for (uint32_t s = 0; s < npairs; ++s) {
         const uint32_t p = p0 + s;
         const uint32_t n16 = side16(o, p), n32 = side32(o);
@@ -124,7 +127,7 @@ PE_OS void mm_r(const TOp& o, uint32_t w_cb, uint32_t p0, uint32_t npairs) {
                 load(P_S32, i, i);
             }
         }
-        mm_k(P_IN0, w_cb, rp, kt, o.piece, kt / o.piece, o.fid_hi);
+        mm_k(P_IN0, w_cb, rp, kt, o.piece, kt / o.piece, o.fid_hi, s == 0);
         epilogue(o, p);
         tile_regs_commit();
         if (n16) {
@@ -163,7 +166,7 @@ NOINL void mm_s(const TOp& o, uint32_t npairs) {
             for (uint32_t i = 0; i < nt; ++i) {
                 load(src, i, i);
             }
-            mm_k(P_IN08, P_W8, rp, pc, pc, 1, o.fid_hi);
+            mm_k(P_IN08, P_W8, rp, pc, pc, 1, o.fid_hi, false);
             tile_regs_commit();
             cb_pop_front(src, nt);
             const uint32_t dst = kb + 1 == nq ? P_O32 : P_PART;
@@ -202,10 +205,29 @@ PE_OS void run_mm(const TOp& o) {
 }
 
 // ================================================================ norms (one row tile per item)
-// Exact fp32 SFPU arithmetic (x copied to DST by UnpackToDestFp32 from P_S32), the SFPU inits hoisted over batches of
-// NB tiles; one pass over x for the statistics (row sums of x and of x^2 by a HiFi4 matmul with ONES afterwards; LN
-// variance = E[x^2] - mu^2: mu^2 / var <= 0.46 on real SigLIP activations, 2026-09-30).
-constexpr uint32_t NB = 5;  // x tiles per batch in DST 1..5; DST 0 = sum x, DST 6 = sum x^2, DST 7 scratch
+// x (fp32, P_X32: an FPU operand, default unpack) arrives in chunks; statistics by FPU (sum of squares by an
+// accumulating ELWMUL, row sums by a HiFi4 matmul with ONES), E[x^2] - mu^2 for the LN variance (SigLIP inputs:
+// mu^2 / var <= 0.46 on real activations, 2026-09-30), the apply batched 3 tiles per DST acquire with the inits hoisted.
+ALWI void fpu_mul_init(uint32_t a, uint32_t b) {
+    reconfig_data_format(a, b);
+    MATH((llk_math_eltwise_binary_init<EltwiseBinaryType::ELWMUL, BroadcastType::NONE, MathFidelity::HiFi4>(a, b, 0)));
+    UNPACK((llk_unpack_AB_init<BroadcastType::NONE>(a, b)));
+}
+ALWI void fpu_mul(uint32_t a, uint32_t b, uint32_t ta, uint32_t tb, uint32_t dst) {
+    UNPACK((llk_unpack_AB(a, b, ta, tb)));
+    MATH((llk_math_eltwise_binary<EltwiseBinaryType::ELWMUL, BroadcastType::NONE, DST_ACCUM_MODE, MathFidelity::HiFi4,
+                                  EltwiseBinaryReuseDestType::NONE>(a, b, dst, true)));
+}
+ALWI void fpu_sub_init(uint32_t a, uint32_t b) {
+    reconfig_data_format(a, b);
+    MATH((llk_math_eltwise_binary_init<EltwiseBinaryType::ELWSUB, BroadcastType::NONE, MathFidelity::HiFi4>(a, b, 0)));
+    UNPACK((llk_unpack_AB_init<BroadcastType::NONE>(a, b)));
+}
+ALWI void fpu_sub(uint32_t a, uint32_t b, uint32_t ta, uint32_t tb, uint32_t dst) {
+    UNPACK((llk_unpack_AB(a, b, ta, tb)));
+    MATH((llk_math_eltwise_binary<EltwiseBinaryType::ELWSUB, BroadcastType::NONE, DST_ACCUM_MODE, MathFidelity::HiFi4,
+                                  EltwiseBinaryReuseDestType::NONE>(a, b, dst, true)));
+}
 
 PE_OS void norm_row(const TOp& o) {
     const uint32_t nk = o.nk;
@@ -214,55 +236,37 @@ PE_OS void norm_row(const TOp& o) {
     constexpr uint32_t ONE_OVER_1152 = 0x3A638E39u;  // 1 / 1152 (fp32)
     const uint32_t inv_n = ln ? ONE_OVER_1152 : ONE_OVER_2048;
     const uint32_t eps = ln ? EPS_S : EPS_V;
-    // pass 1: per-element sums over k of x (DST 0, LN only) and x^2 (DST 6)
+    // pass 1: per-element sum over k of x^2 (DST 0) and, for LN, the row sums of x (DST 1, every column)
     tile_regs_acquire();
-    reconfig_data_format_srca(P_CONST);
-    copy_init(P_CONST);
-    copy_tile(P_CONST, PC_ZERO, 0);
-    copy_tile(P_CONST, PC_ZERO, 6);
-    for (uint32_t k0 = 0; k0 < nk; k0 += NB) {
-        const uint32_t n = nk - k0 < NB ? nk - k0 : NB;
-        cb_wait_front(P_S32, k0 + n);
-        reconfig_data_format_srca(P_S32);
-        copy_init(P_S32);
-        for (uint32_t j = 0; j < n; ++j) {
-            copy_tile(P_S32, k0 + j, 1 + j);
-        }
-        if (ln) {
-            add_binary_tile_init();
-            for (uint32_t j = 0; j < n; ++j) {
-                add_binary_tile(0, 1 + j, 0);
-            }
-        }
-        mul_binary_tile_init();
-        for (uint32_t j = 0; j < n; ++j) {
-            mul_binary_tile(1 + j, 1 + j, 1 + j);
-        }
-        add_binary_tile_init();
-        for (uint32_t j = 0; j < n; ++j) {
-            add_binary_tile(6, 1 + j, 6);
+    mul_acc_init(P_X32, P_X32);
+    for (uint32_t k = 0; k < nk; ++k) {
+        cb_wait_front(P_X32, k + 1);
+        mul_acc(P_X32, P_X32, k, k, 0);
+    }
+    if (ln) {
+        mm_init_f<MathFidelity::HiFi4>(P_X32, P_CONST);
+        for (uint32_t k = 0; k < nk; ++k) {
+            mm_f<MathFidelity::HiFi4>(P_X32, P_CONST, k, PC_ONES, 1);
         }
     }
     tile_regs_commit();
     cb_reserve_back(P_SCR, 2);
     tile_regs_wait();
-    pack_to(6, P_SCR, 0);
-    pack_to(0, P_SCR, 1);
+    pack_to(0, P_SCR, 0);
+    pack_to(1, P_SCR, 1);
     tile_regs_release();
     cb_push_back(P_SCR, 2);
     cb_wait_front(P_SCR, 2);
     // pass 2: r (RMS) or (rstd, mu) (LN) as full tiles -> P_R [0] (and [1])
     tile_regs_acquire();
     mm_init_f<MathFidelity::HiFi4>(P_SCR, P_CONST);
-    mm_f<MathFidelity::HiFi4>(P_SCR, P_CONST, 0, PC_ONES, 0);  // row sums of x^2 (every column)
+    mm_f<MathFidelity::HiFi4>(P_SCR, P_CONST, 0, PC_ONES, 0);  // row sums of x^2
+    fscale(0, inv_n);                                          // E[x^2]
     if (ln) {
-        mm_f<MathFidelity::HiFi4>(P_SCR, P_CONST, 1, PC_ONES, 1);  // row sums of x
-    }
-    fscale(0, inv_n);  // E[x^2]
-    if (ln) {
-        fscale(1, inv_n);  // mu
+        load(P_SCR, 1, 1);  // row sums of x
+        fscale(1, inv_n);   // mu
         fmul(1, 1, 2);
-        fsub(0, 2, 0);  // var
+        fsub(0, 2, 0);  // var = E[x^2] - mu^2
     }
     binop_with_scalar_tile_init();
     add_unary_tile(0, eps);
@@ -273,48 +277,56 @@ PE_OS void norm_row(const TOp& o) {
     cb_reserve_back(P_R, 2);
     tile_regs_wait();
     pack_to(0, P_R, 0);
-    pack_to(1, P_R, 1);
+    if (ln) {
+        pack_to(1, P_R, 1);
+    }
     tile_regs_release();
     cb_push_back(P_R, 2);
     cb_wait_front(P_R, 2);
     cb_wait_front(P_S16, ln ? 2 * nk : nk);
-    // apply: RMS x * r * g ; LN (x - mu) * rstd * g + b  (DST 7 = r / rstd, DST 6 = mu, x in 0..2, g / b in 3..5)
-    constexpr uint32_t NA = 3;
-    for (uint32_t k0 = 0; k0 < nk; k0 += NA) {
-        const uint32_t n = nk - k0 < NA ? nk - k0 : NA;
+    // apply, 3 tiles per acquire (RMS: x * r * g ; LN: (x - mu) * rstd * g + b)
+    for (uint32_t k0 = 0; k0 < nk; k0 += 3) {
+        const uint32_t n = nk - k0 < 3 ? nk - k0 : 3;
         tile_regs_acquire();
-        reconfig_data_format_srca(P_S32);
-        copy_init(P_S32);
-        for (uint32_t j = 0; j < n; ++j) {
-            copy_tile(P_S32, k0 + j, j);
-        }
-        copy_init(P_R);
-        copy_tile(P_R, 0, 7);
         if (ln) {
-            copy_tile(P_R, 1, 6);
-            sub_binary_tile_init();
+            fpu_sub_init(P_X32, P_R);
             for (uint32_t j = 0; j < n; ++j) {
-                sub_binary_tile(j, 6, j);
+                fpu_sub(P_X32, P_R, k0 + j, 1, j);  // x - mu
             }
-        }
-        reconfig_data_format_srca(P_S16);
-        copy_init(P_S16);
-        for (uint32_t j = 0; j < n; ++j) {
-            copy_tile(P_S16, k0 + j, 3 + j);
-        }
-        mul_binary_tile_init();
-        for (uint32_t j = 0; j < n; ++j) {
-            mul_binary_tile(j, 7, j);
-            mul_binary_tile(j, 3 + j, j);
-        }
-        if (ln) {
+            reconfig_data_format_srca(P_R);
+            copy_init(P_R);
+            copy_tile(P_R, 0, 6);  // rstd
+            reconfig_data_format_srca(P_S16);
             copy_init(P_S16);
             for (uint32_t j = 0; j < n; ++j) {
-                copy_tile(P_S16, nk + k0 + j, 3 + j);
+                copy_tile(P_S16, k0 + j, 3 + j);  // gamma
+            }
+            mul_binary_tile_init();
+            for (uint32_t j = 0; j < n; ++j) {
+                mul_binary_tile(j, 6, j);
+                mul_binary_tile(j, 3 + j, j);
+            }
+            copy_init(P_S16);
+            for (uint32_t j = 0; j < n; ++j) {
+                copy_tile(P_S16, nk + k0 + j, 3 + j);  // beta
             }
             add_binary_tile_init();
             for (uint32_t j = 0; j < n; ++j) {
                 add_binary_tile(j, 3 + j, j);
+            }
+        } else {
+            fpu_mul_init(P_X32, P_R);
+            for (uint32_t j = 0; j < n; ++j) {
+                fpu_mul(P_X32, P_R, k0 + j, 0, j);  // x * r
+            }
+            reconfig_data_format_srca(P_S16);
+            copy_init(P_S16);
+            for (uint32_t j = 0; j < n; ++j) {
+                copy_tile(P_S16, k0 + j, 3 + j);
+            }
+            mul_binary_tile_init();
+            for (uint32_t j = 0; j < n; ++j) {
+                mul_binary_tile(j, 3 + j, j);
             }
         }
         tile_regs_commit();
@@ -328,11 +340,11 @@ PE_OS void norm_row(const TOp& o) {
     }
     cb_pop_front(P_R, 2);
     cb_pop_front(P_S16, ln ? 2 * nk : nk);
-    cb_pop_front(P_S32, nk);
+    cb_pop_front(P_X32, nk);
 }
 
 PE_OS void run_norm(const TOp& o) {
-    cb_point(P_S32, o.a[OA_X32], o.nk, T32);
+    cb_point(P_X32, o.a[OA_X32], o.nk, T32);
     cb_point(P_S16, o.a[OA_S16], 2 * o.nk, T16);
     cb_point(P_O16, o.a[OA_O16], 8, T16);  // == the BRISC writer (norm_write)
     cb_point(P_SCR, o.a[OA_SCR], 2, T32);
@@ -349,7 +361,7 @@ PE_OS void run_norm(const TOp& o) {
 // one key chunk of one q row tile: q tiles at q_off (dh), keys [t0, t0 + n) of the resident K / V (K at kv_k, V at
 // kv_v, [t][d] layout), optional mask tiles -> part (O dh tiles, m full tile, l fp32 full tile) pushed to OP / PM / PL
 PE_OS void flash_part(uint32_t kv_cb, uint32_t q_off, uint32_t dh, uint32_t t0, uint32_t n, uint32_t kv_v, bool mask,
-                      uint32_t ss_addr) {
+                      uint32_t ss_addr, bool single) {
     // P_SS in full-capacity cycles of n tiles (a chunk may be shorter than the others: a ring of a fixed capacity
     // would straddle its end and pack_tile / unpack index past it). P_SS is TRISC-private (pack -> unpack).
     cb_point(P_SS, ss_addr, n, T16);
@@ -390,17 +402,19 @@ PE_OS void flash_part(uint32_t kv_cb, uint32_t q_off, uint32_t dh, uint32_t t0, 
     reduce_uninit(P_SS);
     cb_push_back(P_M, 1);
     cb_wait_front(P_M, 1);
-    // MF = m broadcast (full tile) -> the part's m
-    reconfig_data_format(P_CONST, P_M);
-    mul_bcast_cols_init(P_CONST, P_M);
-    cb_reserve_back(P_PM, 1);
-    tile_regs_acquire();
-    mul_tiles_bcast_cols(P_CONST, P_M, PC_ONES, 0, 0);
-    tile_regs_commit();
-    tile_regs_wait();
-    pack_to(0, P_PM, 0);
-    tile_regs_release();
-    cb_push_back(P_PM, 1);
+    if (!single) {
+        // MF = m broadcast (full tile) -> the part's m
+        reconfig_data_format(P_CONST, P_M);
+        mul_bcast_cols_init(P_CONST, P_M);
+        cb_reserve_back(P_PM, 1);
+        tile_regs_acquire();
+        mul_tiles_bcast_cols(P_CONST, P_M, PC_ONES, 0, 0);
+        tile_regs_commit();
+        tile_regs_wait();
+        pack_to(0, P_PM, 0);
+        tile_regs_release();
+        cb_push_back(P_PM, 1);
+    }
     // P = exp(S - m), in place
     reconfig_data_format(P_SS, P_M);
     sub_bcast_cols_init(P_SS, P_M);
@@ -421,7 +435,8 @@ PE_OS void flash_part(uint32_t kv_cb, uint32_t q_off, uint32_t dh, uint32_t t0, 
     cb_push_back(P_SS, n);
     cb_wait_front(P_SS, n);
     cb_pop_front(P_M, 1);
-    // l = sum_i P_i @ ONES
+    // l = sum_i P_i @ ONES (fp32, P_PL) and O = sum_i P_i @ V_i (single: normalised by l in DST, the output is ctx)
+    const uint32_t ocb = single ? P_O16 : P_OP;
     cb_reserve_back(P_PL, 1);
     tile_regs_acquire();
     mm_init_f<MathFidelity::HiFi4>(P_SS, P_CONST);
@@ -433,8 +448,7 @@ PE_OS void flash_part(uint32_t kv_cb, uint32_t q_off, uint32_t dh, uint32_t t0, 
     pack_to(0, P_PL, 0);
     tile_regs_release();
     cb_push_back(P_PL, 1);
-    // O = sum_i P_i @ V_i
-    cb_reserve_back(P_OP, dh);
+    cb_reserve_back(ocb, dh);
     tile_regs_acquire();
     mm_init_f<MathFidelity::HiFi2>(P_SS, kv_cb);
     for (uint32_t i = 0; i < n; ++i) {
@@ -442,13 +456,22 @@ PE_OS void flash_part(uint32_t kv_cb, uint32_t q_off, uint32_t dh, uint32_t t0, 
             mm_f<MathFidelity::HiFi2>(P_SS, kv_cb, i, kv_v + (t0 + i) * dh + d, d);
         }
     }
+    if (single) {  // every key in this chunk
+        cb_wait_front(P_PL, 1);
+        load(P_PL, 0, dh);
+        cb_pop_front(P_PL, 1);
+        frecip(dh);
+        for (uint32_t d = 0; d < dh; ++d) {
+            fmul(d, dh, d);
+        }
+    }
     tile_regs_commit();
     tile_regs_wait();
     for (uint32_t d = 0; d < dh; ++d) {
-        pack_to(d, P_OP, d);
+        pack_to(d, ocb, d);
     }
     tile_regs_release();
-    cb_push_back(P_OP, dh);
+    cb_push_back(ocb, dh);
     cb_pop_front(P_SS, n);
 }
 
@@ -517,7 +540,8 @@ PE_OS void run_attn(const TOp& o) {
     const bool v = o.what == W_VATTN;
     const uint32_t dh = v ? V_DH : S_DH, nk = v ? PTV : S_NK, ch = v ? V_CH : S_CH, np = (nk + ch - 1) / ch;
     const uint32_t kv_cb = v ? P_KV8 : P_KV16;
-    cb_point(P_Q, o.a[OA_Q], 2 * dh, T16);
+    const uint32_t qn = v ? 2 * V_DH : 3 * S_DH;
+    cb_point(P_Q, o.a[OA_Q], qn, T16);
     if (v) {
         cb_point(P_KV8, o.a[OA_KV], 2 * PTV * V_DH, T8);
         cb_point(P_MSK, o.a[OA_MSK], PTV, T16);
@@ -537,10 +561,19 @@ PE_OS void run_attn(const TOp& o) {
         cb_wait_front(P_MSK, PTV);
     }
     const uint32_t kv_v = nk * dh;  // V after K in the resident buffer
+    if (v) {
+        cb_wait_front(kv_cb, 2 * nk * dh);  // resident for the whole op (multicast once)
+    }
     for (uint32_t it = 0; it < o.nitems; ++it) {
-        cb_wait_front(P_Q, 2 * dh);
-        cb_wait_front(kv_cb, 2 * nk * dh);
-        for (uint32_t h = 0; h < 2; ++h) {  // VLM: 2 heads of one q row tile; SigLIP: 2 q row tiles of one head
+        uint32_t nr = 2;
+        if (!v) {  // SigLIP item rows: groups {3, 3, 2}
+            nr = ((o.it0 + it * NCORES) % (S_HEADS * 3)) % 3 < 2 ? 3 : 2;
+        }
+        cb_wait_front(P_Q, qn);
+        if (!v) {
+            cb_wait_front(kv_cb, 2 * nk * dh);
+        }
+        for (uint32_t h = 0; h < nr; ++h) {  // VLM: 2 heads of one q row tile; SigLIP: 2-3 q row tiles of one head
 #ifdef PE_DBG_ATTN_NOCOMPUTE
             cb_reserve_back(P_O16, dh);  // timing arm: inputs in, zeros out
             tile_regs_acquire();
@@ -553,16 +586,23 @@ PE_OS void run_attn(const TOp& o) {
             cb_push_back(P_O16, dh);
             continue;
 #endif
+            if (!v) {
+                flash_part(kv_cb, h * dh, dh, 0, nk, kv_v, false, o.a[OA_SS], true);
+                continue;
+            }
             for (uint32_t t0 = 0; t0 < nk; t0 += ch) {
                 const uint32_t n = nk - t0 < ch ? nk - t0 : ch;
-                flash_part(kv_cb, h * dh, dh, t0, n, kv_v, v, o.a[OA_SS]);
+                flash_part(kv_cb, h * dh, dh, t0, n, kv_v, v, o.a[OA_SS], false);
             }
             merge_parts(np, dh);
         }
-        cb_pop_front(kv_cb, 2 * nk * dh);
-        cb_pop_front(P_Q, 2 * dh);
+        if (!v) {
+            cb_pop_front(kv_cb, 2 * nk * dh);
+        }
+        cb_pop_front(P_Q, qn);
     }
     if (v) {
+        cb_pop_front(kv_cb, 2 * nk * dh);
         cb_pop_front(P_MSK, PTV);
     }
     cb_pop_front(P_CONST, PC_N);
