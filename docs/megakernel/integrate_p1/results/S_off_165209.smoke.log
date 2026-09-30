@@ -1,0 +1,2 @@
+info: num_images=2 token_len=224 tokenizer=True weights={'repo': 'lerobot/pi05_base', 'revision': None, 'snapshot_dir': '/home/deepgadget/.cache/huggingface/hub/models--lerobot--pi05_base/snapshots/b211f3d44c36b6acfcf7ae94a64e8e96f75a64ba'} warmup_ms={'first': 581.1, 'last': 84.4}
+PASS pi05 actions=(50,32) max|a|=0.268 std=0.074 repeat_maxdiff=0.0000 change_maxdiff=0.8242 inference_ms=88.2/84.27 tokens=143/224 truncated=False

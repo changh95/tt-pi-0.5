@@ -1,0 +1,37 @@
+{
+ "t0": "2026-09-30 15:40:15",
+ "env_megakernel": "expert",
+ "MEGAKERNEL_WORKER_L1_SIZE": 1395712,
+ "views_cut": {
+  "BufferType.L1": 1371136,
+  "BufferType.L1_SMALL": 24576
+ },
+ "refusal_cut": null,
+ "kwargs_cut": {
+  "device_id": 0,
+  "l1_small_size": 24576,
+  "trace_region_size": 160000000,
+  "worker_l1_size": 1395712
+ },
+ "views_nocut": {
+  "BufferType.L1": 1436672,
+  "BufferType.L1_SMALL": 24576
+ },
+ "refusal_nocut": "the device was opened without the 64 KiB worker-L1 cut (worker L1 1461248 B per bank > 1395712); open it with common/device_open.py (open_pi05_device / device_kwargs), or set PI05_MEGAKERNEL=off for the stock-op comparator path",
+ "kwargs_nocut": {
+  "device_id": 0,
+  "l1_small_size": 24576,
+  "trace_region_size": 160000000
+ },
+ "model_built_without_cut": false,
+ "error": "PI05_MEGAKERNEL=expert refused: the device was opened without the 64 KiB worker-L1 cut (worker L1 1461248 B per bank > 1395712); open it with common/device_open.py (open_pi05_device / device_kwargs), or set PI05_MEGAKERNEL=off for the stock-op comparator path",
+ "error_names_cut": true,
+ "tb_tail": [
+  "    m = PI0ModelTTNN(base_config(), PI0WeightLoader(BASE_WEIGHTS), dev, fused=env)",
+  "  File \"/home/deepgadget/experiments/tt-models/ports/tt-pi-0.5/models/experimental/pi0_5/tt/ttnn_pi0_model.py\", line 100, in __init__",
+  "    raise RuntimeError(f\"PI05_MEGAKERNEL=expert refused: {why}\")",
+  "RuntimeError: PI05_MEGAKERNEL=expert refused: the device was opened without the 64 KiB worker-L1 cut (worker L1 1461248 B per bank > 1395712); open it with common/device_open.py (open_pi05_device / device_kwargs), or set PI05_MEGAKERNEL=off for the stock-op comparator path"
+ ],
+ "seconds": 0.0,
+ "t1": "2026-09-30 15:40:16"
+}

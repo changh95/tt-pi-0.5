@@ -34,6 +34,7 @@ stream timeline uses the review's fluid model `docs/megakernel/design/review_str
 | WP-P1-4 whole 10-step loop, standalone | DONE (b5; P1-4 gate vs shipped 0.99987+ on 8 golden obs) | |
 | WP-P1-5 integration into `sample_actions_fused` + all gates | DONE except the base per-seed gate (seed 2) | JOURNAL phase-1 exit gate table |
 | WP-P1-6 server integration of phase 1 | DONE (served 70.72 ms) | |
+| integrate-p1: phase 1 as the DEFAULT path (`off` = comparator), server mask plumbing, refusal (d), gate re-run, LIBERO closed loop | DONE 2026-09-30 (gates re-run PASS; served 70.9 vs 84.0 ms; LIBERO 99/100 at 66.4 ms/call) | JOURNAL "integrate-p1"; `integrate_p1/results/` |
 | WP-P2-0 phase-2 binary size + L1 overlay proof (no card) | NOT STARTED | |
 | WP-P2-1 VLM layer prototype (go / no-go on timing) | NOT STARTED | GR00T's fused prefill ended slower than TTNN, so this is gated by measurement |
 | WP-P2-2 SigLIP layer prototype | NOT STARTED | |
@@ -496,8 +497,17 @@ SigLIP/VLM ops keep their time under the 64 KiB cut (WP-P1-0 measures it).
 ### 4.12 Selection, stamps, refusals and the shape contract (applies to both phases)
 
 - **Knob**: `FusedConfig.megakernel` from `PI05_MEGAKERNEL` in {`off`, `expert`, `whole`}, read once at model build.
-  Default `off` until the phase-2 exit (P2-4 + P2-5) passes; it then becomes `whole`. `expert` exists for bring-up and
-  as the phase-1 comparator; it is never the served default and is never described as "the megakernel".
+  ~~Default `off` until the phase-2 exit (P2-4 + P2-5) passes; it then becomes `whole`. `expert` exists for bring-up and
+  as the phase-1 comparator; it is never the served default and is never described as "the megakernel".~~
+  **Amended 2026-09-30 (integrate-p1)**: after phase 1 was accepted on the amended gates, the user asked to update the
+  Hugging Face package first and then continue with the next phase ("a. 일단 HF에 update. 이후 다음 phase 작업 진행"); the
+  integrate-p1 task made `expert` the default (`FusedConfig`, the server, the package serve env) and kept `off` (the
+  previous shipped path) only as the comparator. It is always described as "the phase-1 expert megakernel" with the
+  prefix labelled as traced stock ops, never as "the megakernel" of the whole model. Phase 2 stays the deliverable;
+  on its exit the default becomes `whole`. The UNSET default resolves to `off` on a multi-chip mesh
+  (`FusedConfig.resolved`); an explicit `expert` there refuses. Refusal (d) is implemented
+  (`PI0ModelTTNN.megakernel_device_refusal`, checked at the start of `__init__`; device evidence
+  `integrate_p1/results/NOCUT.json`).
 - **Stamp**: the constructed model carries `model.megakernel_backend` (`off` / `expert` / `whole`) and
   `model.megakernel_program` (the descriptor hash and kernel source list of the generic_op captured in the trace).
   `tests/pcc/test_pcc_pi05_fused.py`, the megakernel device tests and the server smoke test assert the stamp read from

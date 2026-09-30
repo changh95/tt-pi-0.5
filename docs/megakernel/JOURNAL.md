@@ -415,3 +415,86 @@ since aa7bf50).
   scratchpad/ip1/out/{NOCUT,A_*,ALT_*,O_ip1}.json (out_first/ = an earlier hold1 at 488fe36, superseded by the cfe9fa2 code change).
 - hold2 (profiles) is INCOMPLETE (only P_default_base.json, no ops CSV): discarded and re-run. hold3 (soak) and hold4
   (pytest, served) never started: run now. Working-tree edits of README.md / DESIGN.md are doc-only (sums unaffected).
+
+## 2026-09-30 16:49:56 KST -- integrate-p1: gate re-run results (holds 1-4), arms "default" = PI05_MEGAKERNEL UNSET, "off" = comparator
+
+Code: hold1 at cfe9fa2, holds 2-4 at a46beb5 (a46beb5 only changed server/app.py docstring + /info text). md5 of every
+tt/ + common/ source = ALL 403253dd516ba74bd937e6ac4a329009 at the start and end of every hold (sums_*.txt), kernel_digest
+328761c8a1ce3fd9 (the verify_p1_r1 digest). Results copied to docs/megakernel/integrate_p1/results/ (from scratchpad/ip1/out/).
+- Refusal (d) (NOCUT.json, NOCUT_final.json): a device opened without the cut is refused by name before weight conversion
+  (model_built_without_cut False, error names the cut); with the cut, no refusal.
+- A/B arms differ: the default cache compiled mk_brisc / mk_ncrisc / mk_trisc and not the off path's compute / reader / writer /
+  dm_in0_sender / dm_in1_sender_out; the off cache no mk_* (kernels_{default,off}.txt).
+- Structural (tracy, S_struct.json): default 21 replay sessions per shape, 892 ops each, 36 UpdateKVCache, exactly 1 op after
+  the last one = GenericOp on 110 cores (mk_trisc / mk_brisc + mk_ncrisc), one program hash per shape, no missing durations.
+  Megakernel kernel time median 17.490 ms base (17.448-17.521), 16.071 ms LIBERO (16.046-16.128). Off: 2551 ops, 1660 after the
+  last cache write, post-cache device sum 30.31 / 26.83 ms. The 891-op prefix sequence is identical in both arms (both shapes).
+- Amended base gate (O_ip1.json, 22 seeds, oracle fed each arm's own device K/V): default closer on 22/22; mean 0.99974
+  (min 0.99916) vs off 0.99596 (min 0.98575); smallest margin +4.3e-5 (seed 708). Controls as verify_p1_r1 (K/V and noise
+  bit-identical across arms 22/22; oracle reproduces ref.sample_actions to PCC 1-5e-14; wrong-K/V negative control 0.93/0.88/-0.08).
+- openpi golden PCC7 (A_default_libero.json): mean 0.999884, min 0.999778 (off 0.999839 / 0.999712). PASS.
+- Replays / poisoning (A_*.json): ten calls and ten raw execute_trace bit-identical to the first in both arms and shapes; the
+  20 profiled replays too (P_*.json). Output buffer poisoned with 7.0 -> next call equals that prompt's earlier output, no 7.0.
+- Alternating / shape switch (ALT_{default,off}.json): 20/20 calls bit-identical to fresh-model references, refs pairwise
+  distinct (max PCC 0.952), fresh refs equal to the other process's outputs. Named repo test verify_alternating.py under the
+  default: all_ok True (ALT_named_repo_default.json).
+- Soak (hold3.log): 20/20 processes rc=0, each 31 calls cycling n_lang 1 / 128 / 224, all_equal, finite, digest
+  099ce3592052e5c4 (= verify_p1_r1's), 40-43 s each. No hang.
+- Latency (A_*.json, aiclk 1350 before/after each bench): per call median base 70.68 ms vs off 84.26; LIBERO 65.84 vs 76.72.
+  Replay 69.54 / 64.41 vs 82.84 / 75.65. 10 s time.time window: 144 vs 121 (base), 156 vs 133 (LIBERO) replays.
+- tests/pcc/test_pcc_pi05_fused.py (pytest_pcc_{default,off}.log): libero PASS in both arms; base FAILS its own 0.95 min
+  fp32-reference floor on seed 3 in BOTH arms (default 0.94833, off 0.93811), pre-existing, values identical to O_ip1.json.
+- CPU suites: 44 passed (cpu_suites.txt, 15:54); test_server_masks.py 5 passed again at a46beb5.
+- Served A/B in hold4 is INVALID and discarded (moved to scratchpad/ip1/out/hold4_serve_invalid/): the loop's `kill $P`
+  hit the subshell of the `arm` shell function, not uvicorn, so the first (default) server kept port 20000; all 4 "arms"
+  measured it (every /info says backend expert) and the three later servers blocked in UMD "Waiting for lock
+  CHIP_IN_USE_0_PCIe held by PID 889382" and were left holding /dev/tenstorrent/0 after the hold (guard: "orphaned device
+  users"). I killed them by pid at 16:48 (card then probed ok). Only the first default server's numbers are genuine
+  (S_default_164515: smoke PASS, inference median 70.97 ms, mask probe pass). Re-run as hold5.sh: setsid per server,
+  process-group stop, port + process table confirmed empty, /info backend must equal the arm before measuring.
+
+## 2026-09-30 17:13:30 KST -- integrate-p1: served A/B, LIBERO closed loop, demo (session end)
+
+- hold5 (16:49-16:53) was a second invalid served attempt: GNU `timeout` makes itself a process-group leader, so the
+  setsid group kill missed uvicorn. Its arm check caught it (arm 2 /info said expert, measurements skipped). Only its
+  genuine arms are kept: default_164949 (inference median 70.855 ms) and off_165209 (83.92 ms). I killed leftover
+  servers by pid at 16:51 and 16:53. The eval hold's probe at 16:53:52 was ok.
+- hold6 (17:05-17:08, hold6.sh: stops every uvicorn of the app by pid, then confirms the process table and port are
+  empty; /info backend must equal the arm): alternated default / off / default / off, each arm confirmed by /info.
+  timing_ms.inference median 70.925 / 70.875 ms (default) vs 84.04 / 84.10 ms (off); total 72.31 / 72.28 vs 85.53 / 85.50;
+  client wall 73.50 / 73.47 vs 86.85 / 86.84 (S_*_1705*..1708*.lat.json). Served gate < 84.02: PASS. smoke_test PASS on
+  all 4. Mask probe on all 4 (S_*.mask.json), through the batcher at batch 1: X = [2, 0] vs Y = [2] differ (maxabs 0.85),
+  and X repeated is identical. So the request's own mask reaches the model; with the old tokens != 0 fallback X and Y
+  would give identical outputs. No uvicorn left after the hold.
+- LIBERO closed loop with the default (/home/deepgadget/experiments/gr00t/libero_eval/pi05/megakernel-p1/, tools/ =
+  copies of ../fused/tools; the policy opens the device via common/device_open.device_kwargs, PI05_MEGAKERNEL is unset
+  in run_fused.sh, and the stamp includes backend + mk_digest; the server lifetime is capped at 1800 s):
+  - Open-loop golden through the wrapper (openloop_pcc_mkp1.json): mean PCC7 0.999884, min 0.999778, deterministic,
+    host preprocessing ok, steady call 65.75 ms.
+  - libero_spatial 10 tasks x inits 0-9 (tt_spatial_summary.json): **99/100**, 0 errors, 0 timeouts, 0 missing; the one
+    failure is t9/i4 at the step cap. Paired inits 0-4: 49/50 vs GPU 50/50 (only_gpu [9,4]); inits 5-9: 50/50. Previous
+    fused path: 98/100. ACCEPTED (>= 80 and paired >= GPU - 10 pts). Server policy latency median 66.4 ms (p10 66.1,
+    p90 66.7, 2,130 calls) vs 77.6 on 09-29. Every episode carries the stamp megakernel=expert, backend=expert,
+    mk_digest=328761c8a1ce3fd9, code=a46beb54a24f+dirty. The dirty files are README / DESIGN / JOURNAL only.
+  - Demo (demo/, manifest.json): 4 on-screen viewer recordings, t3/i0 95 steps, t7/i0 131, t0/i0 78, t5/i0 108, all
+    SUCCESS, each equal to its eval episode's steps. Median 66.5-66.7 ms per call. Captioned clips + combined
+    pi05_libero_spatial.mp4 (29.6 s) + poster. I LOOKED at the poster (t3 SUCCESS frame, the bowl is on the plate), the
+    title card (99/100, 66.4 ms, "the phase-1 expert megakernel"), a t7 running frame and the end card. The captions
+    are correct.
+- Docs: README Results rewritten from these files (default vs off accuracy, latency, device time 17.49 / 16.07 vs 30.31 /
+  26.83 ms, served 70.9 vs 84.0-84.1, LIBERO 99/100, RTX ratios recomputed against 70.9 ms). The architecture table marks
+  which part is ONE persistent op (the expert loop) and which is still traced stock ops (the 891-op prefix). DESIGN §4.12
+  amendment + status row. Results in docs/megakernel/integrate_p1/.
+Ship-phase handoff (NOT done here: the staging package is outside the pi0.5 repo):
+- /home/deepgadget/experiments/tt-models/models/pi05-base-p150-fused/tt-model.yaml: an unset PI05_MEGAKERNEL already
+  gives expert. Still, add `PI05_MEGAKERNEL: "expert"` to serve.env so the served path is explicit. Update
+  PI05_SOURCE_COMMIT, the card numbers (84 ms -> 70.9 ms served, LIBERO 99/100 at 66.4 ms, the GPU ratios) and the
+  "one fused, traced TT-NN graph" wording (the expert loop is one persistent generic_op; the prefix is traced stock ops).
+  The verify glob `tt/kernels/*/*.cpp` (asserts 9) does not cover tt/megakernel/kernels/mk_*.cpp. Add a check that
+  mk_{brisc,ncrisc,trisc}.cpp + mk_defs.hpp / mk_dm.hpp ship. Their tt_metal includes (api/compute/*, api/dataflow/*,
+  api/debug/*) all exist under publish/tt-metal-668c2907575/tt_metal/hw/inc; I checked this at 16:1x.
+- The container must open the device through device_kwargs. server/app.py does; the image's own smoke should read /info
+  megakernel.backend == expert.
+Open (unchanged): base pytest 0.95 floor fails in both arms on seed 3 (user's call); mk_brisc.cpp:8 stale test path
+comment (deferred to the next kernel change); the non-blocking items listed by fix-p1-r0.
+Next: Ship (HF update), then phase 2 (WP P2-0).

@@ -1,0 +1,30 @@
+2026-09-30_16:41:26 nocut probe (final code) start
+2026-09-30_16:41:30 nocut probe rc=0
+2026-09-30_16:41:30 pytest test_pcc_pi05_fused (default) start
+2026-09-30_16:43:34 pytest (default) rc=1 1 failed, 1 passed in 122.64s (0:02:02)
+2026-09-30_16:43:34 pytest test_pcc_pi05_fused (off) start
+2026-09-30_16:45:15 pytest (off) rc=1 1 failed, 1 passed in 99.21s (0:01:39)
+2026-09-30_16:45:15 SERVE default (default_164515)
+smoke rc=0 PASS pi05 actions=(50,32) max|a|=0.277 std=0.074 repeat_maxdiff=0.0000 change_maxdiff=0.8174 inference_ms=75.51/71.01 tokens=143/224 truncated=False
+RESULT {"n": 30, "total_ms_median": 72.27, "inference_ms_median": 70.97, "client_wall_ms_median": 73.41836951673031, "megakernel": {"backend": "expert", "program": {"kernel_digest": "328761c8a1ce3fd9", "sources": ["mk_brisc.cpp", "mk_defs.hpp", "mk_dm.hpp", "mk_ncrisc.cpp", "mk_trisc.cpp"]}}, "hardware": "Tenstorrent Blackhole, single chip (mesh 1x1) via tt-nn; fused whole-graph sample_actions_fused: traced stock-ttnn SigLIP / VLM prefix + the phase-1 expert megakernel (ONE persistent generic_op for the whole 10-step action expert loop), one Metal trace", "time": "2026-09-30 16:46:03"}
+RESULT {"time": "2026-09-30 16:46:03", "num_tokens": [2, 1], "X_repeat_identical": true, "X_vs_Y_identical": false, "X_vs_Y_maxabs": 0.852142333984375, "batched_as": [1, 1], "pass": true}
+2026-09-30_16:46:03 SERVE off (off_164603)
+smoke rc=0 PASS pi05 actions=(50,32) max|a|=0.277 std=0.074 repeat_maxdiff=0.0000 change_maxdiff=0.8174 inference_ms=75.13/71.3 tokens=143/224 truncated=False
+RESULT {"n": 30, "total_ms_median": 72.695, "inference_ms_median": 71.11500000000001, "client_wall_ms_median": 74.30913699499797, "megakernel": {"backend": "expert", "program": {"kernel_digest": "328761c8a1ce3fd9", "sources": ["mk_brisc.cpp", "mk_defs.hpp", "mk_dm.hpp", "mk_ncrisc.cpp", "mk_trisc.cpp"]}}, "hardware": "Tenstorrent Blackhole, single chip (mesh 1x1) via tt-nn; fused whole-graph sample_actions_fused: traced stock-ttnn SigLIP / VLM prefix + the phase-1 expert megakernel (ONE persistent generic_op for the whole 10-step action expert loop), one Metal trace", "time": "2026-09-30 16:46:06"}
+RESULT {"time": "2026-09-30 16:46:06", "num_tokens": [2, 1], "X_repeat_identical": true, "X_vs_Y_identical": false, "X_vs_Y_maxabs": 0.852142333984375, "batched_as": [1, 1], "pass": true}
+2026-09-30_16:46:06 SERVE default (default_164606)
+smoke rc=0 PASS pi05 actions=(50,32) max|a|=0.277 std=0.074 repeat_maxdiff=0.0000 change_maxdiff=0.8174 inference_ms=74.73/71.53 tokens=143/224 truncated=False
+RESULT {"n": 30, "total_ms_median": 72.94, "inference_ms_median": 71.17500000000001, "client_wall_ms_median": 74.70987450506072, "megakernel": {"backend": "expert", "program": {"kernel_digest": "328761c8a1ce3fd9", "sources": ["mk_brisc.cpp", "mk_defs.hpp", "mk_dm.hpp", "mk_ncrisc.cpp", "mk_trisc.cpp"]}}, "hardware": "Tenstorrent Blackhole, single chip (mesh 1x1) via tt-nn; fused whole-graph sample_actions_fused: traced stock-ttnn SigLIP / VLM prefix + the phase-1 expert megakernel (ONE persistent generic_op for the whole 10-step action expert loop), one Metal trace", "time": "2026-09-30 16:46:09"}
+RESULT {"time": "2026-09-30 16:46:09", "num_tokens": [2, 1], "X_repeat_identical": true, "X_vs_Y_identical": false, "X_vs_Y_maxabs": 0.852142333984375, "batched_as": [1, 1], "pass": true}
+2026-09-30_16:46:09 SERVE off (off_164609)
+smoke rc=0 PASS pi05 actions=(50,32) max|a|=0.277 std=0.074 repeat_maxdiff=0.0000 change_maxdiff=0.8174 inference_ms=74.99/72.9 tokens=143/224 truncated=False
+RESULT {"n": 30, "total_ms_median": 72.82, "inference_ms_median": 71.16499999999999, "client_wall_ms_median": 74.19865900010336, "megakernel": {"backend": "expert", "program": {"kernel_digest": "328761c8a1ce3fd9", "sources": ["mk_brisc.cpp", "mk_defs.hpp", "mk_dm.hpp", "mk_ncrisc.cpp", "mk_trisc.cpp"]}}, "hardware": "Tenstorrent Blackhole, single chip (mesh 1x1) via tt-nn; fused whole-graph sample_actions_fused: traced stock-ttnn SigLIP / VLM prefix + the phase-1 expert megakernel (ONE persistent generic_op for the whole 10-step action expert loop), one Metal trace", "time": "2026-09-30 16:46:12"}
+RESULT {"time": "2026-09-30 16:46:12", "num_tokens": [2, 1], "X_repeat_identical": true, "X_vs_Y_identical": false, "X_vs_Y_maxabs": 0.852142333984375, "batched_as": [1, 1], "pass": true}
+2026-09-30_16:46:12 END
+2026-09-30_16:46:12 [device-guard pid=887688] WITH_DEVICE_RESET_AFTER=1 requested but the device is still held; not resetting
+2026-09-30_16:47:13 [device-guard pid=887688] WARNING: job exited (rc=0) but /dev/tenstorrent/0 is still held -> orphaned device user(s); the next holder will WAIT for them:
+ 889382       01:58 python -m uvicorn models.experimental.pi0_5.server.app:app --host 127.0.0.1 --port 20000 --lifespan on
+ 889777       01:10 python -m uvicorn models.experimental.pi0_5.server.app:app --host 127.0.0.1 --port 20000 --lifespan on
+ 889900       01:07 python -m uvicorn models.experimental.pi0_5.server.app:app --host 127.0.0.1 --port 20000 --lifespan on
+ 890021       01:04 python -m uvicorn models.experimental.pi0_5.server.app:app --host 127.0.0.1 --port 20000 --lifespan on
+device-guard: WARNING your job left the device open (orphaned server/container?). Stop it: docker ps / tt-model stop <manifest>.

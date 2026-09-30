@@ -1,0 +1,223 @@
+{
+ "golden": "/home/deepgadget/experiments/gr00t/libero_eval/pi05/openloop_golden.pt",
+ "time": "2026-09-30 16:49:45",
+ "backend": "tt-p150a:models.experimental.pi0_5.tt.ttnn_pi0_model.PI0ModelTTNN.sample_actions_fused[traced=True,H=10,steps=10,lang_len=32,arch=Arch.BLACKHOLE,code=a46beb54a24f+dirty(megakernel-2026-09-29),tt-metal=668c29075755,megakernel=expert,trace=True,tp=1,expert_attn=fused,expert_norm_fold=True,expert_geglu=True,expert_mm=mcast1d_fp32,kv_dtype=bf8,residual=bf16,mlp_chunk=256,vlm_attn_pc=mcast2d,vlm_gateup_pc=mcast2d,vlm_down_pc=mcast2d,siglip_pc=mcast2d,siglip_batched=True,skip_vlm_tail=True,backend=expert,mk_digest=328761c8a1ce3fd9]",
+ "backend_detail": {
+  "model": "models.experimental.pi0_5.tt.ttnn_pi0_model.PI0ModelTTNN",
+  "entry": "sample_actions_fused(lang_masks=...)",
+  "traced": true,
+  "pi05": true,
+  "H": 10,
+  "steps": 10,
+  "arch": "Arch.BLACKHOLE",
+  "lang_len": 32,
+  "code": {
+   "repo": "/home/deepgadget/experiments/tt-models/ports/tt-pi-0.5",
+   "commit": "a46beb54a24f4ed73bdafcba4a2dff6f4bc81879",
+   "branch": "megakernel-2026-09-29",
+   "dirty_tracked": true,
+   "module_file": "/home/deepgadget/experiments/tt-models/ports/tt-pi-0.5/models/experimental/pi0_5/tt/ttnn_pi0_model.py"
+  },
+  "tt_metal": {
+   "repo": "/home/deepgadget/experiments/gr00t/tt-metal",
+   "commit": "668c290757550588d0ce46b180c344a462a2aaf5",
+   "branch": "main",
+   "dirty_tracked": false,
+   "ttnn_file": "/home/deepgadget/experiments/gr00t/tt-metal/ttnn/ttnn/__init__.py"
+  },
+  "fused_cfg": {
+   "trace": "True",
+   "trace_region_size": "160000000",
+   "residual": "bf16",
+   "mlp_chunk": "256",
+   "vlm_down_pc": "mcast2d",
+   "vlm_gateup_pc": "mcast2d",
+   "vlm_attn_pc": "mcast2d",
+   "siglip_pc": "mcast2d",
+   "siglip_batched": "True",
+   "skip_vlm_tail": "True",
+   "sdpa_vlm": "None",
+   "sdpa_expert": "None",
+   "sdpa_siglip": "None",
+   "dit_blocks": "(1, 8, 4, 1, 4, 0, 2)",
+   "euler_dit_blocks": "(1, 8, 1, 1, 1, 0, 2)",
+   "expert_mm": "mcast1d_fp32",
+   "expert_mm_blocks": "(1, 8, 4, 1, 4, 0, 2)",
+   "tp": "1",
+   "ccl_topology": "ring",
+   "env_keys": "()",
+   "kv_dtype": "bf8",
+   "expert_geglu": "True",
+   "expert_attn": "fused",
+   "expert_norm_fold": "True",
+   "megakernel": "expert"
+  },
+  "megakernel_backend": "expert",
+  "megakernel_program": {
+   "kernel_digest": "328761c8a1ce3fd9",
+   "sources": [
+    "mk_brisc.cpp",
+    "mk_defs.hpp",
+    "mk_dm.hpp",
+    "mk_ncrisc.cpp",
+    "mk_trisc.cpp"
+   ]
+  },
+  "env_PI05_MEGAKERNEL": null
+ },
+ "summary": {
+  "mean_pcc_7": 0.9998843910879766,
+  "min_pcc_7": 0.9997776780152338,
+  "min_pcc_all32": 0.9997864261239592,
+  "max_maxabs_env": 0.018689990043640137,
+  "all_deterministic": true,
+  "host_preproc_ok": true,
+  "steady_call_ms_median": 65.75
+ },
+ "rows": [
+  {
+   "tag": "libero_spatial/t0/i0/call0/step10",
+   "n_lang": 20,
+   "tokens_equal": true,
+   "img_maxabs": 1.1920928955078125e-07,
+   "pcc_all32": 0.9998830501929856,
+   "pcc_7": 0.9999007120343301,
+   "maxabs_7_norm": 0.03245469927787781,
+   "pcc_env": 0.9999862135689439,
+   "maxabs_env": 0.012559711933135986,
+   "gripper_sign_agree": 1.0,
+   "call_ms": [
+    33842.2,
+    66.0,
+    65.7
+   ],
+   "deterministic": true
+  },
+  {
+   "tag": "libero_spatial/t0/i0/call12/step70",
+   "n_lang": 20,
+   "tokens_equal": true,
+   "img_maxabs": 1.1920928955078125e-07,
+   "pcc_all32": 0.9998732574377948,
+   "pcc_7": 0.9998470948335603,
+   "maxabs_7_norm": 0.027761250734329224,
+   "pcc_env": 0.9999319792392571,
+   "maxabs_env": 0.01863323152065277,
+   "gripper_sign_agree": 1.0,
+   "call_ms": [
+    65.4,
+    66.2,
+    66.4
+   ],
+   "deterministic": true
+  },
+  {
+   "tag": "libero_spatial/t3/i1/call0/step10",
+   "n_lang": 17,
+   "tokens_equal": true,
+   "img_maxabs": 1.1920928955078125e-07,
+   "pcc_all32": 0.9999260079153287,
+   "pcc_7": 0.9999283839042866,
+   "maxabs_7_norm": 0.02524217963218689,
+   "pcc_env": 0.9999783271209554,
+   "maxabs_env": 0.013044595718383789,
+   "gripper_sign_agree": 1.0,
+   "call_ms": [
+    66.7,
+    65.7,
+    65.7
+   ],
+   "deterministic": true
+  },
+  {
+   "tag": "libero_spatial/t3/i1/call12/step70",
+   "n_lang": 17,
+   "tokens_equal": true,
+   "img_maxabs": 1.1920928955078125e-07,
+   "pcc_all32": 0.9999708486184022,
+   "pcc_7": 0.9999732463147307,
+   "maxabs_7_norm": 0.014580488204956055,
+   "pcc_env": 0.9999880402602958,
+   "maxabs_env": 0.012069880962371826,
+   "gripper_sign_agree": 1.0,
+   "call_ms": [
+    65.4,
+    65.6,
+    65.7
+   ],
+   "deterministic": true
+  },
+  {
+   "tag": "libero_spatial/t6/i2/call0/step10",
+   "n_lang": 18,
+   "tokens_equal": true,
+   "img_maxabs": 1.1920928955078125e-07,
+   "pcc_all32": 0.9997864261239592,
+   "pcc_7": 0.9997776780152338,
+   "maxabs_7_norm": 0.05097472667694092,
+   "pcc_env": 0.9999764129873192,
+   "maxabs_env": 0.01565837860107422,
+   "gripper_sign_agree": 1.0,
+   "call_ms": [
+    66.5,
+    65.4,
+    65.8
+   ],
+   "deterministic": true
+  },
+  {
+   "tag": "libero_spatial/t6/i2/call12/step70",
+   "n_lang": 18,
+   "tokens_equal": true,
+   "img_maxabs": 1.1920928955078125e-07,
+   "pcc_all32": 0.999838643295746,
+   "pcc_7": 0.9998435863173202,
+   "maxabs_7_norm": 0.046645134687423706,
+   "pcc_env": 0.9999411995221125,
+   "maxabs_env": 0.018689990043640137,
+   "gripper_sign_agree": 1.0,
+   "call_ms": [
+    65.6,
+    65.4,
+    66.6
+   ],
+   "deterministic": true
+  },
+  {
+   "tag": "libero_spatial/t9/i3/call0/step10",
+   "n_lang": 17,
+   "tokens_equal": true,
+   "img_maxabs": 1.1920928955078125e-07,
+   "pcc_all32": 0.9999258113113504,
+   "pcc_7": 0.9999329448662365,
+   "maxabs_7_norm": 0.02204713225364685,
+   "pcc_env": 0.999981876513432,
+   "maxabs_env": 0.008723348379135132,
+   "gripper_sign_agree": 1.0,
+   "call_ms": [
+    66.7,
+    65.6,
+    65.9
+   ],
+   "deterministic": true
+  },
+  {
+   "tag": "libero_spatial/t9/i3/call12/step70",
+   "n_lang": 17,
+   "tokens_equal": true,
+   "img_maxabs": 1.1920928955078125e-07,
+   "pcc_all32": 0.9998768499408729,
+   "pcc_7": 0.9998714824181141,
+   "maxabs_7_norm": 0.030994266271591187,
+   "pcc_env": 0.9999597854180379,
+   "maxabs_env": 0.011313114315271378,
+   "gripper_sign_agree": 1.0,
+   "call_ms": [
+    65.5,
+    66.2,
+    66.0
+   ],
+   "deterministic": true
+  }
+ ]
+}

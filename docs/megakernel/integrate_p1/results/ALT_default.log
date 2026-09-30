@@ -1,0 +1,65 @@
+2026-09-30 15:43:39.868 | DEBUG    | ttnn:<module>:45 - Initial ttnn.CONFIG:
+Config{cache_path=/home/deepgadget/.cache/ttnn,model_cache_path=/home/deepgadget/.cache/ttnn/models,tmp_dir=/tmp/ttnn,enable_model_cache=false,enable_fast_runtime_mode=true,validate_program_args=false,throw_exception_on_fallback=false,enable_logging=false,enable_graph_report=false,enable_graph_python_stack_traces=false,enable_detailed_buffer_report=false,enable_detailed_tensor_report=false,enable_comparison_mode=false,comparison_mode_should_raise_exception=false,comparison_mode_pcc=0.9999,root_report_path=generated/ttnn/reports,report_name=std::nullopt,std::nullopt}
+2026-09-30 15:43:40.022 | info     |          Device | Opening user mode device driver (tt_cluster.cpp:224)
+2026-09-30 15:43:40.022 | info     |             UMD | Cluster constructor started. (cluster.cpp:408)
+2026-09-30 15:43:40.022 | info     |             UMD | Creating TopologyDiscovery for architecture: blackhole (topology_discovery.cpp:96)
+2026-09-30 15:43:40.022 | info     |             UMD | Starting topology discovery. (topology_discovery.cpp:115)
+2026-09-30 15:43:40.025 | info     |             UMD | Established firmware bundle version: 19.12.0 (topology_discovery.cpp:576)
+2026-09-30 15:43:40.025 | info     |             UMD | Completed topology discovery. (topology_discovery.cpp:119)
+2026-09-30 15:43:40.284 | info     |             UMD | Opening local chip ids/PCIe ids: {0}/[0] and remote chip ids {} (cluster.cpp:175)
+2026-09-30 15:43:40.284 | info     |             UMD | IOMMU: disabled (cluster.cpp:149)
+2026-09-30 15:43:40.284 | info     |             UMD | KMD version: 2.11.0 (cluster.cpp:152)
+2026-09-30 15:43:40.284 | info     |             UMD | Cluster constructor completed. (cluster.cpp:683)
+2026-09-30 15:43:40.284 | info     |             UMD | Starting devices in cluster (cluster.cpp:1289)
+2026-09-30 15:43:40.311 | info     |             UMD | Starting devices in cluster completed. (cluster.cpp:1297)
+2026-09-30 15:43:40.652 | info     |     Distributed | Using auto discovery to generate mesh graph. (metal_env.cpp:422)
+2026-09-30 15:43:40.652 | info     |     Distributed | Constructing control plane using auto-discovery (no mesh graph descriptor). (metal_env.cpp:484)
+2026-09-30 15:43:40.652 | warning  |          Always | Unknown motherboard 'ProArt X870E-CREATOR WIFI' for chip_id=0 (bus_id=0x3) — falling back to bus_id as tray_id. Add this motherboard and its bus IDs to mobo_to_bus_ids in physical_system_discovery.cpp. (physical_system_discovery.cpp:119)
+2026-09-30 15:43:40.652 | info     |          Fabric | Logical multi-mesh adjacency: intermesh degree histogram {0:1}; intra-mesh degree histograms mesh0 {0:1} (topology_mapper_utils.cpp:3190)
+2026-09-30 15:43:40.652 | info     |          Fabric | Physical multi-mesh adjacency: intermesh degree histogram {0:1}; intra-mesh degree histograms mesh0 {0:1} (topology_mapper_utils.cpp:3198)
+2026-09-30 15:43:40.782 | info     |           Metal | Enabling program cache on MeshDevice 1 (mesh_device.cpp:1176)
+[pi0.5] expert adaRMS norms folded into per-step weights in 2.8s
+2026-09-30 15:44:13 fresh ref A
+[pi0.5] expert adaRMS norms folded into per-step weights in 2.4s
+2026-09-30 15:44:38 fresh ref B
+[pi0.5] expert adaRMS norms folded into per-step weights in 2.3s
+2026-09-30 15:45:03 fresh ref C
+[pi0.5] expert adaRMS norms folded into per-step weights in 2.2s
+2026-09-30 15:45:28 fresh ref D
+[pi0.5] expert adaRMS norms folded into per-step weights in 2.2s
+2026-09-30 15:45:53 fresh ref D2
+[pi0.5] expert adaRMS norms folded into per-step weights in 2.3s
+2026-09-30 15:46:19 fresh ref E
+[pi0.5] expert adaRMS norms folded into per-step weights in 2.2s
+2026-09-30 15:46:44 fresh ref F
+[pi0.5] expert adaRMS norms folded into per-step weights in 2.2s
+2026-09-30 15:47:09 alt_base A True
+2026-09-30 15:47:09 alt_base B True
+2026-09-30 15:47:09 alt_base C True
+2026-09-30 15:47:09 alt_base D True
+2026-09-30 15:47:09 alt_base D2 True
+2026-09-30 15:47:09 alt_base A True
+2026-09-30 15:47:09 alt_base D2 True
+2026-09-30 15:47:09 alt_base D True
+2026-09-30 15:47:09 alt_base C True
+2026-09-30 15:47:09 alt_base B True
+[pi0.5] expert adaRMS norms folded into per-step weights in 2.2s
+2026-09-30 15:47:34 libero_after_switch E True
+2026-09-30 15:47:35 libero_after_switch F True
+2026-09-30 15:47:35 libero_after_switch E True
+2026-09-30 15:47:35 libero_after_switch F True
+2026-09-30 15:47:35 libero_after_switch F True
+2026-09-30 15:47:35 libero_after_switch E True
+[pi0.5] expert adaRMS norms folded into per-step weights in 2.3s
+2026-09-30 15:48:00 base_switch_back B True
+2026-09-30 15:48:00 base_switch_back D2 True
+2026-09-30 15:48:00 base_switch_back A True
+2026-09-30 15:48:00 base_switch_back C True
+RESULT {"t0": "2026-09-30 15:43:40", "arm": "expert", "base_seeds": {"A": 703, "B": 712, "C": 701, "D": 6, "D2": 716}, "libero_n_lang": [17, 20], "libero_tags": {"E": "libero_spatial/t3/i1/call0/step10", "F": "libero_spatial/t0/i0/call0/step10"}, "stamps": {"A": "expert", "B": "expert", "C": "expert", "D": "expert", "D2": "expert", "E": "expert", "F": "expert"}, "ref_pairs_max_pcc": 0.9521275116489937, "ref_pairs_any_equal": false, "pcc7_fresh": {"E": 0.9999283839042867, "F": 0.9999007120343301}, "all_bit_identical": true, "n_checks": 20, "fresh_ref_eq_other_process": {"A": true, "B": true, "C": true, "D": true, "D2": true, "E": true, "F": true}, "t1": "2026-09-30 15:48:00"}
+2026-09-30 15:48:01.050 | info     |    BuildKernels | JIT cache stats: 362/362 hits (100.0%) [362 cached, 84 build-once dedup, 0 merged artifacts, 0 merged genfiles] (build_cache_telemetry.cpp:268)
+2026-09-30 15:48:01.050 | info     |    BuildKernels | JIT telemetry: 33 registered TelemetryTokens (build_cache_telemetry.cpp:325)
+2026-09-30 15:48:01.056 | info     |          Device | Closing user mode device drivers (tt_cluster.cpp:550)
+2026-09-30 15:48:01.056 | info     |             UMD | Closing devices in cluster (cluster.cpp:1302)
+2026-09-30 15:48:01.283 | info     |             UMD | Closing devices in cluster completed. (cluster.cpp:1311)
+2026-09-30 15:48:01.283 | info     |             UMD | Cluster destructor started. (cluster.cpp:1017)
+2026-09-30 15:48:01.283 | info     |             UMD | Cluster destructor completed. (cluster.cpp:1020)

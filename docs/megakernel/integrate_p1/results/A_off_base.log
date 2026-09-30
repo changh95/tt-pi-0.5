@@ -1,0 +1,51 @@
+2026-09-30 15:41:14.151 | DEBUG    | ttnn:<module>:45 - Initial ttnn.CONFIG:
+Config{cache_path=/home/deepgadget/.cache/ttnn,model_cache_path=/home/deepgadget/.cache/ttnn/models,tmp_dir=/tmp/ttnn,enable_model_cache=false,enable_fast_runtime_mode=true,validate_program_args=false,throw_exception_on_fallback=false,enable_logging=false,enable_graph_report=false,enable_graph_python_stack_traces=false,enable_detailed_buffer_report=false,enable_detailed_tensor_report=false,enable_comparison_mode=false,comparison_mode_should_raise_exception=false,comparison_mode_pcc=0.9999,root_report_path=generated/ttnn/reports,report_name=std::nullopt,std::nullopt}
+2026-09-30 15:41:14.498 | info     |          Device | Opening user mode device driver (tt_cluster.cpp:224)
+2026-09-30 15:41:14.498 | info     |             UMD | Cluster constructor started. (cluster.cpp:408)
+2026-09-30 15:41:14.499 | info     |             UMD | Creating TopologyDiscovery for architecture: blackhole (topology_discovery.cpp:96)
+2026-09-30 15:41:14.499 | info     |             UMD | Starting topology discovery. (topology_discovery.cpp:115)
+2026-09-30 15:41:14.502 | info     |             UMD | Established firmware bundle version: 19.12.0 (topology_discovery.cpp:576)
+2026-09-30 15:41:14.502 | info     |             UMD | Completed topology discovery. (topology_discovery.cpp:119)
+2026-09-30 15:41:14.755 | info     |             UMD | Opening local chip ids/PCIe ids: {0}/[0] and remote chip ids {} (cluster.cpp:175)
+2026-09-30 15:41:14.755 | info     |             UMD | IOMMU: disabled (cluster.cpp:149)
+2026-09-30 15:41:14.755 | info     |             UMD | KMD version: 2.11.0 (cluster.cpp:152)
+2026-09-30 15:41:14.755 | info     |             UMD | Cluster constructor completed. (cluster.cpp:683)
+2026-09-30 15:41:14.755 | info     |             UMD | Starting devices in cluster (cluster.cpp:1289)
+2026-09-30 15:41:14.787 | info     |             UMD | Starting devices in cluster completed. (cluster.cpp:1297)
+2026-09-30 15:41:15.134 | info     |     Distributed | Using auto discovery to generate mesh graph. (metal_env.cpp:422)
+2026-09-30 15:41:15.134 | info     |     Distributed | Constructing control plane using auto-discovery (no mesh graph descriptor). (metal_env.cpp:484)
+2026-09-30 15:41:15.134 | warning  |          Always | Unknown motherboard 'ProArt X870E-CREATOR WIFI' for chip_id=0 (bus_id=0x3) — falling back to bus_id as tray_id. Add this motherboard and its bus IDs to mobo_to_bus_ids in physical_system_discovery.cpp. (physical_system_discovery.cpp:119)
+2026-09-30 15:41:15.135 | info     |          Fabric | Logical multi-mesh adjacency: intermesh degree histogram {0:1}; intra-mesh degree histograms mesh0 {0:1} (topology_mapper_utils.cpp:3190)
+2026-09-30 15:41:15.135 | info     |          Fabric | Physical multi-mesh adjacency: intermesh degree histogram {0:1}; intra-mesh degree histograms mesh0 {0:1} (topology_mapper_utils.cpp:3198)
+2026-09-30 15:41:15.263 | info     |           Metal | Enabling program cache on MeshDevice 1 (mesh_device.cpp:1176)
+[pi0.5] expert adaRMS norms folded into per-step weights in 5.0s
+2026-09-30 15:41:39 obs 1 1059.7 ms d473d7a8abc5da2d
+2026-09-30 15:41:39 obs 2 85.3 ms 6a2cbf48d100e87b
+2026-09-30 15:41:39 obs 3 85.2 ms 9b1b86969368cbdd
+2026-09-30 15:41:39 obs 4 85.6 ms bda69ff03801b87b
+2026-09-30 15:41:39 obs 5 85.4 ms 6b3510df3d46d826
+2026-09-30 15:41:39 obs 6 85.4 ms 2b5f07d0d2bb1d3d
+2026-09-30 15:41:39 obs 701 85.3 ms 581c5417f859c55e
+2026-09-30 15:41:39 obs 702 85.6 ms 22c8d08e7fd4142f
+2026-09-30 15:41:39 obs 703 85.5 ms 810fa75836aa69ed
+2026-09-30 15:41:40 obs 704 85.7 ms 88f628385415448f
+2026-09-30 15:41:40 obs 705 85.3 ms 01c6ba579ebc0fef
+2026-09-30 15:41:40 obs 706 85.5 ms 58bcb7850ecc4dbd
+2026-09-30 15:41:40 obs 707 86.0 ms 3191eecabaf69e7c
+2026-09-30 15:41:40 obs 708 86.1 ms e03258f7f3c20235
+2026-09-30 15:41:40 obs 709 86.0 ms ec1101b51966aa1e
+2026-09-30 15:41:40 obs 710 85.8 ms d7ee49cb63b4ce12
+2026-09-30 15:41:40 obs 711 85.8 ms 7a26c1feb036d49c
+2026-09-30 15:41:40 obs 712 85.7 ms 1985b1e003ae2487
+2026-09-30 15:41:40 obs 713 85.6 ms b66e056b342ebc6d
+2026-09-30 15:41:41 obs 714 85.5 ms 9cf390f23400f304
+2026-09-30 15:41:41 obs 715 85.9 ms f7c8283a87335cc3
+2026-09-30 15:41:41 obs 716 86.0 ms ac781f8c9f02ca07
+RESULT {"t0": "2026-09-30 15:41:14", "arm_env": "off", "shape": "base", "open_kwargs": {"device_id": 0, "l1_small_size": 24576, "trace_region_size": 160000000}, "smi_open": {"t": "2026-09-30 15:41:14", "aiclk": " 800", "power": " 25.0", "temp": "57.5"}, "stamp": {"backend": "off", "program": null}, "traced": true, "prefix_len": 736, "kv_cache_shape": [1, 1, 800, 256], "kv_cache_dtype": "DataType.BFLOAT8_B", "distinct_outputs": 22, "ten_calls_eq_first": [true, true, true, true, true, true, true, true, true, true], "ten_raw_replays_eq_first": [true, true, true, true, true, true, true, true, true, true], "poison_readback_all_7": true, "after_poison_eq_obs_j": true, "after_poison_has_7": false, "smi_bench_before": {"t": "2026-09-30 15:41:43", "aiclk": "1350", "power": " 67.0", "temp": "61.7"}, "witness_call": {"time_ns_s": 2.529461665, "monotonic_s": 2.52946368, "sum_perf_counter_s": 2.529430216032779, "wall_start_epoch": 1790750503.4640284}, "witness_replay": {"time_ns_s": 2.485571222, "sum_perf_counter_s": 2.4855387688148767}, "replays_in_10s_time_time": 121, "smi_bench_after": {"t": "2026-09-30 15:41:58", "aiclk": "1350", "power": " 69.0", "temp": "63.1"}, "after_bench_eq_first": true, "megakernel_l1": null, "t1": "2026-09-30 15:41:58", "call_median": 84.2620125040412, "replay_median": 82.84343349805567}
+2026-09-30 15:41:59.921 | info     |    BuildKernels | JIT cache stats: 382/382 hits (100.0%) [382 cached, 54 build-once dedup, 0 merged artifacts, 0 merged genfiles] (build_cache_telemetry.cpp:268)
+2026-09-30 15:41:59.921 | info     |    BuildKernels | JIT telemetry: 33 registered TelemetryTokens (build_cache_telemetry.cpp:325)
+2026-09-30 15:41:59.926 | info     |          Device | Closing user mode device drivers (tt_cluster.cpp:550)
+2026-09-30 15:41:59.926 | info     |             UMD | Closing devices in cluster (cluster.cpp:1302)
+2026-09-30 15:42:00.121 | info     |             UMD | Closing devices in cluster completed. (cluster.cpp:1311)
+2026-09-30 15:42:00.121 | info     |             UMD | Cluster destructor started. (cluster.cpp:1017)
+2026-09-30 15:42:00.122 | info     |             UMD | Cluster destructor completed. (cluster.cpp:1020)
