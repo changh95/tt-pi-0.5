@@ -42,7 +42,7 @@ T16, T8, T32 = 2048, 1088, 4096
 SV_LN1W, SV_LN1B, SV_BQKV, SV_BO, SV_LN2W, SV_LN2B, SV_BFC1, SV_BFC2, SV_N = 0, 36, 72, 216, 252, 288, 324, 460, 496
 VV_G1, VV_G2, VV_N = 0, 64, 128
 GV_PLNW, GV_PLNB, GV_BPROJ, GV_N = 0, 36, 72, 136
-S_NK, S_CH, V_CH = 8, 4, 6
+S_NK, S_CH, V_CH = 8, 8, 6
 N_BANKS = 8
 W_BUDGET = 8 * 34816
 IN0_SLOTS = 4
@@ -289,7 +289,7 @@ def layout(o: Op, ps: PShape) -> Dict[str, int]:
         take("m", T16)
         take("mf", T16)
         take("l", T32)
-        np_ = ps.v_np if v else 2
+        np_ = ps.v_np if v else -(-S_NK // S_CH)
         dh = V_DH if v else S_DH
         take("op", 2 * np_ * dh * T16)
         take("pm", 2 * np_ * T16)

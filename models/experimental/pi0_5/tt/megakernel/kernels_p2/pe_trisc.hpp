@@ -163,7 +163,7 @@ NOINL void mm_s(const TOp& o, uint32_t npairs) {
             for (uint32_t i = 0; i < nt; ++i) {
                 load(src, i, i);
             }
-            mm_k(P_IN08, P_W8, rp, pc, pc, 1, 0);
+            mm_k(P_IN08, P_W8, rp, pc, pc, 1, o.fid_hi);
             tile_regs_commit();
             cb_pop_front(src, nt);
             const uint32_t dst = kb + 1 == nq ? P_O32 : P_PART;
@@ -202,112 +202,131 @@ PE_OS void run_mm(const TOp& o) {
 }
 
 // ================================================================ norms (one row tile per item)
-PE_OS void row_reduce_to(uint32_t scale_bits, uint32_t eps_bits, bool rsq, uint32_t out_idx) {
-    // SCR[0] (per-column partial sums) -> row sum in every column (HiFi4 @ ONES) * scale (+ eps, rsqrt) -> P_R[out_idx]
-    cb_wait_front(P_SCR, 1);
-    tile_regs_acquire();
-    mm_init_f<MathFidelity::HiFi4>(P_SCR, P_CONST);
-    mm_f<MathFidelity::HiFi4>(P_SCR, P_CONST, 0, PC_ONES, 0);
-    fscale(0, scale_bits);
-    if (rsq) {
-        binop_with_scalar_tile_init();
-        add_unary_tile(0, eps_bits);
-        rsqrt_tile_init();
-        rsqrt_tile(0);
-    }
-    tile_regs_commit();
-    cb_pop_front(P_SCR, 1);
-    cb_reserve_back(P_R, 1);
-    tile_regs_wait();
-    pack_to(0, P_R, 0);
-    tile_regs_release();
-    cb_push_back(P_R, 1);
-    (void)out_idx;
-}
+// Exact fp32 SFPU arithmetic (x copied to DST by UnpackToDestFp32 from P_S32), the SFPU inits hoisted over batches of
+// NB tiles; one pass over x for the statistics (row sums of x and of x^2 by a HiFi4 matmul with ONES afterwards; LN
+// variance = E[x^2] - mu^2: mu^2 / var <= 0.46 on real SigLIP activations, 2026-09-30).
+constexpr uint32_t NB = 5;  // x tiles per batch in DST 1..5; DST 0 = sum x, DST 6 = sum x^2, DST 7 scratch
 
-PE_OS void pack_scr0() {
-    tile_regs_commit();
-    cb_reserve_back(P_SCR, 1);
-    tile_regs_wait();
-    pack_to(0, P_SCR, 0);
-    tile_regs_release();
-    cb_push_back(P_SCR, 1);
-}
-
-// x in P_S32 (exact fp32 copies), gamma (and beta) in P_S16, out bf16 -> P_O16 (ring of 8)
 PE_OS void norm_row(const TOp& o) {
     const uint32_t nk = o.nk;
     const bool ln = o.nkind == N_LN;
-    cb_wait_front(P_S32, nk);
-    cb_wait_front(P_S16, ln ? 2 * nk : nk);
     constexpr uint32_t ONE_OVER_2048 = 0x3A000000u;  // 1 / 2048
     constexpr uint32_t ONE_OVER_1152 = 0x3A638E39u;  // 1 / 1152 (fp32)
     const uint32_t inv_n = ln ? ONE_OVER_1152 : ONE_OVER_2048;
     const uint32_t eps = ln ? EPS_S : EPS_V;
-    if (ln) {
-        // mu (exact fp32 column partials, row sum by matmul)
-        tile_regs_acquire();
-        load(P_S32, 0, 0);
-        for (uint32_t k = 1; k < nk; ++k) {
-            load(P_S32, k, 1);
-            fadd(0, 1, 0);
+    // pass 1: per-element sums over k of x (DST 0, LN only) and x^2 (DST 6)
+    tile_regs_acquire();
+    reconfig_data_format_srca(P_CONST);
+    copy_init(P_CONST);
+    copy_tile(P_CONST, PC_ZERO, 0);
+    copy_tile(P_CONST, PC_ZERO, 6);
+    for (uint32_t k0 = 0; k0 < nk; k0 += NB) {
+        const uint32_t n = nk - k0 < NB ? nk - k0 : NB;
+        cb_wait_front(P_S32, k0 + n);
+        reconfig_data_format_srca(P_S32);
+        copy_init(P_S32);
+        for (uint32_t j = 0; j < n; ++j) {
+            copy_tile(P_S32, k0 + j, 1 + j);
         }
-        pack_scr0();
-        row_reduce_to(inv_n, 0, false, 0);  // P_R[0] = mu
-        cb_wait_front(P_R, 1);
-        tile_regs_acquire();
-        load(P_R, 0, 2);
-        load(P_S32, 0, 0);
-        fsub(0, 2, 0);
-        fmul(0, 0, 0);
-        for (uint32_t k = 1; k < nk; ++k) {
-            load(P_S32, k, 1);
-            fsub(1, 2, 1);
-            fmul(1, 1, 1);
-            fadd(0, 1, 0);
+        if (ln) {
+            add_binary_tile_init();
+            for (uint32_t j = 0; j < n; ++j) {
+                add_binary_tile(0, 1 + j, 0);
+            }
         }
-        pack_scr0();
-        row_reduce_to(inv_n, eps, true, 1);  // P_R[1] = rstd
-        cb_wait_front(P_R, 2);
-    } else {
-        tile_regs_acquire();
-        load(P_S32, 0, 0);
-        fmul(0, 0, 0);
-        for (uint32_t k = 1; k < nk; ++k) {
-            load(P_S32, k, 1);
-            fmul(1, 1, 1);
-            fadd(0, 1, 0);
+        mul_binary_tile_init();
+        for (uint32_t j = 0; j < n; ++j) {
+            mul_binary_tile(1 + j, 1 + j, 1 + j);
         }
-        pack_scr0();
-        row_reduce_to(inv_n, eps, true, 0);  // P_R[0] = r
-        cb_wait_front(P_R, 1);
+        add_binary_tile_init();
+        for (uint32_t j = 0; j < n; ++j) {
+            add_binary_tile(6, 1 + j, 6);
+        }
     }
-    for (uint32_t k = 0; k < nk; ++k) {
+    tile_regs_commit();
+    cb_reserve_back(P_SCR, 2);
+    tile_regs_wait();
+    pack_to(6, P_SCR, 0);
+    pack_to(0, P_SCR, 1);
+    tile_regs_release();
+    cb_push_back(P_SCR, 2);
+    cb_wait_front(P_SCR, 2);
+    // pass 2: r (RMS) or (rstd, mu) (LN) as full tiles -> P_R [0] (and [1])
+    tile_regs_acquire();
+    mm_init_f<MathFidelity::HiFi4>(P_SCR, P_CONST);
+    mm_f<MathFidelity::HiFi4>(P_SCR, P_CONST, 0, PC_ONES, 0);  // row sums of x^2 (every column)
+    if (ln) {
+        mm_f<MathFidelity::HiFi4>(P_SCR, P_CONST, 1, PC_ONES, 1);  // row sums of x
+    }
+    fscale(0, inv_n);  // E[x^2]
+    if (ln) {
+        fscale(1, inv_n);  // mu
+        fmul(1, 1, 2);
+        fsub(0, 2, 0);  // var
+    }
+    binop_with_scalar_tile_init();
+    add_unary_tile(0, eps);
+    rsqrt_tile_init();
+    rsqrt_tile(0);
+    tile_regs_commit();
+    cb_pop_front(P_SCR, 2);
+    cb_reserve_back(P_R, 2);
+    tile_regs_wait();
+    pack_to(0, P_R, 0);
+    pack_to(1, P_R, 1);
+    tile_regs_release();
+    cb_push_back(P_R, 2);
+    cb_wait_front(P_R, 2);
+    cb_wait_front(P_S16, ln ? 2 * nk : nk);
+    // apply: RMS x * r * g ; LN (x - mu) * rstd * g + b  (DST 7 = r / rstd, DST 6 = mu, x in 0..2, g / b in 3..5)
+    constexpr uint32_t NA = 3;
+    for (uint32_t k0 = 0; k0 < nk; k0 += NA) {
+        const uint32_t n = nk - k0 < NA ? nk - k0 : NA;
         tile_regs_acquire();
-        load(P_S32, k, 0);
-        if (ln) {
-            load(P_R, 0, 1);
-            fsub(0, 1, 0);
-            load(P_R, 1, 1);
-            fmul(0, 1, 0);
-        } else {
-            load(P_R, 0, 1);
-            fmul(0, 1, 0);
+        reconfig_data_format_srca(P_S32);
+        copy_init(P_S32);
+        for (uint32_t j = 0; j < n; ++j) {
+            copy_tile(P_S32, k0 + j, j);
         }
-        load(P_S16, k, 1);
-        fmul(0, 1, 0);
+        copy_init(P_R);
+        copy_tile(P_R, 0, 7);
         if (ln) {
-            load(P_S16, nk + k, 1);
-            fadd(0, 1, 0);
+            copy_tile(P_R, 1, 6);
+            sub_binary_tile_init();
+            for (uint32_t j = 0; j < n; ++j) {
+                sub_binary_tile(j, 6, j);
+            }
+        }
+        reconfig_data_format_srca(P_S16);
+        copy_init(P_S16);
+        for (uint32_t j = 0; j < n; ++j) {
+            copy_tile(P_S16, k0 + j, 3 + j);
+        }
+        mul_binary_tile_init();
+        for (uint32_t j = 0; j < n; ++j) {
+            mul_binary_tile(j, 7, j);
+            mul_binary_tile(j, 3 + j, j);
+        }
+        if (ln) {
+            copy_init(P_S16);
+            for (uint32_t j = 0; j < n; ++j) {
+                copy_tile(P_S16, nk + k0 + j, 3 + j);
+            }
+            add_binary_tile_init();
+            for (uint32_t j = 0; j < n; ++j) {
+                add_binary_tile(j, 3 + j, j);
+            }
         }
         tile_regs_commit();
-        cb_reserve_back(P_O16, 1);
         tile_regs_wait();
-        pack_to(0, P_O16, 0);
+        for (uint32_t j = 0; j < n; ++j) {  // one tile per push: any ring capacity works
+            cb_reserve_back(P_O16, 1);
+            pack_to(j, P_O16, 0);
+            cb_push_back(P_O16, 1);
+        }
         tile_regs_release();
-        cb_push_back(P_O16, 1);
     }
-    cb_pop_front(P_R, ln ? 2 : 1);
+    cb_pop_front(P_R, 2);
     cb_pop_front(P_S16, ln ? 2 * nk : nk);
     cb_pop_front(P_S32, nk);
 }
@@ -315,7 +334,7 @@ PE_OS void norm_row(const TOp& o) {
 PE_OS void run_norm(const TOp& o) {
     cb_point(P_S32, o.a[OA_X32], o.nk, T32);
     cb_point(P_S16, o.a[OA_S16], 2 * o.nk, T16);
-    cb_point(P_O16, o.a[OA_O16], 8, T16);
+    cb_point(P_O16, o.a[OA_O16], 8, T16);  // == the BRISC writer (norm_write)
     cb_point(P_SCR, o.a[OA_SCR], 2, T32);
     cb_point(P_R, o.a[OA_R], 2, T32);
     cb_point(P_CONST, o.a[OA_CST], PC_N, T16);

@@ -34,6 +34,11 @@ static_assert(MT % RV == 0, "VLM bands must split the row tiles evenly");
 static_assert(MT == PTV + 1, "exactly one pad row tile (base 736 -> 768, LIBERO 544 -> 576)");
 
 constexpr uint32_t T16 = 2048, T8 = 1088, T32 = 4096;
+#ifdef PE_VLM_HIFI2
+constexpr uint32_t VLM_FID_HI = 1;  // A/B knob: VLM qkv / o / gate|up at HiFi2 (default LoFi, as the shipped path)
+#else
+constexpr uint32_t VLM_FID_HI = 0;
+#endif
 
 // Re-point a CB at [addr, addr + pages * page_bytes) of the arena (byte address; every RISC keeps its own interface copy,
 // DM RISCs in bytes, TRISCs in 16 B units: cb_addr_shift). Only while the CB is drained from this RISC's view (every op
@@ -74,7 +79,7 @@ constexpr uint32_t VV_G1 = 0, VV_G2 = 64, VV_N = 128;
 constexpr uint32_t GV_PLNW = 0, GV_PLNB = 36, GV_BPROJ = 72, GV_N = 136;
 
 // attention chunking
-constexpr uint32_t S_NK = 8, S_CH = 4;
+constexpr uint32_t S_NK = 8, S_CH = 8;  // SigLIP: all 8 key tiles in one chunk (no mask, DST holds 8)
 constexpr uint32_t V_CH = 6;
 constexpr uint32_t V_NP = (PTV + V_CH - 1) / V_CH;
 static_assert(V_NP <= 6, "merge keeps the NP weights in DST 1..NP");
@@ -138,10 +143,10 @@ PE_OS Op describe(uint32_t op) {
         case W_SFC1: mm(MM_R, S_M, S_R, S_D, S_I / 2, S_PIECE, E_BIAS_GELU, 0, 1); break;
         case W_SFC2: mm(MM_R, S_M, S_R, S_I, S_D / 2, S_PIECE_2, E_RES_BIAS, 0, 1); break;
         case W_PROJ: mm(MM_R, S_M, S_R, S_D, V_D / 2, S_PIECE, E_BIAS, 0, 1); break;
-        case W_VQKV: mm(MM_R, MT, RV, V_D, V_NQKV / 2, V_PIECE, E_ROPE, 0, 0); break;
-        case W_VO: mm(MM_R, MT, RV, V_D, V_D / 2, V_PIECE, E_RES, 0, 0); break;
-        case W_VGU: mm(MM_R, MT, RV, V_D, V_I, V_PIECE, E_GEGLU, 0, 0); break;
-        case W_VDOWN: mm(MM_S, MT, RV, V_I, V_D / 2, V_PIECE, E_RES, 0, 0); break;
+        case W_VQKV: mm(MM_R, MT, RV, V_D, V_NQKV / 2, V_PIECE, E_ROPE, 0, VLM_FID_HI); break;
+        case W_VO: mm(MM_R, MT, RV, V_D, V_D / 2, V_PIECE, E_RES, 0, VLM_FID_HI); break;
+        case W_VGU: mm(MM_R, MT, RV, V_D, V_I, V_PIECE, E_GEGLU, 0, VLM_FID_HI); break;
+        case W_VDOWN: mm(MM_S, MT, RV, V_I, V_D / 2, V_PIECE, E_RES, 0, VLM_FID_HI); break;
         case W_SLN1:
         case W_SLN2:
         case W_POSTLN:
@@ -171,6 +176,9 @@ PE_OS Op describe(uint32_t op) {
             break;
         default: o.kind = K_NOP; break;
     }
+#ifdef PE_DBG_ALL_NOP
+    o.kind = K_NOP;  // timing arm: barrier + descriptor cost per op
+#endif
     return o;
 }
 
@@ -316,7 +324,7 @@ PE_OS Lay layout(const Op& o) {
         y.m = take(T16);
         y.mf = take(T16);
         y.l = take(T32);
-        const uint32_t np = v ? V_NP : 2;
+        const uint32_t np = v ? V_NP : (S_NK + S_CH - 1) / S_CH;
         const uint32_t dh = v ? V_DH : S_DH;
         y.op_ = take(2 * np * dh * T16);
         y.pm = take(2 * np * T16);

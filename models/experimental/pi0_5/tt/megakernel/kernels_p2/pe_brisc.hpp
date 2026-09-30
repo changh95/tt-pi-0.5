@@ -158,11 +158,15 @@ PE_OS void norm_write(const Op& o, const Core& c, const Lay& L, uint32_t A) {
     cb_point(P_O16, A + L.o16, 8, T16);
     const auto out = bdram(o.what >= W_VRMS1 ? PA_XN_V : PA_XN_S, T16);
     for (uint32_t r = c.lin; r < o.items; r += NCORES) {
-        for (uint32_t t = 0; t < o.nk; ++t) {
-            cb_wait_front(P_O16, 1);
-            noc_async_write_page(r * o.nk + t, out, get_read_ptr(P_O16));
+        for (uint32_t t0 = 0; t0 < o.nk; t0 += 4) {  // 4 tiles per flush (the TRISC ring holds 8)
+            const uint32_t n = o.nk - t0 < 4 ? o.nk - t0 : 4;
+            cb_wait_front(P_O16, n);
+            const uint32_t l1 = get_read_ptr(P_O16);
+            for (uint32_t t = 0; t < n; ++t) {
+                noc_async_write_page(r * o.nk + t0 + t, out, l1 + t * T16);
+            }
             noc_async_writes_flushed();
-            cb_pop_front(P_O16, 1);
+            cb_pop_front(P_O16, n);
         }
     }
 }
@@ -198,11 +202,14 @@ PE_OS void embed_write(const Op& o, const Core& c, const Lay& L, uint32_t A) {
     const auto out = bdram(PA_X_V, T32);
     for (uint32_t it = c.lin; it < o.items; it += NCORES) {
         const uint32_t row = S_M + it / 4, cq = it % 4;
-        for (uint32_t t = 0; t < 16; ++t) {
-            cb_wait_front(P_O32, 1);
-            noc_async_write_page(row * V_D + cq * 16 + t, out, get_read_ptr(P_O32));
+        for (uint32_t t0 = 0; t0 < 16; t0 += 4) {
+            cb_wait_front(P_O32, 4);
+            const uint32_t l1 = get_read_ptr(P_O32);
+            for (uint32_t t = 0; t < 4; ++t) {
+                noc_async_write_page(row * V_D + cq * 16 + t0 + t, out, l1 + t * T32);
+            }
             noc_async_writes_flushed();
-            cb_pop_front(P_O32, 1);
+            cb_pop_front(P_O32, 4);
         }
     }
 }

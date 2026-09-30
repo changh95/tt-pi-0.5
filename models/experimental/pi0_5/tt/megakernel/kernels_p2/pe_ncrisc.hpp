@@ -239,18 +239,25 @@ PE_OS void norm_read(const Op& o, const Core& c, const Lay& L, uint32_t A) {
     const auto x = dram(o.what >= W_VRMS1 ? PA_X_V : PA_X_S, T32);
     const auto g = dram(garg, T16);
     for (uint32_t r = c.lin; r < o.items; r += NCORES) {
-        cb_reserve_back(P_S32, nk);
+        for (uint32_t t0 = 0; t0 < nk; t0 += 8) {  // x in chunks of 8 tiles (the TRISC's statistics start on the first)
+            const uint32_t n = nk - t0 < 8 ? nk - t0 : 8;
+            cb_reserve_back(P_S32, n);
+            const uint32_t ax = get_write_ptr(P_S32);
+            for (uint32_t t = 0; t < n; ++t) {
+                noc_async_read_page(r * nk + t0 + t, x, ax + t * T32);
+            }
+            noc_async_read_barrier();
+            cb_push_back(P_S32, n);
+        }
         cb_reserve_back(P_S16, ln ? 2 * nk : nk);
-        const uint32_t ax = get_write_ptr(P_S32), ag = get_write_ptr(P_S16);
+        const uint32_t ag = get_write_ptr(P_S16);
         for (uint32_t t = 0; t < nk; ++t) {
-            noc_async_read_page(r * nk + t, x, ax + t * T32);
             noc_async_read_page(gw + t, g, ag + t * T16);
             if (ln) {
                 noc_async_read_page(gb + t, g, ag + (nk + t) * T16);
             }
         }
         noc_async_read_barrier();
-        cb_push_back(P_S32, nk);
         cb_push_back(P_S16, ln ? 2 * nk : nk);
     }
 }
