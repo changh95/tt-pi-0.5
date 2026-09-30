@@ -634,3 +634,30 @@ mk_expert_kernel_main()); host pe_geometry.py / pe_host.py / pe_program.py; CPU 
 Next: whole prefix end to end (all 314 ops, all arenas) vs the host model and the ttnn caches; then whole-model
 integration; speed work on SigLIP (norms: per-call inits; attention: single-chunk softmax; in0 fill overlap) and the
 weight feeders (VLM matmuls look feeder-bound: gate|up 2.95 us per 34.8 KB page per column).
+
+## 2026-09-30 21:06:06 KST -- mk2-r0-s0: WHOLE sample_actions as ONE generic_op works end to end (first numbers)
+
+- Whole prefix on the engine (all 314 ops, p2/results/b18.json, base, the same inputs as the shipped ttnn prefix in the
+  same process): 18-layer K / V vs the host fp32 decomposition min PCC 0.98589 (L0 K 0.99963, L17 V 0.98958); the SHIPPED
+  caches vs the same fp32 host min 0.96562 (L17 V 0.96580): mine is closer to fp32 on every layer. Mine vs shipped min
+  0.95975: the WP-P2-3 bar "vs the ttnn caches >= 0.999" is failed by the shipped path's own error (recorded as such).
+  Prefix device time 44.2 ms per rep (5 reps) vs TTNN 52.42 ms: WP-P2-3 time bar PASS.
+- Stage checks (b17.json): SigLIP after 27 layers 0.99984, post-LN 0.999999, projector rows 0.999997, embedding rows
+  exact, pad rows 0, VLM layers 0-2 x 0.99994..0.99999, K 0.99989..0.99991.
+- Hang on the way: the embedding op hung when it was the FIRST op of a launch (TRISC tilize after hw_startup; watcher
+  signature b16: 28 language-item cores BRISC CWFW / NCRISC PNGO / TRISC0 UPTW / TRISC1 MWDD / TRISC2 K, 81 cores PBGW, hub
+  PHUB). Fix: the NCRISC tilizes by word copies (face layout), the TRISC only scales (-1.4 KB TRISC code). One 30 min hold
+  (b15, 19:38-20:08) was lost to it; single-op triage now runs with 150 s timeouts.
+- PI05_MEGAKERNEL=whole in tt/ttnn_pi0_model.py (_whole_for, _pe_write_inputs; the trace holds wm.run only):
+  * pe_whole_run.py (w19_*.json, one hold): whole 62.68 ms median vs expert 70.62 ms; 20 replays bit-identical; the first
+    request again after the others identical. whole vs expert actions PCC 0.961 / 0.970 / 0.992 (random inputs).
+  * tests/pcc/test_pcc_pi05_fused.py under whole (pcc_whole_{libero,base}.json): LIBERO openpi golden PCC7 mean 0.999959,
+    min 0.999926 (phase 1 0.999884 / 0.999778; shipped 0.999839 / 0.999712), traced, ten replays identical, call
+    58.71 ms (phase 1 65.8). Base vs the fp32 torch reference on the test's seeds: 0.99481 0.98146 0.99286 0.99760 0.98780
+    0.99839 (shipped B0 0.99843 0.98397 0.93811 0.99549 0.98017 0.98793): closer on 4/6, WORSE on n40 (-0.0036) and n97
+    (-0.0025): the amended per-seed gate is not met yet. Mask live (-0.62), pad ids invisible, default mask identical,
+    replays identical; call 62.75 ms.
+- Process note: I edited kernels_p2/*.hpp (#ifdef'd timing arms only) at ~20:36 while b19 held the card; its whole arm
+  compiled at 20:41 from the edited sources (arms off by default, default code unchanged, but the rule was broken).
+Next: precision (VLM matmuls HiFi2 A/B; the per-seed gate over >= 18 seeds), speed (norms 8 ms -> FPU stats + batched
+apply; attention 9.7 ms; feeders), then the full gate set.

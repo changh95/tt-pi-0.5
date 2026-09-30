@@ -1,0 +1,59 @@
+{
+ "arm": "expert",
+ "shape": "base",
+ "seeds": [
+  0,
+  1,
+  2
+ ],
+ "n_lang": [
+  150,
+  150,
+  150
+ ],
+ "build_s": 21.6,
+ "stamp": {
+  "backend": "expert",
+  "program": {
+   "kernel_digest": "328761c8a1ce3fd9",
+   "sources": [
+    "mk_brisc.cpp",
+    "mk_defs.hpp",
+    "mk_dm.hpp",
+    "mk_ncrisc.cpp",
+    "mk_trisc.cpp"
+   ]
+  }
+ },
+ "latency_ms_median": 70.623,
+ "latency_ms": [
+  70.388,
+  70.476,
+  70.484,
+  70.5,
+  70.506,
+  70.532,
+  70.54,
+  70.544,
+  70.547,
+  70.621,
+  70.623,
+  70.626,
+  70.64,
+  70.666,
+  70.694,
+  70.698,
+  70.713,
+  70.723,
+  70.848,
+  70.867
+ ],
+ "replays_identical": true,
+ "first_seed_again_identical": true,
+ "l1": {
+  "total_per_bank": 1371136,
+  "allocated_per_bank": 117248,
+  "largest_free_per_bank": 1253888,
+  "cb_union": 1156768
+ }
+}
