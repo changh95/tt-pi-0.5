@@ -70,6 +70,37 @@ FORCE_INLINE void wait_credits(uint32_t word0, uint32_t n, const uint32_t* base,
         }                                      \
     } while (0)
 
+// the op's (Op, Lay): computed once by the NCRISC (describe / layout are not compiled into the BRISC) and read by the
+// BRISC after PS_OPK says so. Overwrite safety: op k + 1's copy is written after go k + 1, i.e. after this BRISC arrived
+// at op k's barrier, long after it read op k's copy.
+constexpr uint32_t OP_WORDS = sizeof(Op) / 4, LAY_WORDS = sizeof(Lay) / 4;
+static_assert(4 * (OP_WORDS + LAY_WORDS) <= (PS_WORDS - PS_SHARE) * PSTRIDE, "(Op, Lay) overflow PS_SHARE");
+FORCE_INLINE void share_oplay(const Op& o, const Lay& L, uint32_t k) {
+    volatile tt_l1_ptr uint32_t* d = ps_ptr(PS_SHARE);
+    const uint32_t* s = reinterpret_cast<const uint32_t*>(&o);
+    for (uint32_t i = 0; i < OP_WORDS; ++i) {
+        d[i] = s[i];
+    }
+    s = reinterpret_cast<const uint32_t*>(&L);
+    for (uint32_t i = 0; i < LAY_WORDS; ++i) {
+        d[OP_WORDS + i] = s[i];
+    }
+    asm volatile("fence" ::: "memory");
+    *ps_ptr(PS_OPK) = k + 1;
+}
+FORCE_INLINE void take_oplay(Op& o, Lay& L, uint32_t k) {
+    PWAIT_GE(PS_OPK, k + 1, "POPK");  // (ps_read invalidated the cache)
+    volatile tt_l1_ptr uint32_t* d = ps_ptr(PS_SHARE);
+    uint32_t* s = reinterpret_cast<uint32_t*>(&o);
+    for (uint32_t i = 0; i < OP_WORDS; ++i) {
+        s[i] = d[i];
+    }
+    s = reinterpret_cast<uint32_t*>(&L);
+    for (uint32_t i = 0; i < LAY_WORDS; ++i) {
+        s[i] = d[OP_WORDS + i];
+    }
+}
+
 // Multicast NoC address of (x0, y0)-(x1, y1) in NoC-0 virtual coordinates (min corner first); NoC 1 is end-first.
 FORCE_INLINE uint64_t pmcast(uint32_t x0, uint32_t y0, uint32_t x1, uint32_t y1, uint32_t addr) {
     if (noc_index == 0) {

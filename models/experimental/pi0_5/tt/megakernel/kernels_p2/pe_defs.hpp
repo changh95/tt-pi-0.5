@@ -102,6 +102,11 @@ constexpr uint32_t E_POS = 7;        // DST preloaded with the bf16 (position + 
 // norm kinds
 constexpr uint32_t N_RMS = 0;
 constexpr uint32_t N_LN = 1;
+// norm column groups: an item is (row tile, column group); statistics over the whole row (redundant per group), the
+// apply and the write of one group only (SigLIP 16 x 6 = 96 items, VLM mt x 4 <= 96 items: <= one item per core)
+constexpr uint32_t NCG_S = 6;
+constexpr uint32_t NCG_V = 4;
+static_assert(S_M * NCG_S <= NCORES, "norm items: <= one per core (the stats exchange assumes item == core)");
 
 // ---------------------------------------------------------------- circular buffers (ids 32..; 0..31 = phase 1)
 constexpr uint32_t P_IN0 = 32;     // bf16 in0 (resident band / streamed K blocks)
@@ -198,6 +203,8 @@ constexpr uint32_t PSTRIDE = 16;
 constexpr uint32_t PS_GO = 0;        // every core: barrier go (op index + 1), multicast by the hub
 constexpr uint32_t PS_ARR = 1;       // hub: barrier arrivals (cumulative)
 constexpr uint32_t PS_NCDONE = 2;    // local: ops the NCRISC finished (BRISC waits before it arrives)
+constexpr uint32_t PS_OPK = 3;       // local: ops whose (Op, Lay) the NCRISC published at PS_SHARE (op index + 1)
+constexpr uint32_t PS_NR = 5;        // norm item core: (rstd, mu) tiles landed in its P_R (cumulative count)
 constexpr uint32_t PS_W_VAL = 4;     // receiver: weight pages valid ((op << 16) | pages)
 constexpr uint32_t PS_I_VAL = 6;     // receiver: in0 pages valid ((op << 16) | pages)
 constexpr uint32_t PS_SRC_GO = 7;    // hub-local source of the go multicast
@@ -215,6 +222,8 @@ constexpr uint32_t KVF_X0 = 7;       // the 4 VLM K / V feeders: (7..10, IF_Y) (
 constexpr uint32_t PS_N = 40;
 constexpr uint32_t PS_DIAG = 40;     // 40..43: diagnostics staging (8 words, written once at the end)
 constexpr uint32_t PS_TSTAMP = 44;   // 44..47: the hub's time-stamp record staging (16 B)
+constexpr uint32_t PS_SHARE = 48;    // 48..63: the NCRISC's (Op, Lay) of the current op, read by the BRISC (256 B)
+constexpr uint32_t PS_WORDS = 64;    // P_SYNC = PS_WORDS x PSTRIDE bytes
 
 // ---------------------------------------------------------------- common runtime args (appended after phase 1's)
 // The TRISC reads only phase 1's and PA_OPFIRST..PA_REPS, so its list is cut at PA_TRISC_N (ring bytes). The VLM K / V
@@ -251,9 +260,11 @@ constexpr uint32_t PA_WPATCH = 126; // bf16  patch-embed weight arena (bank-stri
 constexpr uint32_t PA_WPROJ = 127; // bfp8  projector weight arena
 constexpr uint32_t PA_DIAG = 128;  // uint32 [110 pages of 64 B] per-core diagnostics (arena bounds, ops run)
 constexpr uint32_t PA_TIMES = 129; // uint32 [4096, 16] ROW_MAJOR: the hub stamps (wall clock, k, op) at every go
-constexpr uint32_t PA_WS = 130;      // SigLIP layer weight arenas (27, bfp8, bank-striped pages)
-constexpr uint32_t PA_WV = 157;      // VLM layer weight arenas (18)
-constexpr uint32_t PA_N = 175;       // common args in total
+constexpr uint32_t PA_NOCX0 = 130;   // 130..140: NoC x of logical columns 0..10 (host-translated)
+constexpr uint32_t PA_BRISC_N = 141; // the BRISC's common-arg list length (the weight arenas are NCRISC-only)
+constexpr uint32_t PA_WS = 141;      // SigLIP layer weight arenas (27, bfp8, bank-striped pages)
+constexpr uint32_t PA_WV = 168;      // VLM layer weight arenas (18)
+constexpr uint32_t PA_N = 186;       // common args in total
 
 // ---------------------------------------------------------------- per-core runtime args (appended after phase 1's)
 constexpr uint32_t PR0 = 48;

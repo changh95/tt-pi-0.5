@@ -17,6 +17,7 @@ constexpr auto bacc_dram = TensorAccessorArgs<PE_CT0 + PT_ACC>();
 constexpr auto bacc_l1 = TensorAccessorArgs<bacc_dram.next_compile_time_args_offset()>();
 
 FORCE_INLINE auto bdram(uint32_t arg, uint32_t page) { return TensorAccessor(bacc_dram, cra(arg), page); }
+NOINL void wrp(uint32_t arg, uint32_t z, uint32_t page, uint32_t l1) { noc_async_write_page(page, bdram(arg, z), l1); }
 
 struct BState {
     uint32_t ibase[NCOL] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};  // in0 feeder: pages each receiver column was sent
@@ -157,14 +158,31 @@ PE_OS void feed_in0(const Op& o, const Core& c, const Lay& L, uint32_t A, uint32
 // ---------------------------------------------------------------- norm / attention / embedding outputs
 PE_OS void norm_write(const Op& o, const Core& c, const Lay& L, uint32_t A) {
     cb_point(P_O16, A + L.o16, 8, T16);
-    const auto out = bdram(o.what >= W_VRMS1 ? PA_XN_V : PA_XN_S, T16);
-    for (uint32_t r = c.lin; r < o.items; r += NCORES) {
-        for (uint32_t t0 = 0; t0 < o.nk; t0 += 4) {  // 4 tiles per flush (the TRISC ring holds 8)
-            const uint32_t n = o.nk - t0 < 4 ? o.nk - t0 : 4;
+    const uint32_t out_a = o.what >= W_VRMS1 ? PA_XN_V : PA_XN_S, out_z = T16;
+    const uint32_t ncg = o.nkind == N_LN ? NCG_S : NCG_V, w = o.nk / ncg;
+    for (uint32_t it = c.lin; it < o.items; it += NCORES) {
+        const uint32_t r = it / ncg, c0 = (it % ncg) * w;
+        {  // this group's partial statistics -> slot (it % ncg) of P_R on the row's ncg item cores (item == core)
+            cb_point(P_O32, A + L.o32, 2, T32);
+            cb_wait_front(P_O32, 2);
+            const uint32_t src = get_read_ptr(P_O32), row0 = it - it % ncg, dst = A + L.r + (it % ncg) * 2 * T32;
+            for (uint32_t g = 0; g < ncg; ++g) {
+                const uint32_t pl = row0 + g;
+                noc_async_write(src, get_noc_addr(cra(PA_NOCX0 + pl % NCOL), c.nocy[pl / NCOL], dst), 2 * T32);
+            }
+            noc_async_write_barrier();  // landed before the counts
+            for (uint32_t g = 0; g < ncg; ++g) {
+                const uint32_t pl = row0 + g;
+                inc_word(cra(PA_NOCX0 + pl % NCOL), c.nocy[pl / NCOL], PS_NR);
+            }
+            cb_pop_front(P_O32, 2);
+        }
+        for (uint32_t t0 = 0; t0 < w; t0 += 4) {  // 4 tiles per flush (the TRISC ring holds 8)
+            const uint32_t n = w - t0 < 4 ? w - t0 : 4;
             cb_wait_front(P_O16, n);
             const uint32_t l1 = get_read_ptr(P_O16);
             for (uint32_t t = 0; t < n; ++t) {
-                noc_async_write_page(r * o.nk + t0 + t, out, l1 + t * T16);
+                wrp(out_a, out_z, r * o.nk + c0 + t0 + t, l1 + t * T16);
             }
             noc_async_writes_flushed();
             cb_pop_front(P_O16, n);
@@ -176,7 +194,7 @@ PE_OS void attn_write(const Op& o, const Core& c, const Lay& L, uint32_t A) {
     const bool v = o.what == W_VATTN;
     const uint32_t dh = v ? V_DH : S_DH;
     cb_point(P_O16, A + L.o16, 2 * dh, T16);
-    const auto out = bdram(v ? PA_CTX_V : PA_CTX_S, T16);
+    const uint32_t out_a = v ? PA_CTX_V : PA_CTX_S, out_z = T16;
     for (uint32_t it = c.lin; it < o.items; it += NCORES) {
         uint32_t img = 0, sh = 0, r0 = 0, nr = 2;
         if (!v) {
@@ -193,7 +211,7 @@ PE_OS void attn_write(const Op& o, const Core& c, const Lay& L, uint32_t A) {
             cb_wait_front(P_O16, dh);
             const uint32_t l1 = get_read_ptr(P_O16);
             for (uint32_t d = 0; d < dh; ++d) {
-                noc_async_write_page(base + d, out, l1 + d * T16);
+                wrp(out_a, out_z, base + d, l1 + d * T16);
             }
             noc_async_writes_flushed();
             cb_pop_front(P_O16, dh);
@@ -203,14 +221,14 @@ PE_OS void attn_write(const Op& o, const Core& c, const Lay& L, uint32_t A) {
 
 PE_OS void embed_write(const Op& o, const Core& c, const Lay& L, uint32_t A) {
     cb_point(P_O32, A + L.o32, 16, T32);
-    const auto out = bdram(PA_X_V, T32);
+    const uint32_t out_a = PA_X_V, out_z = T32;
     for (uint32_t it = c.lin; it < o.items; it += NCORES) {
         const uint32_t row = S_M + it / 4, cq = it % 4;
         for (uint32_t t0 = 0; t0 < 16; t0 += 4) {
             cb_wait_front(P_O32, 4);
             const uint32_t l1 = get_read_ptr(P_O32);
             for (uint32_t t = 0; t < 4; ++t) {
-                noc_async_write_page(row * V_D + cq * 16 + t0 + t, out, l1 + t * T32);
+                wrp(out_a, out_z, row * V_D + cq * 16 + t0 + t, l1 + t * T32);
             }
             noc_async_writes_flushed();
             cb_pop_front(P_O32, 4);
@@ -281,8 +299,9 @@ PE_OS void run_brisc() {
     const uint32_t reps = cra(PA_REPS);
     for (uint32_t rep = 0; rep < reps; ++rep)
     for (uint32_t op = first; op < stop; ++op, ++k) {
-        const Op o = describe(op);
-        const Lay L = layout(o);
+        Op o;
+        Lay L;
+        take_oplay(o, L, k);
         if (L.end > need) {
             need = L.end;
         }

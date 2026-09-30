@@ -674,3 +674,27 @@ apply; attention 9.7 ms; feeders), then the full gate set.
 - Whole prefix (p2/results/b29_prefix.json): 41.8 ms/rep (was 43.0); K/V vs host fp32 min PCC 0.994709.
 - P2-2 still open: 450 us > 394.7 stop line. Next levers: fuse LN into the producer (O / FC2 epilogue emits the LN'd
   bf16 copy -> removes 2 x 43 us minus epilogue cost), QKV / FC1 / FC2 matmul efficiency.
+
+### 2026-09-30 22:16:30 P2 norms: column groups + distributed statistics; size-check fix; BRISC reads the NCRISC's (Op, Lay)
+- SIZE CHECK BUG (found 21:5x): pe_size_check picked the NEWEST ELF per RISC; a cached (unchanged) kernel kept its old
+  mtime, so the base row could read the libero BRISC (mock19's base BRISC 28,320 B = mock18's libero BRISC). mock19's
+  130,624 B was therefore wrong: the committed 0498289 state was ~131,440 B (over the 131,072 gate, under the 136,192
+  ring). Fixed: only ELFs built by this compile count, missing one = error; the mock cache is now emptied before a run.
+- BRISC no longer compiles describe / layout: the NCRISC publishes (Op, Lay) at P_SYNC words 48..63 and PS_OPK = k + 1;
+  the BRISC waits and copies (-1.8 KB BRISC). P_SYNC 768 -> 1,024 B.
+- Norm items are (row tile, column group): SigLIP 16 x 6, VLM mt x 4 (<= 96 <= 110 cores, one item per core). Three
+  steps measured (bringup sig0/vlm0, 20 in-kernel reps):
+  b30 redundant statistics (every group core reads the whole row): SLN 43.0 -> 56.3 us, VRMS 51 -> 83.6 us (DRAM:
+      6 / 4 x the x reads) -- rejected.
+  b31 one statistics core per row, (rstd, mu) sent to the row's cores: SLN 33.9 us, VRMS 50.8 us (the stats core's full
+      row read + pass bound it) -- superseded.
+  b32 every group core computes partial (sum x^2, row sum x) over its w tiles, all-to-all into slot g of P_R of the row's
+      cores (noc_async_write + write barrier + PS_NR increments), each sums the ncg partials (HiFi4 matmuls with ONES;
+      mu via the x32 row-sum trick): SLN 28.2 us, VRMS 40.0 us. PCC LN1 0.9999985, LN2 0.9999986, RMS1 0.9999971,
+      RMS2 0.999997 (unchanged to 7 digits). Files p2/results/b30.json b31.json b32.json.
+- Size base 130,212 B / libero 128,084 B (p2/results/mock25.json; cold paths use one out-of-line page read / write,
+  BRISC common args cut at PA_BRISC_N = 141, the weight arenas are NCRISC-only).
+- b32: SigLIP layer 421.9 us (LN 28.2 x 2, QKV 52.7, ATTN 90.1, O 40.4, FC1 92.6, FC2 90.0); VLM layer 1.702 ms;
+  prefix 40.65 ms/rep (b32_prefix.json, K/V vs host fp32 min PCC 0.99497); whole call base 59.15 ms median of 20,
+  replays identical, alternation identical (w32.json).
+- P2-2 still open: 421.9 > 394.7 us.

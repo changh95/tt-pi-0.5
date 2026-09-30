@@ -193,6 +193,10 @@ class WholeMegakernel:
             c[P.PA_WV + i] = addr(ten)
         for l in range(G.N_LAYERS):  # the prefix writes the caches phase 1 reads (its C_K_ADDR / C_V_ADDR)
             assert c[G.C_K_ADDR + l] == addr(kv[l][0]) and c[G.C_V_ADDR + l] == addr(kv[l][1])
+        for x in range(P.NCOL):  # NoC x of logical column x (the norm statistics exchange addresses cores by index)
+            c[P.PA_NOCX0 + x] = int(self.mk.noc((x, 0))[0])
+        assert all(int(self.mk.noc((x, y))[0]) == c[P.PA_NOCX0 + x] for x in range(P.NCOL) for y in range(P.GRID_Y))
+        assert self.ps.mt * P.NCG_V <= P.NCORES and P.S_M * P.NCG_S <= P.NCORES  # norm items: <= one per core
         c[P.PA_OPFIRST] = int(first)
         c[P.PA_DBGSTOP] = int(stop)
         c[P.PA_REPS] = int(reps)
@@ -265,7 +269,8 @@ class WholeMegakernel:
                                   compile_time_args=ct, runtime_args=rt, common_runtime_args=common, defines=defines,
                                   config=dm(processor=ttnn.DataMovementProcessor.RISCV_1, noc=ttnn.NOC.NOC_0)),
             ttnn.KernelDescriptor(kernel_source=KERNELS2["brisc"], source_type=fp, core_ranges=cores,
-                                  compile_time_args=ct, runtime_args=rt, common_runtime_args=common, defines=defines,
+                                  compile_time_args=ct, runtime_args=rt, common_runtime_args=common[:P.PA_BRISC_N],
+                                  defines=defines,
                                   config=dm(processor=ttnn.DataMovementProcessor.RISCV_0, noc=ttnn.NOC.NOC_1)),
             ttnn.KernelDescriptor(kernel_source=KERNELS2["trisc"], source_type=fp, core_ranges=cores,
                                   compile_time_args=ct, runtime_args=rt_t, common_runtime_args=common[:P.PA_TRISC_N],

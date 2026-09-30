@@ -32,11 +32,16 @@ def find_elfs2(root: Path, since: float) -> Dict[str, Tuple[int, str]]:
         best = None
         for p in paths:
             t, d = elf_text_data(p)
-            key = (os.path.getmtime(p) >= since - 1, os.path.getmtime(p))
+            # only an ELF built by THIS compile counts: a cached kernel keeps its old mtime and the newest other ELF
+            # can be the other shape's (the 09-30 mock19 base row read the libero BRISC). Run with an empty cache.
+            if os.path.getmtime(p) < since - 1:
+                continue
+            key = os.path.getmtime(p)
             if best is None or key > best[0]:
                 best = (key, t + d, p)
-        if best is not None:
-            out[risc] = (best[1], best[2])
+        if best is None:
+            raise RuntimeError(f"no {risc} ELF built by this compile under {root}: clear TT_METAL_CACHE first")
+        out[risc] = (best[1], best[2])
     return out
 
 
@@ -115,7 +120,7 @@ def footprint2(elfs) -> Dict[str, object]:
     from . import pe_geometry as P
 
     bins = {r: (s + 15) // 16 * 16 for r, (s, _) in elfs.items()}
-    args = 4 * (2 * (P.PR_N + P.PA_N) + G.N_RT_ARGS + P.PA_TRISC_N)  # BRISC + NCRISC full lists, TRISC cut
+    args = 4 * (2 * P.PR_N + P.PA_N + P.PA_BRISC_N + G.N_RT_ARGS + P.PA_TRISC_N)  # NCRISC full, BRISC / TRISC cut
     cbs = 16 * (P.P_LAST + 1)
     sems = 16 * 4
     total = sum(bins.values()) + args + cbs + sems

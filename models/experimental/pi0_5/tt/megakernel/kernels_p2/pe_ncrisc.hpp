@@ -18,9 +18,13 @@ constexpr auto acc_dram = TensorAccessorArgs<PE_CT0 + PT_ACC>();
 constexpr auto acc_l1 = TensorAccessorArgs<acc_dram.next_compile_time_args_offset()>();
 
 FORCE_INLINE auto dram(uint32_t arg, uint32_t page) { return TensorAccessor(acc_dram, cra(arg), page); }
+// one out-of-line page read of common-arg buffer `arg` (page size z): the cold paths (side vectors, norms, attention,
+// embedding) share one copy of the address generation
+NOINL void rdp(uint32_t arg, uint32_t z, uint32_t page, uint32_t l1) { noc_async_read_page(page, dram(arg, z), l1); }
 
 struct NState {
     uint32_t wbase[8] = {0, 0, 0, 0, 0, 0, 0, 0};  // weight feeder: pages each receiver row was sent so far
+    uint32_t nr = 0;                                // norm items so far (PS_NR count)
 };
 
 FORCE_INLINE uint32_t w_arena_arg(const Op& o) {
@@ -51,40 +55,40 @@ PE_OS void read_side(const Op& o, uint32_t p, uint32_t r0) {
         cb_reserve_back(P_S16, n16);
         uint32_t a = get_write_ptr(P_S16);
         if (o.epi == E_POS) {
-            const auto t = dram(PA_POS, T16);
+            const uint32_t t_a = PA_POS, t_z = T16;
             for (uint32_t r = 0; r < rp; ++r) {
                 for (uint32_t u = 0; u < 2; ++u, a += T16) {
-                    noc_async_read_page(((r0 + r) % S_IMG) * S_D + pair_col(o, p, u), t, a);
+                    rdp(t_a, t_z, ((r0 + r) % S_IMG) * S_D + pair_col(o, p, u), a);
                 }
             }
         } else if (o.epi == E_ROPE) {
             const bool q = p < 32;
-            const auto c = dram(q ? PA_COSQ : PA_COSK, T16);
-            const auto s = dram(q ? PA_SINQ : PA_SINK, T16);
+            const uint32_t c_a = q ? PA_COSQ : PA_COSK, c_z = T16;
+            const uint32_t s_a = q ? PA_SINQ : PA_SINK, s_z = T16;
             const uint32_t d0 = p % 4, d1 = d0 + 4;
             for (uint32_t r = 0; r < rp; ++r) {
                 const uint32_t row = (r0 + r) * V_DH;
-                noc_async_read_page(row + d0, c, a);
-                noc_async_read_page(row + d0, s, a + T16);
-                noc_async_read_page(row + d1, c, a + 2 * T16);
-                noc_async_read_page(row + d1, s, a + 3 * T16);
+                rdp(c_a, c_z, row + d0, a);
+                rdp(s_a, s_z, row + d0, a + T16);
+                rdp(c_a, c_z, row + d1, a + 2 * T16);
+                rdp(s_a, s_z, row + d1, a + 3 * T16);
                 a += 4 * T16;
             }
         } else {  // bias (row-broadcast tiles)
-            const auto b = dram(o.what == W_PROJ ? PA_GVEC : PA_SVEC, T16);
-            noc_async_read_page(bias_page(o, pair_col(o, p, 0)), b, a);
-            noc_async_read_page(bias_page(o, pair_col(o, p, 1)), b, a + T16);
+            const uint32_t b_a = o.what == W_PROJ ? PA_GVEC : PA_SVEC, b_z = T16;
+            rdp(b_a, b_z, bias_page(o, pair_col(o, p, 0)), a);
+            rdp(b_a, b_z, bias_page(o, pair_col(o, p, 1)), a + T16);
         }
     }
     if (n32) {
         cb_reserve_back(P_S32, n32);
         uint32_t a = get_write_ptr(P_S32);
         const bool v = o.what >= W_VRMS1;
-        const auto x = dram(v ? PA_X_V : PA_X_S, T32);
+        const uint32_t x_a = v ? PA_X_V : PA_X_S, x_z = T32;
         const uint32_t nt = v ? V_D : S_D;
         for (uint32_t r = 0; r < rp; ++r) {
             for (uint32_t u = 0; u < 2; ++u, a += T32) {
-                noc_async_read_page((r0 + r) * nt + pair_col(o, p, u), x, a);
+                rdp(x_a, x_z, (r0 + r) * nt + pair_col(o, p, u), a);
             }
         }
     }
@@ -220,19 +224,20 @@ PE_OS void feed_w(const Op& o, const Core& c, const Lay& L, uint32_t A, uint32_t
 PE_OS void read_consts(uint32_t A, const Lay& L) {
     cb_point(P_CONST, A + L.cst, PC_N, T16);
     cb_reserve_back(P_CONST, PC_N);
-    const auto t = dram(PA_CONST, T16);
+    const uint32_t t_a = PA_CONST, t_z = T16;
     for (uint32_t i = 0; i < PC_N; ++i) {
-        noc_async_read_page(i, t, get_write_ptr(P_CONST) + i * T16);
+        rdp(t_a, t_z, i, get_write_ptr(P_CONST) + i * T16);
     }
     noc_async_read_barrier();
     cb_push_back(P_CONST, PC_N);
 }
 
-PE_OS void norm_read(const Op& o, const Core& c, const Lay& L, uint32_t A) {
+PE_OS void norm_read(const Op& o, const Core& c, const Lay& L, uint32_t A, NState& st) {
     const bool ln = o.nkind == N_LN;
-    const uint32_t nk = o.nk;
+    const uint32_t nk = o.nk, ncg = ln ? NCG_S : NCG_V, w = nk / ncg;
     cb_point(P_X32, A + L.x32, nk, T32);
-    cb_point(P_S16, A + L.s16, 2 * nk, T16);
+    cb_point(P_S16, A + L.s16, 2 * w, T16);
+    cb_point(P_R, A + L.r, 2 * ncg, T32);
     read_consts(A, L);
     uint32_t gw = 0, gb = 0, garg = PA_VVEC;
     switch (o.what) {
@@ -242,29 +247,35 @@ PE_OS void norm_read(const Op& o, const Core& c, const Lay& L, uint32_t A) {
         case W_SLN2: garg = PA_SVEC; gw = o.layer * SV_N + SV_LN2W; gb = o.layer * SV_N + SV_LN2B; break;
         default: garg = PA_GVEC; gw = GV_PLNW; gb = GV_PLNB; break;  // W_POSTLN
     }
-    const auto x = dram(o.what >= W_VRMS1 ? PA_X_V : PA_X_S, T32);
-    const auto g = dram(garg, T16);
-    for (uint32_t r = c.lin; r < o.items; r += NCORES) {
-        for (uint32_t t0 = 0; t0 < nk; t0 += 8) {  // x in chunks of 8 tiles (the TRISC's statistics start on the first)
-            const uint32_t n = nk - t0 < 8 ? nk - t0 : 8;
+    const uint32_t x_a = o.what >= W_VRMS1 ? PA_X_V : PA_X_S, x_z = T32;
+    const uint32_t g_a = garg, g_z = T16;
+    for (uint32_t it = c.lin; it < o.items; it += NCORES) {
+        const uint32_t r = it / ncg, c0 = (it % ncg) * w;
+        for (uint32_t t0 = 0; t0 < w; t0 += 8) {  // this group's x in chunks of 8 tiles
+            const uint32_t n = w - t0 < 8 ? w - t0 : 8;
             cb_reserve_back(P_X32, n);
             const uint32_t ax = get_write_ptr(P_X32);
             for (uint32_t t = 0; t < n; ++t) {
-                noc_async_read_page(r * nk + t0 + t, x, ax + t * T32);
+                rdp(x_a, x_z, r * nk + c0 + t0 + t, ax + t * T32);
             }
             noc_async_read_barrier();
             cb_push_back(P_X32, n);
         }
-        cb_reserve_back(P_S16, ln ? 2 * nk : nk);
+        cb_reserve_back(P_S16, ln ? 2 * w : w);
         const uint32_t ag = get_write_ptr(P_S16);
-        for (uint32_t t = 0; t < nk; ++t) {
-            noc_async_read_page(gw + t, g, ag + t * T16);
+        for (uint32_t t = 0; t < w; ++t) {
+            rdp(g_a, g_z, gw + c0 + t, ag + t * T16);
             if (ln) {
-                noc_async_read_page(gb + t, g, ag + (nk + t) * T16);
+                rdp(g_a, g_z, gb + c0 + t, ag + (w + t) * T16);
             }
         }
         noc_async_read_barrier();
-        cb_push_back(P_S16, ln ? 2 * nk : nk);
+        cb_push_back(P_S16, ln ? 2 * w : w);
+        // the row's ncg partial-statistics pairs: written into P_R by the row's BRISCs, then PS_NR (one each)
+        cb_reserve_back(P_R, 2 * ncg);
+        st.nr += ncg;
+        PWAIT_GE(PS_NR, st.nr, "PNRW");
+        cb_push_back(P_R, 2 * ncg);
     }
 }
 
@@ -282,9 +293,9 @@ PE_OS void attn_read(const Op& o, const Core& c, const Lay& L, uint32_t A, uint3
     read_consts(A, L);
     if (v) {
         cb_reserve_back(P_MSK, PTV);
-        const auto m = dram(PA_VMASK, T16);
+        const uint32_t m_a = PA_VMASK, m_z = T16;
         for (uint32_t t = 0; t < PTV; ++t) {
-            noc_async_read_page(t, m, get_write_ptr(P_MSK) + t * T16);
+            rdp(m_a, m_z, t, get_write_ptr(P_MSK) + t * T16);
         }
         noc_async_read_barrier();
         cb_push_back(P_MSK, PTV);
@@ -307,30 +318,29 @@ PE_OS void attn_read(const Op& o, const Core& c, const Lay& L, uint32_t A, uint3
         const uint32_t aq = get_write_ptr(P_Q), akv = get_write_ptr(kvcb);
         if (v) {
             const uint32_t r = it / 4, hp = it % 4;
-            const auto q = dram(PA_Q_V, T16);
+            const uint32_t q_a = PA_Q_V, q_z = T16;
             for (uint32_t hh = 0; hh < 2; ++hh) {
                 const uint32_t h = 2 * hp + hh;
                 for (uint32_t d = 0; d < V_DH; ++d) {
-                    noc_async_read_page((h * MT + r) * V_DH + d, q, aq + (hh * V_DH + d) * T16);
+                    rdp(q_a, q_z, (h * MT + r) * V_DH + d, aq + (hh * V_DH + d) * T16);
                 }
             }
 
         } else {
             uint32_t img, h, r0, nr;
             s_attn_item(it, img, h, r0, nr);
-            const auto qkv = dram(PA_QKV_S, T16);
+            const uint32_t qkv_a = PA_QKV_S, qkv_z = T16;
             for (uint32_t rr = 0; rr < nr; ++rr) {
                 const uint32_t r = r0 + rr;
                 for (uint32_t d = 0; d < S_DH; ++d) {
-                    noc_async_read_page(r * S_NQKV + h * S_DH + d, qkv, aq + (rr * S_DH + d) * T16);
+                    rdp(qkv_a, qkv_z, r * S_NQKV + h * S_DH + d, aq + (rr * S_DH + d) * T16);
                 }
             }
             for (uint32_t t = 0; t < S_NK; ++t) {
                 const uint32_t r = img * S_IMG + t;
                 for (uint32_t d = 0; d < S_DH; ++d) {
-                    noc_async_read_page(r * S_NQKV + S_DCTX + h * S_DH + d, qkv, akv + (t * S_DH + d) * T16);
-                    noc_async_read_page(r * S_NQKV + 2 * S_DCTX + h * S_DH + d, qkv,
-                                        akv + ((S_NK + t) * S_DH + d) * T16);
+                    rdp(qkv_a, qkv_z, r * S_NQKV + S_DCTX + h * S_DH + d, akv + (t * S_DH + d) * T16);
+                    rdp(qkv_a, qkv_z, r * S_NQKV + 2 * S_DCTX + h * S_DH + d, akv + ((S_NK + t) * S_DH + d) * T16);
                 }
             }
         }
@@ -381,8 +391,8 @@ PE_OS void embed_read(const Op& o, const Core& c, const Lay& L, uint32_t A) {
             continue;
         }
         if (!have_ids) {
-            const auto tk = dram(PA_TOK, NTOK * 4);
-            noc_async_read_page(0, tk, ids);
+            const uint32_t tk_a = PA_TOK, tk_z = NTOK * 4;
+            rdp(tk_a, tk_z, 0, ids);
             noc_async_read_barrier();
             invalidate_l1_cache();
             have_ids = true;
@@ -467,6 +477,7 @@ PE_OS void run_ncrisc() {
     for (uint32_t op = first; op < stop; ++op, ++k) {
         const Op o = describe(op);
         const Lay L = layout(o);
+        share_oplay(o, L, k);
         push_opd(o, L, c, A);
         switch (o.kind) {
             case K_MM:
@@ -478,7 +489,7 @@ PE_OS void run_ncrisc() {
                 break;
             case K_NORM:
                 if (c.lin < o.items) {
-                    norm_read(o, c, L, A);
+                    norm_read(o, c, L, A, st);
                 }
                 break;
             case K_ATTN:

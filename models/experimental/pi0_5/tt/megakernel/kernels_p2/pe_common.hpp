@@ -153,14 +153,14 @@ PE_OS Op describe(uint32_t op) {
             o.kind = K_NORM;
             o.nkind = N_LN;
             o.nk = S_D;
-            o.items = S_M;
+            o.items = S_M * NCG_S;
             break;
         case W_VRMS1:
         case W_VRMS2:
             o.kind = K_NORM;
             o.nkind = N_RMS;
             o.nk = V_D;
-            o.items = MT;
+            o.items = MT * NCG_V;
             break;
         case W_SATTN:
             o.kind = K_ATTN;
@@ -319,10 +319,11 @@ PE_OS Lay layout(const Op& o) {
         y.stage = 0;
     } else if (o.kind == K_NORM) {
         y.x32 = take(o.nk * T32);
-        y.s16 = take(2 * o.nk * T16);
+        y.s16 = take(2 * (o.nk / (o.nkind == N_LN ? NCG_S : NCG_V)) * T16);
         y.o16 = take(8 * T16);
         y.scr = take(2 * T32);
-        y.r = take(2 * T32);
+        y.r = take(2 * (o.nkind == N_LN ? NCG_S : NCG_V) * T32);
+        y.o32 = take(2 * T32);
         y.cst = take(PC_N * T16);
     } else if (o.kind == K_ATTN) {
         const bool v = o.what == W_VATTN;
