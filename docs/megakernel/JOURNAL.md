@@ -506,3 +506,21 @@ merge body); then set PI05_SOURCE_COMMIT = merge sha in the staging package, add
 megakernel include check to verify:, package ONCE on publish/tt-metal-668c2907575, boot + smoke + 100-request bench via
 with-device.sh, ONE HF create_commit (parent pinned), then verify (sha256, code/ vs GitHub main, image pull-back, video).
 Prior publish scripts: scratchpad/pub/ (copied to scratchpad/pub1/ for this round).
+
+## 2026-09-30 17:24:24 KST -- publish-p1: merged, image built
+
+- GitHub: branch pushed, PR #2 (https://github.com/changh95/tt-pi-0.5/pull/2) merged with a merge commit:
+  main = f7f173bd61241f09b286e56a9eb4038f76ee0782 (parents c8d4234 + dafecda; message ends with the Co-Authored-By
+  trailer). The local branch was fast-forwarded to f7f173b and pushed; work continues on megakernel-2026-09-29.
+- Staging /home/deepgadget/experiments/tt-models/models/pi05-base-p150-fused: code/models = git archive f7f173b models
+  (diff -rq vs a fresh GitHub clone: identical). tt-model.yaml: serve.env PI05_MEGAKERNEL=expert,
+  PI05_SOURCE_COMMIT=f7f173b...; new verify lines: the megakernel modules import; FusedConfig default = expert;
+  kernels dir = exactly the five mk_* files, KERNELS exist, kernel_digest() == 328761c8a1ce3fd9; every quoted #include
+  of all 14 port C++ sources resolves to a sibling or tt_metal/hw/inc. Host-tested on a fake /opt layout: pass; a
+  negative control (bogus include appended to mk_dm.hpp) failed both the digest and the include check.
+- Package (logs/pkg-pi05-mkp1.log, buildkit log copied to logs/pkg-pi05-mkp1-buildkit.log): rc 0, all verify lines ran
+  in the image. Image tt-model/pi05-base-p150:fe0d2e3d68a7, digest
+  sha256:fe0d2e3d68a752709a443cbe6b8e5aa5f9d914ab21f03631959cb81623aeeafe, tt_metal 668c2907 dirty=false,
+  code_sha256 08b350f19c7a04e2... build/pi05-base-p150/code/models == GitHub main models (+ tt-metal's
+  models/common/lightweightmodule.py, as before).
+- Boot validation hold started (scratchpad/pub1/validate.log; 2 cycles, cold then warm; /info megakernel.backend must be expert).
