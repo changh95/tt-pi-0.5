@@ -1,0 +1,122 @@
+{
+ "shape": "libero 2x224^2, lang_len 32, H 10",
+ "traced": true,
+ "fused_cfg": {
+  "trace": "True",
+  "trace_region_size": "160000000",
+  "residual": "bf16",
+  "mlp_chunk": "256",
+  "vlm_down_pc": "mcast2d",
+  "vlm_gateup_pc": "mcast2d",
+  "vlm_attn_pc": "mcast2d",
+  "siglip_pc": "mcast2d",
+  "siglip_batched": "True",
+  "skip_vlm_tail": "True",
+  "sdpa_vlm": "None",
+  "sdpa_expert": "None",
+  "sdpa_siglip": "None",
+  "dit_blocks": "(1, 8, 4, 1, 4, 0, 2)",
+  "euler_dit_blocks": "(1, 8, 1, 1, 1, 0, 2)",
+  "expert_mm": "mcast1d_fp32",
+  "expert_mm_blocks": "(1, 8, 4, 1, 4, 0, 2)",
+  "tp": "1",
+  "ccl_topology": "ring",
+  "env_keys": "('PI05_MEGAKERNEL',)",
+  "kv_dtype": "bf8",
+  "expert_geglu": "True",
+  "expert_attn": "fused",
+  "expert_norm_fold": "True",
+  "megakernel": "whole"
+ },
+ "stamp": {
+  "megakernel_backend": "whole",
+  "megakernel_program": {
+   "kernel_digest": "27ba91b0668b4042",
+   "sources": [
+    "kernels/mk_brisc.cpp",
+    "kernels/mk_defs.hpp",
+    "kernels/mk_dm.hpp",
+    "kernels/mk_ncrisc.cpp",
+    "kernels/mk_trisc.cpp",
+    "kernels_p2/pe_brisc.hpp",
+    "kernels_p2/pe_common.hpp",
+    "kernels_p2/pe_defs.hpp",
+    "kernels_p2/pe_dm.hpp",
+    "kernels_p2/pe_ncrisc.hpp",
+    "kernels_p2/pe_trisc.hpp",
+    "kernels_p2/whole_brisc.cpp",
+    "kernels_p2/whole_ncrisc.cpp",
+    "kernels_p2/whole_trisc.cpp"
+   ]
+  }
+ },
+ "rows": [
+  {
+   "tag": "libero_spatial/t0/i0/call0/step10",
+   "n_lang": 20,
+   "pcc7": 0.9999588931431059,
+   "pcc32": 0.9999493284292683,
+   "maxabs7": 0.011971831321716309
+  },
+  {
+   "tag": "libero_spatial/t0/i0/call12/step70",
+   "n_lang": 20,
+   "pcc7": 0.9999769502847717,
+   "pcc32": 0.9999777060496229,
+   "maxabs7": 0.013877153396606445
+  },
+  {
+   "tag": "libero_spatial/t3/i1/call0/step10",
+   "n_lang": 17,
+   "pcc7": 0.9999681448970899,
+   "pcc32": 0.9999609852539344,
+   "maxabs7": 0.01338660717010498
+  },
+  {
+   "tag": "libero_spatial/t3/i1/call12/step70",
+   "n_lang": 17,
+   "pcc7": 0.9999882473632141,
+   "pcc32": 0.999983345619143,
+   "maxabs7": 0.008594393730163574
+  },
+  {
+   "tag": "libero_spatial/t6/i2/call0/step10",
+   "n_lang": 18,
+   "pcc7": 0.9999537259331597,
+   "pcc32": 0.999946385780775,
+   "maxabs7": 0.024896830320358276
+  },
+  {
+   "tag": "libero_spatial/t6/i2/call12/step70",
+   "n_lang": 18,
+   "pcc7": 0.999925924788489,
+   "pcc32": 0.9999217405491595,
+   "maxabs7": 0.029526740312576294
+  },
+  {
+   "tag": "libero_spatial/t9/i3/call0/step10",
+   "n_lang": 17,
+   "pcc7": 0.9999379565460716,
+   "pcc32": 0.9999365980468627,
+   "maxabs7": 0.022991269826889038
+  },
+  {
+   "tag": "libero_spatial/t9/i3/call12/step70",
+   "n_lang": 17,
+   "pcc7": 0.9999633737907012,
+   "pcc32": 0.999966920324221,
+   "maxabs7": 0.01391640305519104
+  }
+ ],
+ "pcc7_mean": 0.9999591520933253,
+ "pcc7_min": 0.999925924788489,
+ "ten_replays_bit_identical": true,
+ "latency": {
+  "runs": 60,
+  "call_ms_median": 58.714903017971665,
+  "call_ms_min": 58.388894016388804,
+  "replay_ms_median": 56.84928348637186,
+  "replay_ms_min": 56.75223999423906
+ },
+ "time": "2026-09-30 20:54:15"
+}
