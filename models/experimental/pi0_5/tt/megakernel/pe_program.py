@@ -65,7 +65,7 @@ class PrefixTensors:
 
         n_sig = len(pp.sig) if n_sig is None else n_sig
         n_vlm = len(pp.vlm) if n_vlm is None else n_vlm
-        if shared is not None and shared.ps.rv == ps.rv and shared.ps.mt == ps.mt:
+        if shared is not None:  # the arenas depend on the op geometry only (np / kt / piece), not on the shape
             self.ws, self.wv = shared.ws, shared.wv
         else:
             self.ws = [arena(H.sig_layer_arena(pp.sig[i], i, ps), ttnn.bfloat8_b) for i in range(n_sig)]

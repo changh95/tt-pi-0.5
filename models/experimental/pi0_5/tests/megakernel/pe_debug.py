@@ -27,6 +27,7 @@ def main():
     wl = PI0WeightLoader(os.environ.get("PI05_WEIGHTS_DIR", "lerobot/pi05_base"))
     cat = wl.categorized_weights
     pp = H.prefix_params(cat, n_sig=1, n_vlm=1)
+    torch.set_num_threads(16)
     dev = ttnn.open_device(device_id=0, l1_small_size=24576, worker_l1_size=1395712)
     try:
         emb = ttnn.from_torch(cat["vlm_language"]["lm_head.weight"][:256], dtype=ttnn.bfloat16,

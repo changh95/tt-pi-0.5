@@ -8,7 +8,6 @@
 // ahead of the op boundary, and no geometry code (describe / layout) is compiled into the three TRISC binaries.
 #pragma once
 
-#include "api/compute/tilize.h"
 #include "pe_common.hpp"
 
 namespace pe {
@@ -28,6 +27,7 @@ NOINL void mm_k(uint32_t in0, uint32_t w_cb, uint32_t rp, uint32_t kt, uint32_t 
     const uint32_t pt = 2 * pc;
     for (uint32_t q = 0; q < nq; ++q) {
         cb_wait_front(w_cb, pt);
+#ifndef PE_DBG_NO_MATH
         for (uint32_t k = 0; k < pc; ++k) {
             UNPACK((llk_unpack_AB_matmul(in0, w_cb, q * pc + k, 2 * k, 2, rp, kt)));
             if (fid_hi) {
@@ -36,6 +36,7 @@ NOINL void mm_k(uint32_t in0, uint32_t w_cb, uint32_t rp, uint32_t kt, uint32_t 
                 MATH((llk_math_matmul<MathFidelity::LoFi, MM_THROTTLE>(0, 2, rp)));
             }
         }
+#endif
         cb_pop_front(w_cb, pt);
     }
 }
@@ -521,6 +522,18 @@ PE_OS void run_attn(const TOp& o) {
         cb_wait_front(P_Q, 2 * dh);
         cb_wait_front(kv_cb, 2 * nk * dh);
         for (uint32_t h = 0; h < 2; ++h) {  // VLM: 2 heads of one q row tile; SigLIP: 2 q row tiles of one head
+#ifdef PE_DBG_ATTN_NOCOMPUTE
+            cb_reserve_back(P_O16, dh);  // timing arm: inputs in, zeros out
+            tile_regs_acquire();
+            tile_regs_commit();
+            tile_regs_wait();
+            for (uint32_t d = 0; d < dh; ++d) {
+                pack_to(0, P_O16, d);
+            }
+            tile_regs_release();
+            cb_push_back(P_O16, dh);
+            continue;
+#endif
             for (uint32_t t0 = 0; t0 < nk; t0 += ch) {
                 const uint32_t n = nk - t0 < ch ? nk - t0 : ch;
                 flash_part(kv_cb, h * dh, dh, t0, n, kv_v, v, o.a[OA_SS]);
@@ -538,8 +551,6 @@ PE_OS void run_attn(const TOp& o) {
 
 // ================================================================ embedding (tilize + scale) / pad rows (zeros)
 PE_OS void run_embed(const TOp& o) {
-    cb_point(P_TOK, o.a[OA_TOK], 1, 64);
-    cb_point(P_RM, o.a[OA_RM], 16, T16);
     cb_point(P_S16, o.a[OA_S16], 16, T16);
     cb_point(P_O32, o.a[OA_O32], 16, T32);
     cb_point(P_CONST, o.a[OA_CST], PC_N, T16);
@@ -548,14 +559,7 @@ PE_OS void run_embed(const TOp& o) {
         const uint32_t it = o.it0 + i * NCORES;
         const bool pad = it / 4 >= LT;
         if (!pad) {
-            cb_wait_front(P_RM, 16);
-            cb_reserve_back(P_S16, 16);
-            tilize_init(P_RM, 16, P_S16);
-            tilize_block(P_RM, 16, P_S16);
-            tilize_uninit(P_RM, P_S16);
-            cb_push_back(P_S16, 16);
-            cb_pop_front(P_RM, 16);
-            cb_wait_front(P_S16, 16);
+            cb_wait_front(P_S16, 16);  // tiles tilized by the NCRISC
         }
         for (uint32_t t = 0; t < 16; ++t) {
             tile_regs_acquire();

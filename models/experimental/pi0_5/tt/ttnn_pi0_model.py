@@ -93,11 +93,11 @@ class PI0ModelTTNN:
         self.fused_cfg = FusedConfig.from_env() if fused is None else fused
         # Multi-chip: PI05_TP=0 (auto) -> the mesh size; single chip -> 1 (see tt/ttnn_ccl.py)
         self.fused_cfg = self.fused_cfg.resolved(_mesh_num_devices(device))
-        if self.fused_cfg.megakernel == "expert" and not _is_mesh(device):
+        if self.fused_cfg.megakernel in ("expert", "whole") and not _is_mesh(device):
             # fail fast (before ~30 s of weight conversion) on a device opened without the worker-L1 cut
             why = self.megakernel_device_refusal(device)
             if why is not None:
-                raise RuntimeError(f"PI05_MEGAKERNEL=expert refused: {why}")
+                raise RuntimeError(f"PI05_MEGAKERNEL={self.fused_cfg.megakernel} refused: {why}")
         if not config.pi05:
             raise RuntimeError("the fused graph supports the pi0.5 (adaRMS) expert only")
         # Fused graph state (persistent device inputs, trace, output)
@@ -149,18 +149,17 @@ class PI0ModelTTNN:
         self.megakernel_l1 = None
         if self.megakernel_backend == "off":
             return
-        if self.megakernel_backend == "whole":
-            raise RuntimeError("PI05_MEGAKERNEL=whole (phase 2: the whole sample_actions as one program) is not built yet")
+        knob = f"PI05_MEGAKERNEL={self.megakernel_backend}"
         from .megakernel.geometry import megakernel_refusal
 
         why = megakernel_refusal(self.fused_cfg.kv_dtype, self.denoise_config.num_steps)
         if why is not None:
-            raise RuntimeError(f"PI05_MEGAKERNEL=expert refused: {why}")
+            raise RuntimeError(f"{knob} refused: {why}")
         if _is_mesh(self.device):
-            raise RuntimeError("PI05_MEGAKERNEL=expert is single-chip: TT_MESH_SHAPE must be 1x1")
+            raise RuntimeError(f"{knob} is single-chip: TT_MESH_SHAPE must be 1x1")
         why = self.megakernel_device_refusal(self.device)
         if why is not None:
-            raise RuntimeError(f"PI05_MEGAKERNEL=expert refused: {why}")
+            raise RuntimeError(f"{knob} refused: {why}")
         from .megakernel.host_model import expert_params
         from .megakernel.program import KERNEL_SOURCES, kernel_digest
 
@@ -170,6 +169,19 @@ class PI0ModelTTNN:
                                         num_steps=self.denoise_config.num_steps)
         self.megakernel_program = {"kernel_digest": kernel_digest(),
                                    "sources": [os.path.basename(p) for p in KERNEL_SOURCES]}
+        self._whole: Dict[str, object] = {}
+        self._pe_params = None
+        self._pe_in_key = None
+        if self.megakernel_backend == "whole":
+            # phase 2: SigLIP x2 + projector + embedding + VLM prefill + the expert loop as ONE generic_op
+            # (tt/megakernel/pe_program.py); the ttnn prefix modules above stay built but are never enqueued
+            from .megakernel.pe_host import prefix_params
+            from .megakernel.pe_program import KERNEL_SOURCES2, kernel_digest2
+
+            self._pe_params = prefix_params(cw)
+            self.megakernel_program = {"kernel_digest": kernel_digest2(),
+                                       "sources": [os.path.relpath(p, os.path.dirname(os.path.dirname(p)))
+                                                   for p in KERNEL_SOURCES2]}
 
     @staticmethod
     def megakernel_device_refusal(device) -> Optional[str]:
@@ -223,6 +235,38 @@ class PI0ModelTTNN:
             mk = ExpertMegakernel(self.device, self._mk_params, shape, arenas=arenas)
             self._mk[shape.name] = mk
         return mk
+
+    def _whole_for(self, prefix_len: int, batch: int):
+        """The WholeMegakernel of this serving shape (prefix weight arenas shared across shapes)."""
+        from .megakernel import pe_geometry as PG
+        from .megakernel.pe_program import PrefixTensors, WholeMegakernel
+
+        mk = self._megakernel_for(prefix_len, batch)
+        wm = self._whole.get(mk.shape.name)
+        if wm is None:
+            shared = next(iter(self._whole.values())).t if self._whole else None
+            pt = PrefixTensors(self.device, self._pe_params, PG.pshape_for(mk.shape),
+                               embed=self.backbone.vlm_embed_tokens, shared=shared)
+            wm = WholeMegakernel(self.device, mk, pt)
+            self._whole[mk.shape.name] = wm
+        return wm
+
+    def _pe_write_inputs(self, valid: torch.Tensor) -> None:
+        """Per request: the prefix engine's own inputs (im2col TILE, token ids, the VLM key-mask row); the key mask
+        only when the prefix validity changed."""
+        from .megakernel.pe_host import vlm_key_mask
+
+        wm = self._whole_for(self.backbone.kv_cache_plan["prefix_len"], self.backbone.kv_cache_plan["batch"])
+        t = wm.t
+        im = self._pe_host_im2col.reshape(512, -1).to(torch.float32)
+        ttnn.copy_host_to_device_tensor(ttnn.from_torch(im, dtype=ttnn.bfloat16, layout=ttnn.TILE_LAYOUT), t.im2col)
+        tok = self._pe_host_tokens.reshape(1, -1).to(torch.int32)
+        ttnn.copy_host_to_device_tensor(ttnn.from_torch(tok, dtype=ttnn.uint32, layout=ttnn.ROW_MAJOR_LAYOUT), t.tokens)
+        key = (id(t), valid.numpy().tobytes())
+        if key != self._pe_in_key:
+            m = vlm_key_mask(valid.reshape(-1), wm.ps)
+            ttnn.copy_host_to_device_tensor(ttnn.from_torch(m, dtype=ttnn.bfloat16, layout=ttnn.TILE_LAYOUT), t.vmask)
+            self._pe_in_key = key
 
     def _init_components(self):
         """Initialize all model components."""
@@ -384,6 +428,11 @@ class PI0ModelTTNN:
         patch = self.config.siglip_config.patch_size
         pad_to = self.backbone.vision_tower.patch_embed.in_features_padded
         im2col = im2col_patches(pixels, patch, pad_to=pad_to)  # [N, 256, 608] fp32
+        if getattr(self, "megakernel_backend", "off") == "whole":
+            if batch != 1 or im2col.shape[0] != 2:
+                raise RuntimeError(f"PI05_MEGAKERNEL=whole serves batch 1 with 2 cameras (got batch {batch}, "
+                                   f"{im2col.shape[0]} images)")
+            self._pe_host_im2col, self._pe_host_tokens = im2col, tokens
         # On a MeshDevice every persistent input is replicated (identical on all chips); the
         # multi-device HOST tensors are built here so copy_host_to_device_tensor / to_device can
         # write all shards. Single chip: plain host tensors (mesh_mapper=None), as before.
@@ -425,7 +474,7 @@ class PI0ModelTTNN:
     _ATTN_INPUTS_TTNN = {"vlm_mask": "dram", "sdpa_mask": "dram", "cos": "l1", "sin": "l1"}
 
     def _attn_input_names(self) -> Dict[str, str]:
-        if getattr(self, "megakernel_backend", "off") == "expert":
+        if getattr(self, "megakernel_backend", "off") in ("expert", "whole"):
             return self._ATTN_INPUTS_FUSED  # the megakernel reads exp_mask and the four q / k RoPE tables
         fused_attn = self.backbone.expert_blocks[0].attention._fused_attn is not None
         return self._ATTN_INPUTS_FUSED if fused_attn else self._ATTN_INPUTS_TTNN
@@ -509,7 +558,7 @@ class PI0ModelTTNN:
         num_images = sum(k[0] for k in key[0]) // batch  # cameras per request
         token_len = key[1][-1]
         plan = check_fused_shape_contract(num_images, token_len, self.config.action_horizon, batch=batch)
-        if self.megakernel_backend == "expert":
+        if self.megakernel_backend in ("expert", "whole"):
             self._megakernel_for(plan["prefix_len"], batch)  # refusals (shape, batch) before any allocation
 
         device = self.device
@@ -524,6 +573,9 @@ class PI0ModelTTNN:
         }
         self._fused_attn_key = valid.numpy().tobytes()
         self._fused_shape_key = key
+        if self.megakernel_backend == "whole":
+            self._whole_for(plan["prefix_len"], batch)
+            self._pe_write_inputs(valid)
 
         # Compile pass (eager): program cache, cos/sin slices, SigLIP pos table -- all outside the trace
         # Two eager passes with the folded expert: with one pass the capture found a VLM matmul program missing from
@@ -549,7 +601,7 @@ class PI0ModelTTNN:
             ttnn.end_trace_capture(device, trace_id, cq_id=0)
             ttnn.synchronize_device(device)
             self._fused_trace_id = trace_id
-            if self.megakernel_backend == "expert":
+            if self.megakernel_backend in ("expert", "whole"):
                 self._mk_l1[key] = self.l1_signature()
                 mv = ttnn.get_memory_view(device, ttnn.BufferType.L1)
                 self.megakernel_l1 = {"total_per_bank": int(mv.total_bytes_per_bank),
@@ -565,6 +617,8 @@ class PI0ModelTTNN:
             ttnn.copy_host_to_device_tensor(host, dev, cq_id=0)
         ttnn.copy_host_to_device_tensor(tokens_host, self._fused_in_tokens, cq_id=0)
         ttnn.copy_host_to_device_tensor(noise_host, self._fused_in_noise, cq_id=0)
+        if self.megakernel_backend == "whole":
+            self._pe_write_inputs(valid)
         attn_key = valid.numpy().tobytes()
         if attn_key != self._fused_attn_key:
             for k, host in self._fused_attn_hosts(valid).items():
@@ -575,6 +629,11 @@ class PI0ModelTTNN:
         """The whole device graph, reading only the persistent inputs; returns x_T [B, round_up(H), 32] bf16 (L1).
         Captured as-is into the trace, so nothing in here may touch the host."""
         attn_in = self._fused_attn_in()
+        if self.megakernel_backend == "whole":
+            # ONE device op for the whole sample_actions: prefix engine -> the 18 K / V caches -> the expert loop
+            plan = self.backbone.kv_cache_plan
+            wm = self._whole_for(plan["prefix_len"], plan["batch"])
+            return wm.run(self.backbone.kv_caches, attn_in["exp_mask"], attn_in["tables"], self._fused_in_noise)
         prefix_embs = self.prefix_embedding.embed_prefix_fused(self._fused_in_im2col, self._fused_in_tokens)
         self.backbone.forward_vlm_fused(prefix_embs, attn_in["vlm_mask"])  # consumes prefix_embs, fills the KV caches
 

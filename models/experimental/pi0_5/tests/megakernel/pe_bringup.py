@@ -114,6 +114,7 @@ def main():
     wl = PI0WeightLoader(a.weights)
     cat = wl.categorized_weights
     pp = H.prefix_params(cat, n_sig=a.n_sig, n_vlm=a.n_vlm)
+    torch.set_num_threads(16)
     dev = ttnn.open_device(device_id=0, l1_small_size=24576, worker_l1_size=1395712)
     try:
         emb_w = cat["vlm_language"].get("model.embed_tokens.weight")

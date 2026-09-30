@@ -178,6 +178,11 @@ PE_OS void feed_w(const Op& o, const Core& c, const Lay& L, uint32_t A, uint32_t
     const uint32_t y0 = c.nocy[0], y1 = c.nocy[nr - 1];
     auto issue = [&](uint32_t j) {
         const uint32_t g = g0 + j;
+#ifdef PE_DBG_NO_WREAD
+        if (j >= 2) {
+            return;  // timing arm: multicast the staging buffers' stale content (no DRAM read after the first two)
+        }
+#endif
         noc_async_read_set_trid(1 + (j & 1));
         noc_async_read(get_noc_addr_from_bank_id<true>(g % N_BANKS, warena + off + (g / N_BANKS) * pb), s0 + (j & 1) * pb,
                        pb);
@@ -314,17 +319,20 @@ PE_OS void attn_read(const Op& o, const Core& c, const Lay& L, uint32_t A) {
     }
 }
 
+// language rows: 32 token rows x 16 tiles (one quarter of the 2048 columns) gathered row-major into the P_RM region,
+// then TILIZED HERE by word copies into P_S16 (face layout: element (r, c) of a tile in face (r / 16) * 2 + c / 16 at
+// (r % 16) * 16 + c % 16) -- the TRISC only scales. Pad row tiles have no NCRISC input (the TRISC packs zeros).
 PE_OS void embed_read(const Op& o, const Core& c, const Lay& L, uint32_t A) {
-    cb_point(P_TOK, A + L.tok, 1, 64);
-    cb_point(P_RM, A + L.rm, 16, T16);
+    cb_point(P_S16, A + L.s16, 16, T16);
     read_consts(A, L);
-    const uint32_t ids = A + L.tok;  // token ids (NCRISC-private; P_TOK's page content is never read)
+    const uint32_t ids = A + L.tok;  // token ids
+    const uint32_t rm = A + L.rm;    // row-major staging, 32 rows x 1024 B
     bool have_ids = false;
     const auto emb = dram(PA_EMB, V_D * 32 * 2);
     for (uint32_t it = c.lin; it < o.items; it += NCORES) {
         const uint32_t rt = it / 4, cq = it % 4;
         if (rt >= LT) {
-            continue;  // pad row tile: the TRISC packs zeros
+            continue;
         }
         if (!have_ids) {
             const auto tk = dram(PA_TOK, NTOK * 4);
@@ -333,15 +341,28 @@ PE_OS void embed_read(const Op& o, const Core& c, const Lay& L, uint32_t A) {
             invalidate_l1_cache();
             have_ids = true;
         }
-        cb_reserve_back(P_RM, 16);
-        const uint32_t a = get_write_ptr(P_RM);
         volatile tt_l1_ptr uint32_t* tok = reinterpret_cast<volatile tt_l1_ptr uint32_t*>(ids);
         for (uint32_t i = 0; i < 32; ++i) {
-            const uint32_t id = tok[rt * 32 + i];
-            noc_async_read(emb.get_noc_addr(id, cq * 1024), a + i * 1024, 1024);
+            noc_async_read(emb.get_noc_addr(tok[rt * 32 + i], cq * 1024), rm + i * 1024, 1024);
         }
         noc_async_read_barrier();
-        cb_push_back(P_RM, 16);
+        invalidate_l1_cache();
+        cb_reserve_back(P_S16, 16);
+        const uint32_t dst = get_write_ptr(P_S16);
+        for (uint32_t r = 0; r < 32; ++r) {
+            volatile tt_l1_ptr uint32_t* src = reinterpret_cast<volatile tt_l1_ptr uint32_t*>(rm + r * 1024);
+            for (uint32_t t = 0; t < 16; ++t) {
+                for (uint32_t h = 0; h < 2; ++h) {  // 16 bf16 = 8 words per face row
+                    volatile tt_l1_ptr uint32_t* d = reinterpret_cast<volatile tt_l1_ptr uint32_t*>(
+                        dst + t * T16 + (((r >> 4) * 2 + h) * 256 + (r & 15) * 16) * 2);
+                    const uint32_t s0 = (t * 32 + h * 16) / 2;
+                    for (uint32_t w = 0; w < 8; ++w) {
+                        d[w] = src[s0 + w];
+                    }
+                }
+            }
+        }
+        cb_push_back(P_S16, 16);
     }
 }
 
