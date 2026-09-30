@@ -230,7 +230,7 @@ PE_OS void boot(const Core& c) {
     for (uint32_t w = 0; w < PS_N; ++w) {
         *ps_ptr(w) = 0;
     }
-    for (uint32_t w = PS_IV0; w < PS_IV0 + PS_IV_N; ++w) {
+    for (uint32_t w = PS_IV0; w < PS_WORDS; ++w) {
         *ps_ptr(w) = 0;
     }
     const uint32_t sem_arr = get_semaphore(2), sem_go = get_semaphore(3);

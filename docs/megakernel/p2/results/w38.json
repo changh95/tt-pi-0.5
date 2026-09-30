@@ -1,0 +1,68 @@
+{
+ "arm": "whole",
+ "shape": "base",
+ "seeds": [
+  0,
+  1,
+  2
+ ],
+ "n_lang": [
+  150,
+  150,
+  150
+ ],
+ "build_s": 26.2,
+ "stamp": {
+  "backend": "whole",
+  "program": {
+   "kernel_digest": "d7f2d82b5114bba8",
+   "sources": [
+    "kernels/mk_brisc.cpp",
+    "kernels/mk_defs.hpp",
+    "kernels/mk_dm.hpp",
+    "kernels/mk_ncrisc.cpp",
+    "kernels/mk_trisc.cpp",
+    "kernels_p2/pe_brisc.hpp",
+    "kernels_p2/pe_common.hpp",
+    "kernels_p2/pe_defs.hpp",
+    "kernels_p2/pe_dm.hpp",
+    "kernels_p2/pe_ncrisc.hpp",
+    "kernels_p2/pe_trisc.hpp",
+    "kernels_p2/whole_brisc.cpp",
+    "kernels_p2/whole_ncrisc.cpp",
+    "kernels_p2/whole_trisc.cpp"
+   ]
+  }
+ },
+ "latency_ms_median": 55.139,
+ "latency_ms": [
+  54.872,
+  54.9,
+  54.968,
+  54.978,
+  55.065,
+  55.118,
+  55.127,
+  55.13,
+  55.131,
+  55.137,
+  55.139,
+  55.144,
+  55.176,
+  55.192,
+  55.193,
+  55.271,
+  55.271,
+  55.304,
+  55.36,
+  56.079
+ ],
+ "replays_identical": true,
+ "first_seed_again_identical": true,
+ "l1": {
+  "total_per_bank": 1371136,
+  "allocated_per_bank": 117248,
+  "largest_free_per_bank": 1253888,
+  "cb_union": 1156768
+ }
+}

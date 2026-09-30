@@ -19,31 +19,52 @@ template <bool is_fp32_dest_acc_en, int ITERATIONS = 8>
 inline void pe_calculate_gelu_fast() {
     // gelu(x) = relu(x) - h(|x|), h(t) = t q(t) on [0, 4.25] (degree-9 least-squares-minimax fit of the tanh form;
     // max abs error 1.3e-5 in fp64, 4.0e-5 in fp32 Horner, 2026-09-30), h = 0 beyond (|x| clamped: q(4.25) ~ 0)
+#ifdef PE_DBG_GELU_EMPTY  // timing arm: the SFPU call without its arithmetic
+    return;
+#endif
+    // two rows per step, the two Horner chains interleaved (a lone chain is SFPMAD-latency bound)
 #pragma GCC unroll 1
-    for (int d = 0; d < ITERATIONS; d++) {
-        sfpi::vFloat x = sfpi::dst_reg[0];
-        sfpi::vFloat a = sfpi::setsgn(x, 0);
-        sfpi::vFloat t = a;
-        v_if(t > 4.25f) { t = 4.25f; }
+    for (int d = 0; d < ITERATIONS; d += 2) {
+        sfpi::vFloat t0 = sfpi::dst_reg[0];
+        sfpi::vFloat t1 = sfpi::dst_reg[1];
+        t0 = sfpi::setsgn(t0, 0);
+        t1 = sfpi::setsgn(t1, 0);
+        v_if(t0 > 4.25f) { t0 = 4.25f; }
         v_endif;
-        sfpi::vFloat q = t * -1.432145018e-05f + 3.306026920e-04f;
-        q = q * t + -3.156597493e-03f;
-        q = q * t + 1.561119035e-02f;
-        q = q * t + -3.921917826e-02f;
-        q = q * t + 3.103299625e-02f;
-        q = q * t + 4.830191657e-02f;
-        q = q * t + 5.249063484e-03f;
-        q = q * t + -3.992681503e-01f;
-        q = q * t + 4.999349117e-01f;
-        sfpi::dst_reg[0] = (x + a) * 0.5f - t * q;
-        sfpi::dst_reg++;
+        v_if(t1 > 4.25f) { t1 = 4.25f; }
+        v_endif;
+        sfpi::vFloat q0 = t0 * -1.432145018e-05f + 3.306026920e-04f;
+        sfpi::vFloat q1 = t1 * -1.432145018e-05f + 3.306026920e-04f;
+        q0 = q0 * t0 + -3.156597493e-03f;
+        q1 = q1 * t1 + -3.156597493e-03f;
+        q0 = q0 * t0 + 1.561119035e-02f;
+        q1 = q1 * t1 + 1.561119035e-02f;
+        q0 = q0 * t0 + -3.921917826e-02f;
+        q1 = q1 * t1 + -3.921917826e-02f;
+        q0 = q0 * t0 + 3.103299625e-02f;
+        q1 = q1 * t1 + 3.103299625e-02f;
+        q0 = q0 * t0 + 4.830191657e-02f;
+        q1 = q1 * t1 + 4.830191657e-02f;
+        q0 = q0 * t0 + 5.249063484e-03f;
+        q1 = q1 * t1 + 5.249063484e-03f;
+        q0 = q0 * t0 + -3.992681503e-01f;
+        q1 = q1 * t1 + -3.992681503e-01f;
+        q0 = q0 * t0 + 4.999349117e-01f;
+        q1 = q1 * t1 + 4.999349117e-01f;
+        q0 = t0 * q0;
+        q1 = t1 * q1;
+        sfpi::vFloat x0 = sfpi::dst_reg[0];
+        sfpi::dst_reg[0] = (x0 + sfpi::setsgn(x0, 0)) * 0.5f - q0;
+        sfpi::vFloat x1 = sfpi::dst_reg[1];
+        sfpi::dst_reg[1] = (x1 + sfpi::setsgn(x1, 0)) * 0.5f - q1;
+        sfpi::dst_reg += 2;
     }
 }
 inline void pe_gelu_fast_init() {}
 // exp for the softmax: bf16-accurate exp_21f (P is packed to bf16) instead of the fp32-accurate exp
 template <bool is_fp32_dest_acc_en, int ITERATIONS = 8>
 inline void pe_calculate_exp21() {
-#pragma GCC unroll 1
+#pragma GCC unroll 2
     for (int d = 0; d < ITERATIONS; d++) {
         sfpi::dst_reg[0] = _sfpu_exp_21f_bf16_<true>(sfpi::dst_reg[0]);
         sfpi::dst_reg++;
@@ -344,8 +365,8 @@ PE_OS void norm_row(const TOp& o) {
     tile_regs_release();
     cb_push_back(P_SCR, 2);
     cb_wait_front(P_SCR, 2);
-    cb_wait_front(P_S16, ln ? 2 * w : w);
-    // apply to this item's column group [c0, c0 + w), 3 tiles per acquire (RMS: x * r * g ; LN: (x - mu) * rstd * g + b)
+    // apply to this item's column group [c0, c0 + w), 3 tiles per acquire: RMS x * r, LN (x - mu) * rstd (gamma /
+    // beta / the RMS (1 + w) are folded into the next matmul's weights and bias on the host, pe_host.fold_norms)
     for (uint32_t k0 = 0; k0 < w; k0 += 3) {
         const uint32_t n = w - k0 < 3 ? w - k0 : 3;
         tile_regs_acquire();
@@ -357,37 +378,14 @@ PE_OS void norm_row(const TOp& o) {
             reconfig_data_format_srca(P_SCR);
             copy_init(P_SCR);
             copy_tile(P_SCR, 0, 6);  // rstd
-            reconfig_data_format_srca(P_S16);
-            copy_init(P_S16);
-            for (uint32_t j = 0; j < n; ++j) {
-                copy_tile(P_S16, k0 + j, 3 + j);  // gamma
-            }
             mul_binary_tile_init();
             for (uint32_t j = 0; j < n; ++j) {
                 mul_binary_tile(j, 6, j);
-                mul_binary_tile(j, 3 + j, j);
-            }
-            copy_init(P_S16);
-            for (uint32_t j = 0; j < n; ++j) {
-                copy_tile(P_S16, w + k0 + j, 3 + j);  // beta
-            }
-            add_binary_tile_init();
-            for (uint32_t j = 0; j < n; ++j) {
-                add_binary_tile(j, 3 + j, j);
             }
         } else {
             fpu_mul_init(P_X32, P_SCR);
             for (uint32_t j = 0; j < n; ++j) {
                 fpu_mul(P_X32, P_SCR, k0 + j, 0, j);  // x * r
-            }
-            reconfig_data_format_srca(P_S16);
-            copy_init(P_S16);
-            for (uint32_t j = 0; j < n; ++j) {
-                copy_tile(P_S16, k0 + j, 3 + j);
-            }
-            mul_binary_tile_init();
-            for (uint32_t j = 0; j < n; ++j) {
-                mul_binary_tile(j, 3 + j, j);
             }
         }
         tile_regs_commit();
@@ -400,13 +398,11 @@ PE_OS void norm_row(const TOp& o) {
         tile_regs_release();
     }
     cb_pop_front(P_SCR, 2);
-    cb_pop_front(P_S16, ln ? 2 * w : w);
     cb_pop_front(P_X32, w);
 }
 
 PE_OS void run_norm(const TOp& o) {
     cb_point(P_X32, o.a[OA_X32], o.nk, T32);
-    cb_point(P_S16, o.a[OA_S16], 2 * (o.nk / (o.nkind == N_LN ? NCG_S : NCG_V)), T16);
     cb_point(P_O16, o.a[OA_O16], 8, T16);  // == the BRISC writer (norm_write)
     cb_point(P_SCR, o.a[OA_SCR], 2, T32);
     cb_point(P_R, o.a[OA_R], 2 * (o.nkind == N_LN ? NCG_S : NCG_V), T32);

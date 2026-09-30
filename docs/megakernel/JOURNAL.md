@@ -717,3 +717,20 @@ apply; attention 9.7 ms; feeders), then the full gate set.
   0.9999684, attn 0.9999885, vlm0 attn 0.9997526, gu 0.9999045; K/V vs host fp32 min 0.995117 (b35_prefix.json).
   Prefix 37.6 ms/rep; whole call base 55.99 ms (w35.json, 20 replays identical, alternation identical).
 - P2-2: 370.7 us is under the 394.7 stop line, above the 355 go line. Size base 129,332 B (mock29.json).
+
+### 2026-09-30 22:58:38 P2-2 GO: SigLIP layer 350.5 us (<= 355): folded norm affines, K / V all-gather
+- arms4 (p2/results/arms4_*.json): FC1 no-GELU 46.8, empty-GELU call 48.1, polynomial GELU 77.4 us: the SFPU arithmetic
+  itself is ~1.2 us/tile (~50 cycles per 32-lane row); two interleaved Horner chains (b36) changed nothing
+  (throughput-, not latency-bound). VLM gate|up: empty-GELU 518 vs 670 us: GEGLU costs 152 us per VLM layer.
+- Norm affines folded into the consuming matmuls on the host (pe_host.fold_norms: diag(g) W, b + beta W; SigLIP LN1 ->
+  qkv, LN2 -> fc1, post-LN -> projector, VLM (1 + w) -> qkv / gate|up); the norms apply only (x - mu) rstd / x r and
+  read no gamma / beta (b37): SLN 27.9 -> 23.5 us, VRMS 39.9 -> 30.9 us. PCC: LN1 0.9999985, qkv 0.9999686, fc1
+  0.9999665, sig0 layer 0.9999806 (was 0.9999719), vlm0 layer 0.9988911 (was 0.9989235), K/V vs host fp32 min 0.995023
+  (was 0.995117). The real-weight CPU test (PI05_SLOW_CPU=1) passes with the folded parameters.
+- SigLIP attention K / V: the 3 item cores of a head each read a third (key tiles t = g mod 3) and write it into the
+  other two (PS_KVX counts), 9.2 MB -> 3.1 MB of DRAM reads per op (b38): SATTN 81.8 -> 71.9 us.
+- b38 (p2/results/b38.json): SigLIP layer 350.5 us (LN 23.4, QKV 47.4, ATTN 71.9, O 34.1, LN2 23.5, FC1 77.4, FC2
+  72.8) -> P2-2 GO (<= 355). VLM layer 1.579 ms. Prefix 36.74 ms/rep (b38_prefix.json). Whole call base 55.14 ms
+  (w38.json; 20 replays identical, alternation identical). Size base 128,548 B (mock33.json).
+- Next: accuracy re-verification of the whole model (22-seed gate vs shipped, LIBERO golden) after the numerics
+  changes (polynomial GELU, exp_21f softmax, folded norms), then the full exit gate set.

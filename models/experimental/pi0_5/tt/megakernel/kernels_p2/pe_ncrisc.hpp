@@ -25,6 +25,7 @@ NOINL void rdp(uint32_t arg, uint32_t z, uint32_t page, uint32_t l1) { noc_async
 struct NState {
     uint32_t wbase[8] = {0, 0, 0, 0, 0, 0, 0, 0};  // weight feeder: pages each receiver row was sent so far
     uint32_t nr = 0;                                // norm items so far (PS_NR count)
+    uint32_t kvx = 0;                               // SigLIP attention K / V thirds received so far (PS_KVX)
 };
 
 FORCE_INLINE uint32_t w_arena_arg(const Op& o) {
@@ -239,19 +240,9 @@ PE_OS void norm_read(const Op& o, const Core& c, const Lay& L, uint32_t A, NStat
     const bool ln = o.nkind == N_LN;
     const uint32_t nk = o.nk, ncg = ln ? NCG_S : NCG_V, w = nk / ncg;
     cb_point(P_X32, A + L.x32, nk, T32);
-    cb_point(P_S16, A + L.s16, 2 * w, T16);
     cb_point(P_R, A + L.r, 2 * ncg, T32);
     read_consts(A, L);
-    uint32_t gw = 0, gb = 0, garg = PA_VVEC;
-    switch (o.what) {
-        case W_VRMS1: gw = o.layer * VV_N + VV_G1; break;
-        case W_VRMS2: gw = o.layer * VV_N + VV_G2; break;
-        case W_SLN1: garg = PA_SVEC; gw = o.layer * SV_N + SV_LN1W; gb = o.layer * SV_N + SV_LN1B; break;
-        case W_SLN2: garg = PA_SVEC; gw = o.layer * SV_N + SV_LN2W; gb = o.layer * SV_N + SV_LN2B; break;
-        default: garg = PA_GVEC; gw = GV_PLNW; gb = GV_PLNB; break;  // W_POSTLN
-    }
     const uint32_t x_a = o.what >= W_VRMS1 ? PA_X_V : PA_X_S, x_z = T32;
-    const uint32_t g_a = garg, g_z = T16;
     for (uint32_t it = c.lin; it < o.items; it += NCORES) {
         const uint32_t r = it / ncg, c0 = (it % ncg) * w;
         for (uint32_t t0 = 0; t0 < w; t0 += 8) {  // this group's x in chunks of 8 tiles
@@ -264,16 +255,6 @@ PE_OS void norm_read(const Op& o, const Core& c, const Lay& L, uint32_t A, NStat
             noc_async_read_barrier();
             cb_push_back(P_X32, n);
         }
-        cb_reserve_back(P_S16, ln ? 2 * w : w);
-        const uint32_t ag = get_write_ptr(P_S16);
-        for (uint32_t t = 0; t < w; ++t) {
-            rdp(g_a, g_z, gw + c0 + t, ag + t * T16);
-            if (ln) {
-                rdp(g_a, g_z, gb + c0 + t, ag + (w + t) * T16);
-            }
-        }
-        noc_async_read_barrier();
-        cb_push_back(P_S16, ln ? 2 * w : w);
         // the row's ncg partial-statistics pairs: written into P_R by the row's BRISCs, then PS_NR (one each)
         cb_reserve_back(P_R, 2 * ncg);
         st.nr += ncg;
@@ -282,7 +263,7 @@ PE_OS void norm_read(const Op& o, const Core& c, const Lay& L, uint32_t A, NStat
     }
 }
 
-PE_OS void attn_read(const Op& o, const Core& c, const Lay& L, uint32_t A, uint32_t k) {
+PE_OS void attn_read(const Op& o, const Core& c, const Lay& L, uint32_t A, uint32_t k, NState& st) {
     const bool v = o.what == W_VATTN;
     const uint32_t dh = v ? V_DH : S_DH, nk = v ? PTV : S_NK;
     const uint32_t qn = v ? 2 * V_DH : 3 * S_DH;
@@ -339,13 +320,38 @@ PE_OS void attn_read(const Op& o, const Core& c, const Lay& L, uint32_t A, uint3
                     rdp(qkv_a, qkv_z, r * S_NQKV + h * S_DH + d, aq + (rr * S_DH + d) * T16);
                 }
             }
-            for (uint32_t t = 0; t < S_NK; ++t) {
+            // K / V of the head: the item's 3 group cores (items it - g .. it - g + 2 = cores, one item each) each read
+            // key tiles t = g (mod 3) and write them into the other two (96 items x 96 KB was 9.2 MB of DRAM reads
+            // per op, ~21 us at the DRAM peak; 2026-09-30)
+            const uint32_t g = it % 3, base = it - g;
+            for (uint32_t t = g; t < S_NK; t += 3) {
                 const uint32_t r = img * S_IMG + t;
                 for (uint32_t d = 0; d < S_DH; ++d) {
                     rdp(qkv_a, qkv_z, r * S_NQKV + S_DCTX + h * S_DH + d, akv + (t * S_DH + d) * T16);
                     rdp(qkv_a, qkv_z, r * S_NQKV + 2 * S_DCTX + h * S_DH + d, akv + ((S_NK + t) * S_DH + d) * T16);
                 }
             }
+            noc_async_read_barrier();
+            for (uint32_t pg = 0; pg < 3; ++pg) {
+                if (pg == g) {
+                    continue;
+                }
+                const uint32_t pl = base + pg, px = cra(PA_NOCX0 + pl % NCOL), py = c.nocy[pl / NCOL];
+                for (uint32_t t = g; t < S_NK; t += 3) {
+                    noc_async_write(akv + t * S_DH * T16, get_noc_addr(px, py, akv + t * S_DH * T16), S_DH * T16);
+                    noc_async_write(akv + (S_NK + t) * S_DH * T16, get_noc_addr(px, py, akv + (S_NK + t) * S_DH * T16),
+                                    S_DH * T16);
+                }
+            }
+            noc_async_write_barrier();  // landed before the counts
+            for (uint32_t pg = 0; pg < 3; ++pg) {
+                if (pg != g) {
+                    const uint32_t pl = base + pg;
+                    inc_word(cra(PA_NOCX0 + pl % NCOL), c.nocy[pl / NCOL], PS_KVX);
+                }
+            }
+            st.kvx += 2;
+            PWAIT_GE(PS_KVX, st.kvx, "PKVX");
         }
         noc_async_read_barrier();
         cb_push_back(P_Q, qn);
@@ -500,7 +506,7 @@ PE_OS void run_ncrisc() {
                 if (o.what == W_VATTN && c.y == IF_Y && c.x >= KVF_X0) {
                     feed_kv(o, c, L, A, k);
                 } else if (c.lin < o.items) {
-                    attn_read(o, c, L, A, k);
+                    attn_read(o, c, L, A, k, st);
                 }
                 break;
             case K_EMBED:

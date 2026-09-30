@@ -275,7 +275,6 @@ def layout(o: Op, ps: PShape) -> Dict[str, int]:
         y["stage"] = 0
     elif o.kind == K_NORM:
         take("x32", o.nk * T32)
-        take("s16", 2 * (o.nk // (NCG_S if o.nkind == N_LN else NCG_V)) * T16)
         take("o16", 8 * T16)
         take("scr", 2 * T32)
         take("r", 2 * (NCG_S if o.nkind == N_LN else NCG_V) * T32)

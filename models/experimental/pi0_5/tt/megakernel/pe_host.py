@@ -76,7 +76,8 @@ def _pad_heads_vec(b: torch.Tensor, heads: int, dh: int, dhp: int) -> torch.Tens
     return out.reshape(-1)
 
 
-def prefix_params(cat: Dict[str, Dict[str, torch.Tensor]], n_sig: int = 27, n_vlm: int = 18) -> PrefixParams:
+def prefix_params(cat: Dict[str, Dict[str, torch.Tensor]], n_sig: int = 27, n_vlm: int = 18,
+                  fold: bool = True) -> PrefixParams:
     vis, proj, lang = cat["vlm_vision"], cat["vlm_projector"], cat["vlm_language"]
     f = lambda t: t.detach().float()
     heads, dh, dhp = 16, 72, 96
@@ -120,10 +121,30 @@ def prefix_params(cat: Dict[str, Dict[str, torch.Tensor]], n_sig: int = 27, n_vl
             wug=torch.cat([g("mlp.up_proj.weight"), g("mlp.gate_proj.weight")], 0).T.contiguous(),
             wd=g("mlp.down_proj.weight").T.contiguous(),
             g1=1.0 + g("input_layernorm.weight"), g2=1.0 + g("post_attention_layernorm.weight")))
-    return PrefixParams(
+    pp = PrefixParams(
         patch_w=patch_w, pos_b=pos_b, sig=sig, post_w=f(vis["vision_model.post_layernorm.weight"]),
         post_b=f(vis["vision_model.post_layernorm.bias"]), proj_w=f(proj["linear.weight"]).T.contiguous(),
         proj_b=f(proj["linear.bias"]), vlm=vlm)
+    return fold_norms(pp) if fold else pp
+
+
+def fold_norms(pp: PrefixParams) -> PrefixParams:
+    """Every norm's affine part into the matmul that consumes it (fp32, before quantisation): LN(x) W + b =
+    ((x - mu) rstd) (diag(g) W) + (b + beta W), RMS the same with g = 1 + w and no beta. Scaling K row k of W by g_k
+    scales whole bfp8 exponent blocks (16 elements along N), so the weight quantisation error is unchanged; the norms
+    then leave g = 1, beta = 0 (the kernels apply only (x - mu) rstd / x r)."""
+    one = lambda v: torch.ones_like(v)
+    zero = lambda v: torch.zeros_like(v)
+    sig = []
+    for s in pp.sig:
+        sig.append(SigLayer(
+            wqkv=s.ln1w[:, None] * s.wqkv, bqkv=s.bqkv + s.ln1b @ s.wqkv, wo=s.wo, bo=s.bo,
+            ln1w=one(s.ln1w), ln1b=zero(s.ln1b), ln2w=one(s.ln2w), ln2b=zero(s.ln2b),
+            wfc1=s.ln2w[:, None] * s.wfc1, bfc1=s.bfc1 + s.ln2b @ s.wfc1, wfc2=s.wfc2, bfc2=s.bfc2))
+    vlm = [VlmLayer(wqkv=v.g1[:, None] * v.wqkv, wo=v.wo, wug=v.g2[:, None] * v.wug, wd=v.wd, g1=one(v.g1), g2=one(v.g2))
+           for v in pp.vlm]
+    return PrefixParams(patch_w=pp.patch_w, pos_b=pp.pos_b, sig=sig, post_w=one(pp.post_w), post_b=zero(pp.post_b),
+                        proj_w=pp.post_w[:, None] * pp.proj_w, proj_b=pp.proj_b + pp.post_b @ pp.proj_w, vlm=vlm)
 
 
 # ======================================================================================================== arenas

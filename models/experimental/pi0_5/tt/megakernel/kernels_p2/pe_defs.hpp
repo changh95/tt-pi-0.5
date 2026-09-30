@@ -107,6 +107,7 @@ constexpr uint32_t N_LN = 1;
 constexpr uint32_t NCG_S = 6;
 constexpr uint32_t NCG_V = 4;
 static_assert(S_M * NCG_S <= NCORES, "norm items: <= one per core (the stats exchange assumes item == core)");
+static_assert(2 * 16 * 3 <= NCORES, "SigLIP attention items: <= one per core (the K / V exchange assumes item == core)");
 
 // ---------------------------------------------------------------- circular buffers (ids 32..; 0..31 = phase 1)
 constexpr uint32_t P_IN0 = 32;     // bf16 in0 (resident band / streamed K blocks)
@@ -225,7 +226,8 @@ constexpr uint32_t PS_TSTAMP = 44;   // 44..47: the hub's time-stamp record stag
 constexpr uint32_t PS_SHARE = 48;    // 48..63: the NCRISC's (Op, Lay) of the current op, read by the BRISC (256 B)
 constexpr uint32_t PS_IV0 = 64;      // 64..71: every compute core: mode-R in0 piece q landed ((op << 16) | 1)
 constexpr uint32_t PS_IV_N = 8;      // (at most 8 K pieces per mode-R op)
-constexpr uint32_t PS_WORDS = 72;    // P_SYNC = PS_WORDS x PSTRIDE bytes
+constexpr uint32_t PS_KVX = 72;      // SigLIP attention item core: K / V thirds landed from its 2 group peers (count)
+constexpr uint32_t PS_WORDS = 73;    // P_SYNC = PS_WORDS x PSTRIDE bytes
 
 // ---------------------------------------------------------------- common runtime args (appended after phase 1's)
 // The TRISC reads only phase 1's and PA_OPFIRST..PA_REPS, so its list is cut at PA_TRISC_N (ring bytes). The VLM K / V

@@ -319,7 +319,6 @@ PE_OS Lay layout(const Op& o) {
         y.stage = 0;
     } else if (o.kind == K_NORM) {
         y.x32 = take(o.nk * T32);
-        y.s16 = take(2 * (o.nk / (o.nkind == N_LN ? NCG_S : NCG_V)) * T16);
         y.o16 = take(8 * T16);
         y.scr = take(2 * T32);
         y.r = take(2 * (o.nkind == N_LN ? NCG_S : NCG_V) * T32);
