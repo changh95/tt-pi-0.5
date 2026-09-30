@@ -406,3 +406,12 @@ Code commit 488fe36 (kernels unchanged):
 Device gate plan (scripts copied from verify_p1_r1 into scratchpad/ip1, arms "default" = PI05_MEGAKERNEL UNSET and
 "off" = PI05_MEGAKERNEL=off; the fp32 torch reference outputs ref_base.pt are reused from vp1r1: reference/ unchanged
 since aa7bf50).
+
+## 2026-09-30 16:08:26 KST -- integrate-p1 (resumed session): state found after the interrupted session
+
+- The previous integrate-p1 process died during hold2 (tracy profile, started 15:51:31; no HOLD END in the guard ledger;
+  card probed healthy 16:06:43). Lock free at resume, no device process running.
+- hold1 at cfe9fa2 (15:40-15:50, reset-after, source md5 ALL 403253dd... identical at hold start/end) is COMPLETE and kept:
+  scratchpad/ip1/out/{NOCUT,A_*,ALT_*,O_ip1}.json (out_first/ = an earlier hold1 at 488fe36, superseded by the cfe9fa2 code change).
+- hold2 (profiles) is INCOMPLETE (only P_default_base.json, no ops CSV): discarded and re-run. hold3 (soak) and hold4
+  (pytest, served) never started: run now. Working-tree edits of README.md / DESIGN.md are doc-only (sums unaffected).

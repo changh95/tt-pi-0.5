@@ -17,8 +17,9 @@ has run (kernels compiled, trace captured).
 Recipe (the one the port validated -- ``tests/pcc/test_pcc_pi05_fused.py`` and the LIBERO
 closed-loop harness ``tests/pcc/test_rollout_libero.py``):
 
-* ``device = ttnn.open_device(device_id, l1_small_size=24576, trace_region_size=...)`` (single
-  chip) or a MeshDevice (``TT_MESH_SHAPE``); ``PI0ModelTTNN.sample_actions_fused``.
+* ``device = ttnn.open_device(**common.device_open.device_kwargs(...))`` (single chip: l1_small_size=24576,
+  trace_region_size=..., and the 64 KiB worker-L1 cut the default ``PI05_MEGAKERNEL=expert`` needs) or a
+  MeshDevice (``TT_MESH_SHAPE``); ``PI0ModelTTNN.sample_actions_fused``.
 * ``PI0ModelConfig(action_dim=32, action_horizon=50, state_dim=32, pi05=True)`` with the
   default ``SigLIPConfig`` (224 px, patch 14 -> 256 tokens per image).
 * weights: ``PI0WeightLoader(<HF snapshot dir>)`` -- resolved with ``hf_hub_download`` of
@@ -967,8 +968,9 @@ def _graph_string(cfg: Optional[ServerConfig], traced: bool) -> str:
         return "fused whole-graph sample_actions_fused per group" + (", one Metal trace per group per batch size" if traced else ", eager")
     mk = (STATE.get("megakernel") or {}).get("backend", "off")
     if mk == "expert":
-        return ("fused whole-graph sample_actions_fused: ttnn SigLIP / VLM prefix + ONE megakernel generic_op for the "
-                "whole 10-step action expert loop" + (", one Metal trace" if traced else ", eager"))
+        return ("fused whole-graph sample_actions_fused: traced stock-ttnn SigLIP / VLM prefix + the phase-1 expert "
+                "megakernel (ONE persistent generic_op for the whole 10-step action expert loop)"
+                + (", one Metal trace" if traced else ", eager"))
     return "fused whole-graph sample_actions_fused" + (", one Metal trace per batch size" if traced else ", eager")
 
 
