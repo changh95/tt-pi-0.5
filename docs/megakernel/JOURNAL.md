@@ -286,3 +286,50 @@ Source md5s (tt/**/*.cpp,hpp,py) were the same at 13:05 (checksums_start.txt), b
 Not re-run by the verifier: served latency (P1-6), LIBERO n_lang 32 / 1 edge cases, the replay L1 guard.
 Open: the 2026-09-30 gate amendment is NOT yet recorded in DESIGN.md §7 (still the old "within 0.005" text).
 Verdict: phase 1 ACCEPTED on the amended gates.
+
+## 2026-09-30 14:14:22 KST -- fix-p1-r0: blocking review defects fixed, gate amendment recorded, unverified gates re-run
+
+Code commit 6b8632c (kernels unchanged: kernel_digest 328761c8a1ce3fd9, same as the verified build). Results in
+docs/megakernel/fix_p1_r0/results/.
+- BLOCKING 1 (PI05_KV_DTYPE=bf16 not refused; bf16 pages landed at the bfp8 stride and overran CB_KV): fixed.
+  geometry.megakernel_refusal(kv_dtype, num_steps) is called in PI0ModelTTNN._init_megakernel before any parameter
+  build and in the server startup refusals; ExpertMegakernel.program() also refuses unless there are 18 layers of
+  bfloat8_b (K, V) caches.
+- BLOCKING 2 (num steps != 10 not refused; the one-dt guard passes 5 / 16 / 20): fixed. Same refusal function, plus
+  ExpertMegakernel.__init__ refuses len(params.dts) != G.N_STEPS (parsed from mk_defs.hpp) before any upload.
+  Server evidence (server_refusals.txt, under the device lock, no device opened): PI05_KV_DTYPE=bf16,
+  PI05_NUM_STEPS=20 and =5 each log "refused at startup" and exit rc=3.
+- CPU tests added to tests/megakernel/test_cpu_mk.py: test_cpu_refuses_bf16_kv_and_other_step_counts (every entry:
+  pure check, model init, ExpertMegakernel step check, program() dtype / layer-count check);
+  test_cpu_merge_dst_budget_and_host_invariants; test_cpu_decomposition_equals_reference_loop[base, libero]
+  (loop_decomposed vs loop_reference over the whole 10 x 18 loop, synthetic weights, padded prompt: PCC
+  0.99999999999997 / relmax 2.46e-7 base, 2.32e-7 LIBERO; the positive control that drops chunk 0's keys from the
+  decomposed arm only gives relmax 0.043 / 0.046, PCC 0.99921 / 0.99911). CPU suites: 38 passed (cpu_suites.txt).
+- Non-blocking items fixed (host side only): Shape.check now requires NCH <= 6 (merge: DST 0 + weights 1..NCH + temp 7;
+  test with an NCH = 7 shape). check_roles asserts that mergers and units with y < 8 are MLP cores (K/V prefetch
+  path). It also asserts that the multicast destination counts parsed from mk_brisc.cpp (rx 80, rm 64, ro 32, rk 8*RT,
+  row 7, ra 109, col NU-1) equal area minus an in-rectangle sender, for every row and column instance, and that
+  x_round_receivers equals the counts derived from the roles (80 / 72). The positive control is a doctored literal,
+  which gives a mismatch. The geometry.py and arena.py docstrings now cite test_cpu_mk.py.
+- DESIGN.md §7: the user's 2026-09-30 amendment (phase 1 and phase 2 text, date, reason, acceptance evidence);
+  the old "within 0.005" text is struck through and points at the amendment.
+- Re-run on device at 6b8632c (hold.log, 14:05-14:12, WITH_DEVICE_RESET_AFTER=1, private TT_METAL_CACHE):
+  - Digest regression (soak_one.log): 31 calls all_equal, digest c9a66e4da14f7563. This is the verifier's soak digest,
+    so the outputs did not change.
+  - LIBERO n_lang 32 / 1 edge cases (E2.json): mk vs ref 0.99960 / 0.99948, shipped 0.99949 / 0.99930. No worse: PASS.
+    Values are identical to impl/results/E2.json. Call 65.71 vs 76.90 ms.
+  - Replay L1 guard (G.json), both shapes: it raised on a 1-tile L1 allocation, the replay after the free was
+    bit-identical, and the guard costs 38.1 / 38.7 us. Largest free block 1,253,888 B vs CB union 1,156,768 / 851,616 B.
+  - Served P1-6 (S_*.lat.json), arms alternated expert / off / expert / off. Inference median 70.93 and 70.78 ms vs
+    shipped 83.94 and 84.10 ms (gate < 84.02: PASS). smoke_test PASS on all 4. /info reports backend expert with
+    kernel_digest 328761c8a1ce3fd9, and off with program None.
+Open (not changed by me):
+- tests/pcc/test_pcc_pi05_fused.py base still fails its own 0.95 per-observation minimum on seed 3 for BOTH arms
+  (mk 0.94833, shipped 0.93811; this was already true on main). That floor is the fp32-torch-reference distance that
+  the amended gate replaced. Changing the test's floor is the user's call.
+- The mk_brisc.cpp:8 header still cites a nonexistent tests/megakernel/test_cpu_mk_protocol.py, and the per-buffer
+  argument for the 7 uncredited deposits is not written anywhere. A comment edit changes kernel_digest, so this is
+  deferred to the next kernel change.
+- Other non-blocking items: owner x/r landing ordered only by causality; mixed-width matmuls with no static guard;
+  CB_RTOK pushed without a reserve; debug x dump on every launch.
+Next: phase 2 (WP P2-0).

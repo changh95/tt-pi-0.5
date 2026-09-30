@@ -1,0 +1,25 @@
+{
+ "time": "2026-09-30 14:08:04",
+ "base": {
+  "megakernel_l1": {
+   "total_per_bank": 1371136,
+   "allocated_per_bank": 117248,
+   "largest_free_per_bank": 1253888,
+   "cb_union": 1156768
+  },
+  "guard_cost_us": 38.135540089569986,
+  "raised_on_l1_alloc": true,
+  "replay_after_free_bit_identical": true
+ },
+ "libero": {
+  "megakernel_l1": {
+   "total_per_bank": 1371136,
+   "allocated_per_bank": 117248,
+   "largest_free_per_bank": 1253888,
+   "cb_union": 851616
+  },
+  "guard_cost_us": 38.73806010233238,
+  "raised_on_l1_alloc": true,
+  "replay_after_free_bit_identical": true
+ }
+}

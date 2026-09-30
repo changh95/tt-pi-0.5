@@ -1,0 +1,9 @@
+[2026-09-30 14:04:10] REFUSE PI05_KV_DTYPE=bf16
+rc=3
+2026-09-30 14:04:16,286 ERROR pi05.server: PI05_MEGAKERNEL=expert refused at startup: PI05_KV_DTYPE=bf16 (the megakernel reads bfp8 K / V caches at the 1088 B bfp8 page stride; use PI05_KV_DTYPE=bf8)
+[2026-09-30 14:04:17] REFUSE PI05_NUM_STEPS=20
+rc=3
+2026-09-30 14:04:22,147 ERROR pi05.server: PI05_MEGAKERNEL=expert refused at startup: PI05_NUM_STEPS / num_denoising_steps=20 (the megakernel compiles exactly 10 denoising steps; use 10)
+[2026-09-30 14:04:22] REFUSE PI05_NUM_STEPS=5
+rc=3
+2026-09-30 14:04:27,970 ERROR pi05.server: PI05_MEGAKERNEL=expert refused at startup: PI05_NUM_STEPS / num_denoising_steps=5 (the megakernel compiles exactly 10 denoising steps; use 10)
