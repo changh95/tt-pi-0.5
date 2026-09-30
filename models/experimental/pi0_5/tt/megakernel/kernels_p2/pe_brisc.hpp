@@ -90,19 +90,34 @@ FORCE_INLINE uint32_t in0_arg(const Op& o) {
 // mode R in0, distributed: the band's compute core in column q reads K piece q (all rp rows) from DRAM into its own
 // resident band and multicasts it along its row, then flags PS_IV0 + q. One reader per row (b, 9) capped the 8 bands
 // at ~90 GB/s together (row-9 links; 27 GB/s for one feeder alone, 11 each for eight: FC2 in0 51 us of reads).
+#ifdef PE_IN0_LAG
+constexpr uint32_t IN0_LAG = PE_IN0_LAG;
+#else
+constexpr uint32_t IN0_LAG = 1;
+#endif
 PE_OS void in0_source(const Op& o, const Core& c, const Lay& L, uint32_t A, uint32_t k) {
     const uint32_t rp = o.rpb, kt = o.kt, pc = o.piece, q = c.x, r0 = c.y * rp;
     const auto src = bdram(in0_arg(o), T16);
     const uint32_t dst = A + L.in0, y = c.nocy[c.y];
-    if (q > 0) {  // staggered: the row's pieces arrive in K order (all at once, piece 0 came as late as the last)
-        PWAIT_GE(PS_IV0 + q - 1, (k << 16) + 1, "PIVS");
+    // every source reads its piece at once; only the multicasts are staggered (piece q after piece q - IN0_LAG
+    // landed), so the row's pieces arrive in K order without serialising the DRAM reads (arm PE_IN0_READ_STAGGER:
+    // the read waits too, as before)
+#ifdef PE_IN0_READ_STAGGER
+    if (q >= IN0_LAG) {
+        PWAIT_GE(PS_IV0 + q - IN0_LAG, (k << 16) + 1, "PIVS");
     }
+#endif
     for (uint32_t r = 0; r < rp; ++r) {
         for (uint32_t kk = 0; kk < pc; ++kk) {
             noc_async_read_page((r0 + r) * kt + q * pc + kk, src, dst + (r * kt + q * pc + kk) * T16);
         }
     }
     noc_async_read_barrier();
+#ifndef PE_IN0_READ_STAGGER
+    if (q >= IN0_LAG) {
+        PWAIT_GE(PS_IV0 + q - IN0_LAG, (k << 16) + 1, "PIVS");
+    }
+#endif
     for (uint32_t r = 0; r < rp; ++r) {
         const uint32_t a = dst + (r * kt + q * pc) * T16;
         noc_async_write_multicast(a, pmcast(c.rowx0, y, c.rowx1, y, a), pc * T16, NCOL - 1, false);

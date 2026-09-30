@@ -35,6 +35,9 @@ FORCE_INLINE uint32_t w_arena_arg(const Op& o) {
     if (o.what == W_PROJ) {
         return PA_WPROJ;
     }
+    if (o.what == W_VQKV) {
+        return PA_WV16 + o.layer;
+    }
     return (o.what >= W_VRMS1 ? PA_WV : PA_WS) + o.layer;
 }
 

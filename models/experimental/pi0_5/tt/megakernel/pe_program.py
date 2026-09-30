@@ -66,10 +66,11 @@ class PrefixTensors:
         n_sig = len(pp.sig) if n_sig is None else n_sig
         n_vlm = len(pp.vlm) if n_vlm is None else n_vlm
         if shared is not None:  # the arenas depend on the op geometry only (np / kt / piece), not on the shape
-            self.ws, self.wv = shared.ws, shared.wv
+            self.ws, self.wv, self.wv16 = shared.ws, shared.wv, shared.wv16
         else:
             self.ws = [arena(H.sig_layer_arena(pp.sig[i], i, ps), ttnn.bfloat8_b) for i in range(n_sig)]
             self.wv = [arena(H.vlm_layer_arena(pp.vlm[i], i, ps), ttnn.bfloat8_b) for i in range(n_vlm)]
+            self.wv16 = [arena(H.vlm_qkv_arena(pp.vlm[i], i, ps), ttnn.bfloat16) for i in range(n_vlm)]
         if shared is not None:
             self.wpatch, self.wproj = shared.wpatch, shared.wproj
             self.svec, self.gvec, self.vvec, self.consts, self.pos = (shared.svec, shared.gvec, shared.vvec,
@@ -112,7 +113,7 @@ class PrefixTensors:
         self.vmask = up(torch.zeros(32, ps.ptv * 32), ttnn.bfloat16)
 
     def all(self) -> List:
-        return (list(self.ws) + list(self.wv) + [self.wpatch, self.wproj, self.svec, self.gvec, self.vvec, self.consts,
+        return (list(self.ws) + list(self.wv) + list(self.wv16) + [self.wpatch, self.wproj, self.svec, self.gvec, self.vvec, self.consts,
                                                   self.pos] + list(self.rope)
                 + [self.x_s, self.xn_s, self.qkv_s, self.ctx_s, self.h_s, self.x_v, self.xn_v, self.q_v, self.ctx_v,
                    self.h_v, self.diag, self.times, self.embed, self.im2col, self.tokens, self.vmask])
@@ -189,6 +190,8 @@ class WholeMegakernel:
             c[P.PA_COSQ + i] = addr(ten)
         for i, ten in enumerate(t.ws):
             c[P.PA_WS + i] = addr(ten)
+        for i, ten in enumerate(t.wv16):
+            c[P.PA_WV16 + i] = addr(ten)
         for i, ten in enumerate(t.wv):
             c[P.PA_WV + i] = addr(ten)
         for l in range(G.N_LAYERS):  # the prefix writes the caches phase 1 reads (its C_K_ADDR / C_V_ADDR)

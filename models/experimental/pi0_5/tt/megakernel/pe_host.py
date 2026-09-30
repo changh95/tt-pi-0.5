@@ -196,10 +196,14 @@ def sig_layer_arena(sp: SigLayer, layer: int, ps: P.PShape) -> torch.Tensor:
 
 
 def vlm_layer_arena(vp: VlmLayer, layer: int, ps: P.PShape) -> torch.Tensor:
+    """o / gate|up / down (bfp8); the qkv weights are in vlm_qkv_arena (bf16)."""
     base = P.OP_V0 + layer * P.OPS_PER_LAYER
-    ops = [(P.describe(base + 1, ps), vp.wqkv), (P.describe(base + 3, ps), vp.wo), (P.describe(base + 5, ps), vp.wug),
-           (P.describe(base + 6, ps), vp.wd)]
+    ops = [(P.describe(base + 3, ps), vp.wo), (P.describe(base + 5, ps), vp.wug), (P.describe(base + 6, ps), vp.wd)]
     return stripe(ops, ps, P.T8)
+
+
+def vlm_qkv_arena(vp: VlmLayer, layer: int, ps: P.PShape) -> torch.Tensor:
+    return stripe([(P.describe(P.OP_V0 + layer * P.OPS_PER_LAYER + 1, ps), vp.wqkv)], ps, P.T16)
 
 
 def patch_arena(pp: PrefixParams, ps: P.PShape) -> torch.Tensor:

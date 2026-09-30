@@ -734,3 +734,31 @@ apply; attention 9.7 ms; feeders), then the full gate set.
   (w38.json; 20 replays identical, alternation identical). Size base 128,548 B (mock33.json).
 - Next: accuracy re-verification of the whole model (22-seed gate vs shipped, LIBERO golden) after the numerics
   changes (polynomial GELU, exp_21f softmax, folded norms), then the full exit gate set.
+
+### 2026-09-30 23:42:11 P2 accuracy re-check after the numerics changes; bf16 VLM qkv; library exp; SigLIP 353.6 us
+- 22-seed amended gate (pe_seed_gate.py; off = seeds_off_v2.pt, same session; files p2/results/seeds_*.json):
+  | build | passes | whole mean | min margin |
+  |---|---|---|---|
+  | 21:28 HiFi2 (pre-session-2 numerics) | 22/22 | 0.99853 | +0.00123 |
+  | c6aa39e (folded norms, poly GELU, exp_21f) | 21/22 | 0.99652 | -0.01370 (seed 707) |
+  | + PE_EXP_STOCK | 22/22 | 0.99677 | +0.00086 |
+  | + PE_GELU_STOCK | 22/22 | 0.99768 | +0.00080 |
+  | + both stock | 22/22 | 0.99726 | +0.00120 |
+  | bf16 VLM qkv weights (exp_21f) | 21/22 | 0.99740 | -0.01187 (707) |
+  | bf16 qkv + PE_EXP_STOCK | 22/22 | 0.99838 | +0.00121 |
+  | bf16 qkv + degree-4 2^f exp (2.7e-6) | 21/22 | 0.99707 | -0.01710 (707) |
+  | final (bf16 qkv, library exp, b41) | 22/22 | 0.99838 | +0.00121 (707: 0.99522 vs 0.99175) |
+  Seed 707 (n_lang 64) moves between 0.975 and 0.997 with numerically equivalent builds (an exp accurate to 2.7e-6
+  still failed it): the whole-model PCC is chaotic at that seed (tiny changes flip bf16 roundings of P / activations).
+  The library exp passed it in all three builds tested and costs 7-8 us per SigLIP attention and ~16 us per VLM
+  attention; it is the default, the fast exps are arm PE_EXP_FAST.
+- Error budget (CPU emulation, p2/results/emu/: ttnn's bfp8 packing reproduced bit-exactly by the emulator): VLM K/V
+  rel error at layer 17 (V) 6.6 % with bfp8 weights, 2.7 % with bf16 weights, activations bf16 vs fp32 immaterial;
+  qkv weights bf16 alone 4.95 %. SigLIP output 0.55 % (bfp8) vs device 1.8 % (HiFi2) / 1.2 % (arm PE_MM_HIFI4,
+  acc4_*.json: prefix 37 -> 50 ms, not taken). bf16 attention scores / P cost little (0.55 -> 0.59 %).
+  -> VLM qkv weights now bf16 (own arena per layer, PA_WV16): VQKV 95 -> 111 us, vlm0 layer PCC 0.99889 -> 0.99927.
+- in0: sources read their pieces at once, only the multicasts are staggered (lag 1; arm PE_IN0_READ_STAGGER = old):
+  SigLIP 359.2 -> 353.6 us with the library exp (arms6_*.json); lag 2 / 3 slower.
+- b41 (p2/results/b41.json, b41_prefix.json, w41.json): SigLIP layer 353.6 us (LN 23.6, QKV 46.8, ATTN 80.5, O 33.9,
+  LN2 23.4, FC1 76.6, FC2 69.0) -> P2-2 GO; VLM layer 1.612 ms; prefix 37.3 ms/rep; K/V vs host fp32 min 0.995379;
+  whole call base 55.67 ms (20 replays identical, alternation identical). Size base 128,636 B (mock36.json).

@@ -268,7 +268,9 @@ constexpr uint32_t PA_NOCX0 = 130;   // 130..140: NoC x of logical columns 0..10
 constexpr uint32_t PA_BRISC_N = 141; // the BRISC's common-arg list length (the weight arenas are NCRISC-only)
 constexpr uint32_t PA_WS = 141;      // SigLIP layer weight arenas (27, bfp8, bank-striped pages)
 constexpr uint32_t PA_WV = 168;      // VLM layer weight arenas (18)
-constexpr uint32_t PA_N = 186;       // common args in total
+constexpr uint32_t PA_WV16 = 186;    // VLM layer qkv weight arenas (18, bf16: bfp8 qkv weights were the largest
+                                     // prefix K / V error term, CPU emulation 2026-09-30)
+constexpr uint32_t PA_N = 204;       // common args in total
 
 // ---------------------------------------------------------------- per-core runtime args (appended after phase 1's)
 constexpr uint32_t PR0 = 48;

@@ -73,7 +73,9 @@ def test_cpu_pe_arena_roundtrip(what):
                         g2=r(2048))
         arena = H.vlm_layer_arena(vp, 5, ps)
         base = P.OP_V0 + 5 * 7
-        cases = [(base + 1, vp.wqkv), (base + 3, vp.wo), (base + 5, vp.wug), (base + 6, vp.wd)]
+        cases = [(base + 3, vp.wo), (base + 5, vp.wug), (base + 6, vp.wd)]
+        o = P.describe(base + 1, ps)
+        assert torch.equal(_read_back(o, H.vlm_qkv_arena(vp, 5, ps), ps, vp.wqkv.shape), vp.wqkv)
     else:
         from models.experimental.pi0_5.tt.megakernel.pe_size_check import dummy_prefix_params
 

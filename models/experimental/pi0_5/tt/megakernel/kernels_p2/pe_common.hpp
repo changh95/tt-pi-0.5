@@ -143,7 +143,7 @@ PE_OS Op describe(uint32_t op) {
         case W_SFC1: mm(MM_R, S_M, S_R, S_D, S_I / 2, S_PIECE, E_BIAS_GELU, 0, 1); break;
         case W_SFC2: mm(MM_R, S_M, S_R, S_I, S_D / 2, S_PIECE_2, E_RES_BIAS, 0, 1); break;
         case W_PROJ: mm(MM_R, S_M, S_R, S_D, V_D / 2, S_PIECE, E_BIAS, 0, 1); break;
-        case W_VQKV: mm(MM_R, MT, RV, V_D, V_NQKV / 2, V_PIECE, E_ROPE, 0, VLM_FID_HI); break;
+        case W_VQKV: mm(MM_R, MT, RV, V_D, V_NQKV / 2, V_PIECE, E_ROPE, 1, VLM_FID_HI); break;
         case W_VO: mm(MM_R, MT, RV, V_D, V_D / 2, V_PIECE, E_RES, 0, VLM_FID_HI); break;
         case W_VGU: mm(MM_R, MT, RV, V_D, V_I, V_PIECE, E_GEGLU, 0, VLM_FID_HI); break;
         case W_VDOWN: mm(MM_S, MT, RV, V_I, V_D / 2, V_PIECE, E_RES, 0, VLM_FID_HI); break;
@@ -219,7 +219,10 @@ PE_OS uint32_t mm_arena_off(const Op& o) {
     if (o.what == W_PATCH || o.what == W_PROJ) {
         return 0;
     }
-    uint32_t first = (o.what >= W_VRMS1) ? W_VQKV : W_SQKV;
+    if (o.what == W_VQKV) {  // alone in its bf16 arena
+        return 0;
+    }
+    uint32_t first = (o.what >= W_VRMS1) ? W_VO : W_SQKV;
     uint32_t off = 0;
     for (uint32_t w = first; w < o.what; ++w) {
         if (w == W_SATTN || w == W_SLN2 || w == W_VATTN || w == W_VRMS2) {

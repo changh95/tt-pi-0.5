@@ -61,12 +61,23 @@ inline void pe_calculate_gelu_fast() {
     }
 }
 inline void pe_gelu_fast_init() {}
-// exp for the softmax: bf16-accurate exp_21f (P is packed to bf16) instead of the fp32-accurate exp
+// exp for the softmax: exp_21f's range reduction with a degree-4 2^f (max rel err 2.7e-6; exp_21f's quadratic is
+// ~1.7e-3 and failed seed 707 of the base gate in two builds while the fp32-accurate exp passed, 2026-09-30).
+// p(0) = 1.0000026 >= 1 and p(1) = 1.9999948 < 2, as setexp needs.
 template <bool is_fp32_dest_acc_en, int ITERATIONS = 8>
 inline void pe_calculate_exp21() {
-#pragma GCC unroll 2
+#pragma GCC unroll 1
     for (int d = 0; d < ITERATIONS; d++) {
-        sfpi::dst_reg[0] = _sfpu_exp_21f_bf16_<true>(sfpi::dst_reg[0]);
+        sfpi::vFloat xlog2 = sfpi::dst_reg[0] * 1.4426950216293334961f + 127.f;
+        xlog2 = sfpi::clamp(xlog2, 0.0f, 255.0f);
+        sfpi::vFloat z = sfpi::as<sfpi::vFloat>(_float_to_int32_for_exp_21f_(xlog2));
+        sfpi::vInt ep = sfpi::exexp(z, sfpi::ExponentMode::Biased);
+        sfpi::vFloat f = sfpi::convert<sfpi::vFloat>(sfpi::exman(z), sfpi::RoundMode::Nearest) * 1.1920928955078125e-07f;
+        sfpi::vFloat q = f * 1.353495196e-02f + 5.200919136e-02f;
+        q = q * f + 2.414447218e-01f;
+        q = q * f + 6.930032969e-01f;
+        q = q * f + 1.000002623e+00f;
+        sfpi::dst_reg[0] = sfpi::setexp(q, ep);
         sfpi::dst_reg++;
     }
 }
@@ -75,25 +86,43 @@ inline void pe_calculate_exp21() {
 
 namespace pe {
 
-ALWI void pe_gelu_init() { MATH(llk_math_eltwise_unary_sfpu_init<SfpuType::gelu_tanh>(sfpu::pe_gelu_fast_init)); }
+// softmax exp: the fp32-accurate library exp by default. Faster SFPU exps (exp_21f; degree-4 2^f, max rel err
+// 2.7e-6: arm PE_EXP_FAST) failed seed 707 of the amended base gate in three builds (0.978 / 0.980 / 0.975 vs the
+// shipped 0.992) while every build with the library exp passed 22 / 22 (2026-09-30, p2/results/seeds_*.json).
+#ifndef PE_EXP_FAST
+ALWI void pe_exp_init() { exp_tile_init<false>(); }
+ALWI void pe_exp(uint32_t idst) { exp_tile<false>(idst); }
+#else
 ALWI void pe_exp_init() { MATH(llk_math_eltwise_unary_sfpu_init<SfpuType::exponential>(sfpu::pe_gelu_fast_init)); }
 ALWI void pe_exp(uint32_t idst) {
     MATH(SFPU_UNARY_CALL(DST_SYNC_MODE, DST_ACCUM_MODE, pe_calculate_exp21, (DST_ACCUM_MODE), idst, VectorMode::RC));
 }
+#endif
+#ifdef PE_GELU_STOCK  // precision arm: the fp32-accurate gelu_tanh
+ALWI void pe_gelu_init() { gelu_tanh_tile_init(); }
+ALWI void pe_gelu(uint32_t idst) { gelu_tanh_tile(idst); }
+#else
+ALWI void pe_gelu_init() { MATH(llk_math_eltwise_unary_sfpu_init<SfpuType::gelu_tanh>(sfpu::pe_gelu_fast_init)); }
 ALWI void pe_gelu(uint32_t idst) {
     MATH(SFPU_UNARY_CALL(DST_SYNC_MODE, DST_ACCUM_MODE, pe_calculate_gelu_fast, (DST_ACCUM_MODE), idst,
                          VectorMode::RC));
 }
+#endif
 
 // ---------------------------------------------------------------- the block-matmul K loop (every prefix matmul)
 // One output pair (rp x 2 tiles in DST 0 .. 2 rp - 1) accumulates nq weight pages of pc K tiles each; in0 tile of
 // (row r, k) at q * pc + k + r * kt. The fidelity is a runtime switch on the MATH thread only (the unpacker and the
-// packer code is shared: one copy of the loop per binary).
+// packer code is shared: one copy of the loop per binary). Arm PE_MM_HIFI4: the "high" fidelity is HiFi4.
+#ifdef PE_MM_HIFI4
+constexpr MathFidelity MM_FID_HI = MathFidelity::HiFi4;
+#else
+constexpr MathFidelity MM_FID_HI = MathFidelity::HiFi2;
+#endif
 NOINL void mm_k(uint32_t in0, uint32_t w_cb, uint32_t rp, uint32_t kt, uint32_t pc, uint32_t nq, uint32_t fid_hi,
                 bool wait_in0) {
     reconfig_data_format(w_cb, in0);  // matmul: SrcA <- in1, SrcB <- in0
     if (fid_hi) {
-        MATH((llk_math_matmul_init<MathFidelity::HiFi2, MM_THROTTLE>(in0, w_cb, 0, 2, rp)));
+        MATH((llk_math_matmul_init<MM_FID_HI, MM_THROTTLE>(in0, w_cb, 0, 2, rp)));
     } else {
         MATH((llk_math_matmul_init<MathFidelity::LoFi, MM_THROTTLE>(in0, w_cb, 0, 2, rp)));
     }
@@ -108,7 +137,7 @@ NOINL void mm_k(uint32_t in0, uint32_t w_cb, uint32_t rp, uint32_t kt, uint32_t 
         for (uint32_t k = 0; k < pc; ++k) {
             UNPACK((llk_unpack_AB_matmul(in0, w_cb, q * pc + k, 2 * k, 2, rp, kt)));
             if (fid_hi) {
-                MATH((llk_math_matmul<MathFidelity::HiFi2, MM_THROTTLE>(0, 2, rp)));
+                MATH((llk_math_matmul<MM_FID_HI, MM_THROTTLE>(0, 2, rp)));
             } else {
                 MATH((llk_math_matmul<MathFidelity::LoFi, MM_THROTTLE>(0, 2, rp)));
             }

@@ -1,0 +1,73 @@
+{
+ "siglip_x_after_27": {
+  "pcc": 0.9999287,
+  "rel_l2": 0.011959,
+  "max_abs": 9.0250244140625,
+  "finite": true,
+  "ref_absmax": 717.78564453125
+ },
+ "siglip_postln": {
+  "pcc": 0.9999988,
+  "rel_l2": 0.001548,
+  "max_abs": 0.080322265625,
+  "finite": true,
+  "ref_absmax": 28.791385650634766
+ },
+ "proj_rows": {
+  "pcc": 0.9999952,
+  "rel_l2": 0.003184,
+  "max_abs": 0.196136474609375,
+  "finite": true,
+  "ref_absmax": 122.6769790649414
+ },
+ "embed_rows": {
+  "pcc": 1.0,
+  "rel_l2": 0.0,
+  "max_abs": 0.0,
+  "finite": true,
+  "ref_absmax": 140.71424865722656
+ },
+ "pad_rows_absmax": 0.0,
+ "vlm_x_after_layer0": {
+  "pcc": 0.999995,
+  "rel_l2": 0.00315,
+  "max_abs": 1.99786376953125,
+  "finite": true,
+  "ref_absmax": 500.54345703125
+ },
+ "vlm_k_layer0": {
+  "pcc": 0.9999567,
+  "rel_l2": 0.009528,
+  "max_abs": 0.05965602025389671,
+  "finite": true,
+  "ref_absmax": 7.989973068237305
+ },
+ "vlm_x_after_layer1": {
+  "pcc": 0.9999987,
+  "rel_l2": 0.001615,
+  "max_abs": 0.3162841796875,
+  "finite": true,
+  "ref_absmax": 556.3508911132812
+ },
+ "vlm_k_layer1": {
+  "pcc": 0.999944,
+  "rel_l2": 0.010728,
+  "max_abs": 0.0879068374633789,
+  "finite": true,
+  "ref_absmax": 14.268499374389648
+ },
+ "vlm_x_after_layer2": {
+  "pcc": 0.999999,
+  "rel_l2": 0.001409,
+  "max_abs": 0.508453369140625,
+  "finite": true,
+  "ref_absmax": 567.0318603515625
+ },
+ "vlm_k_layer2": {
+  "pcc": 0.9999609,
+  "rel_l2": 0.009082,
+  "max_abs": 0.09832906723022461,
+  "finite": true,
+  "ref_absmax": 11.432832717895508
+ }
+}

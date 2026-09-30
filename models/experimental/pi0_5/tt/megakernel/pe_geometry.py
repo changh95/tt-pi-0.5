@@ -138,7 +138,7 @@ def describe(op: int, ps: PShape) -> Op:
     elif what == W_PROJ:
         mm(MM_R, S_M, S_R, S_D, V_D // 2, S_PIECE, E_BIAS, 0, 1)
     elif what == W_VQKV:
-        mm(MM_R, ps.mt, ps.rv, V_D, V_NQKV // 2, V_PIECE, E_ROPE, 0, 0)
+        mm(MM_R, ps.mt, ps.rv, V_D, V_NQKV // 2, V_PIECE, E_ROPE, 1, 0)
     elif what == W_VO:
         mm(MM_R, ps.mt, ps.rv, V_D, V_D // 2, V_PIECE, E_RES, 0, 0)
     elif what == W_VGU:
@@ -197,9 +197,9 @@ def op_bank_bytes(o: Op) -> int:
 
 
 def mm_arena_off(o: Op, ps: PShape) -> int:
-    if o.what in (W_PATCH, W_PROJ):
+    if o.what in (W_PATCH, W_PROJ, W_VQKV):  # (VQKV: alone in its bf16 arena)
         return 0
-    first = W_VQKV if o.what >= W_VRMS1 else W_SQKV
+    first = W_VO if o.what >= W_VRMS1 else W_SQKV
     off = 0
     for w in range(first, o.what):
         if w in (W_SATTN, W_SLN2, W_VATTN, W_VRMS2):
