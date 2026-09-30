@@ -524,3 +524,31 @@ Prior publish scripts: scratchpad/pub/ (copied to scratchpad/pub1/ for this roun
   code_sha256 08b350f19c7a04e2... build/pi05-base-p150/code/models == GitHub main models (+ tt-metal's
   models/common/lightweightmodule.py, as before).
 - Boot validation hold started (scratchpad/pub1/validate.log; 2 cycles, cold then warm; /info megakernel.backend must be expert).
+
+## 2026-09-30 17:34:16 KST -- publish-p1: SHIPPED (session end)
+
+Files: docs/megakernel/publish_p1/{scripts,results}/ (copies of scratchpad/pub1).
+- Boot validation (results/validate.log, one with-device hold 17:24-17:27, WITH_DEVICE_RESET_AFTER=1, reset exit 0):
+  image fe0d2e3d68a7, cycle 1 cold (package cache removed; serve 97.7 s, first warm-up 31.45 s) and cycle 2 warm (43.3 s,
+  13.08 s). Both: /info megakernel.backend = expert, kernel_digest 328761c8a1ce3fd9, source.commit f7f173bd; the device was
+  opened with worker_l1_size 1395712 (the cut); smoke_test PASS; 100 warm requests with identical actions.
+  timing_ms.inference median 70.83 (c1) / **70.81 ms (c2)** p90 70.95; total 72.18 / 72.16; client wall 73.73 / 73.69
+  (results/bench-c{1,2}-*.json). Card, README and GPU_COMPARISON use c2. Previous image: 84.02 / 85.35.
+- HF changh95/pi05-base-p150: ONE create_commit **9f6b082bfdda94c1fdf319670764e250c660b369**, parent pinned 2900530f.
+  148 adds (code/, image/ OCI blobs, tt_kernel_manifest.json, README, SERVING, GPU_COMPARISON, tt-model.yaml,
+  requirements.lock, demo/{README.md, libero_eval.json, 4 clips, combined mp4, poster}); 33 deletes (only the superseded
+  image blobs); the demo file names are unchanged, so the old demo content was replaced in place. The YAML front matter was
+  kept (no outdated field). The card says which part is the ONE persistent op (the expert loop) and which is traced stock
+  ops (the SigLIP / VLM prefix, 891 ops); every number comes from bench-c2, integrate_p1/results (O_ip1, A_default_base,
+  profiler), or the megakernel-p1 LIBERO files. The rows for the 125.9 ms image and the old 0.938-0.998 fp32 range were removed.
+- Verify (results/hf_verify.log): 151 files in the tree, none missing or unexpected, deleted blobs gone. sha256: 133 files
+  downloaded + 15 LFS image blobs via lfs.sha256, 0 mismatches. code/: all 83 GitHub-main files byte-identical (HF-only
+  = tt-metal's common/lightweightmodule.py). Image pull-back: removed local images, then  docker-loaded sha256:fe0d2e3d68a752709a443cbe6b8e5aa5f9d914ab21f03631959cb81623aeeafe
+  (= recorded digest). Served the pulled package by repo id (results/serve_pulled.log): megakernel expert, digest
+  328761c8a1ce3fd9, smoke PASS, 70.97 ms. Headless Chromium (results/pw_video.log): the README video
+  played (readyState 4, t 3.99 s of 29.63 s, no media error). The one failed request (replay.mp4, 404) comes from the HF
+  page itself, not from the card.
+- Disk: deleted the superseded docker image tt-model/pi05-base-p150:672900e23919 (3.02 GB; the 09-29 image, still on HF
+  history at 2900530f). build/pi05-base-p150 was overwritten by the new package. 31 GB free after.
+Open (unchanged): base pytest 0.95 floor on seed 3 (both arms, pre-existing); mk_brisc.cpp:8 stale comment.
+Next: phase 2 (WP P2-0), whole model as one fused op, on this branch.

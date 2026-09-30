@@ -1,0 +1,12 @@
+✓ weights lerobot/pi05_base@b211f3d4  
+  ✓ host ready  docker 28.5.2 (rootless) · tt devices · hugepages
+  ✓ image tt-model/pi05-base-p150:fe0d2e3d68a7
+  ✓ container started
+  ✓ server process started  1.6s
+  ✓ pipeline warmed up  39.3s
+  ✓ changh95/pi05-base-p150 ready  43.2s
+info pi05-base-p150 f7f173bd61241f09b286e56a9eb4038f76ee0782 b211f3d44c36b6acfcf7ae94a64e8e96f75a64ba megakernel expert 328761c8a1ce3fd9
+PASS pi05 actions=(50,32) max|a|=0.277 std=0.074 repeat_maxdiff=0.0000 change_maxdiff=0.8174 inference_ms=75.24/70.97 tokens=143/224 truncated=False
+✓ stopping tt-model-pi05-base-p150-default  clean shutdown  2.3s
+  ✓ stopped 1 container(s)
+[trap] device users: []

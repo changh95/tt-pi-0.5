@@ -1,0 +1,3618 @@
+- program_created:
+    id: 0
+    timestamp_ns: 1790744718107530963
+- program_compile_started:
+    id: 0
+    timestamp_ns: 1790744718107875171
+- program_kernel_compile_finished:
+    id: 0
+    timestamp_ns: 1790744718468382600
+    duration_ns: 360507429
+    watcher_kernel_id: 3
+    name: cq_dispatch_subordinate
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/cq_dispatch_subordinate/7580625835460921077/
+    source: tt_metal/impl/dispatch/kernels/cq_dispatch_subordinate.cpp
+- program_kernel_compile_finished:
+    id: 0
+    timestamp_ns: 1790744718666761753
+    duration_ns: 558886582
+    watcher_kernel_id: 4
+    name: cq_dispatch_subordinate_compute
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/cq_dispatch_subordinate_compute/10394825864546208667/
+    source: tt_metal/impl/dispatch/kernels/cq_dispatch_subordinate_compute.cpp
+- program_kernel_compile_finished:
+    id: 0
+    timestamp_ns: 1790744718990140432
+    duration_ns: 882265261
+    watcher_kernel_id: 2
+    name: cq_dispatch
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/cq_dispatch/3235398329204005883/
+    source: tt_metal/impl/dispatch/kernels/cq_dispatch.cpp
+- program_kernel_compile_finished:
+    id: 0
+    timestamp_ns: 1790744719451019719
+    duration_ns: 1343144548
+    watcher_kernel_id: 1
+    name: cq_prefetch
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/cq_prefetch/3134417297847883116/
+    source: tt_metal/impl/dispatch/kernels/cq_prefetch.cpp
+- program_compile_finished:
+    id: 0
+    timestamp_ns: 1790744719451061006
+    duration_ns: 1343185835
+- program_created:
+    id: 1
+    timestamp_ns: 1790744719500636949
+- program_created:
+    id: 2
+    timestamp_ns: 1790744719500721798
+- program_destroyed:
+    id: 2
+    timestamp_ns: 1790744719500723762
+- program_compile_started:
+    id: 1
+    timestamp_ns: 1790744719500727940
+- program_kernel_compile_finished:
+    id: 1
+    timestamp_ns: 1790744719753242076
+    duration_ns: 252514136
+    watcher_kernel_id: 6
+    name: writer_unary_interleaved_start_id_metal2
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/writer_unary_interleaved_start_id_metal2/8611675143340282510/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/writer_unary_interleaved_start_id_metal2.cpp
+- program_kernel_compile_finished:
+    id: 1
+    timestamp_ns: 1790744719815333189
+    duration_ns: 314605249
+    watcher_kernel_id: 5
+    name: reader_unary_pad_dims_split_rows_multicore
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_unary_pad_dims_split_rows_multicore/10071376302647983331/
+    source: ttnn/cpp/ttnn/operations/data_movement/tilize_with_val_padding/device/kernels/dataflow/reader_unary_pad_dims_split_rows_multicore.cpp
+- program_kernel_compile_finished:
+    id: 1
+    timestamp_ns: 1790744719965046842
+    duration_ns: 464318902
+    watcher_kernel_id: 7
+    name: tilize_metal2
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/tilize_metal2/6046538523043070191/
+    source: ttnn/cpp/ttnn/kernel/compute/tilize_metal2.cpp
+- program_compile_finished:
+    id: 1
+    timestamp_ns: 1790744719965067931
+    duration_ns: 464339991
+- program_created:
+    id: 3
+    timestamp_ns: 1790744719965964008
+- program_created:
+    id: 4
+    timestamp_ns: 1790744719966042166
+- program_destroyed:
+    id: 4
+    timestamp_ns: 1790744719966043829
+- program_compile_started:
+    id: 3
+    timestamp_ns: 1790744719966047265
+- program_kernel_compile_finished:
+    id: 3
+    timestamp_ns: 1790744719966138878
+    duration_ns: 91613
+    watcher_kernel_id: 9
+    name: writer_unary_interleaved_start_id_metal2
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/writer_unary_interleaved_start_id_metal2/8611675143340282510/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/writer_unary_interleaved_start_id_metal2.cpp
+- program_kernel_compile_finished:
+    id: 3
+    timestamp_ns: 1790744720280200501
+    duration_ns: 314153236
+    watcher_kernel_id: 8
+    name: reader_unary_pad_dims_split_rows_multicore
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_unary_pad_dims_split_rows_multicore/17218843195719538125/
+    source: ttnn/cpp/ttnn/operations/data_movement/tilize_with_val_padding/device/kernels/dataflow/reader_unary_pad_dims_split_rows_multicore.cpp
+- program_kernel_compile_finished:
+    id: 3
+    timestamp_ns: 1790744720417817780
+    duration_ns: 451770515
+    watcher_kernel_id: 10
+    name: tilize_metal2
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/tilize_metal2/14090956487519634501/
+    source: ttnn/cpp/ttnn/kernel/compute/tilize_metal2.cpp
+- program_compile_finished:
+    id: 3
+    timestamp_ns: 1790744720417840592
+    duration_ns: 451793327
+- program_created:
+    id: 5
+    timestamp_ns: 1790744720429442574
+- program_created:
+    id: 6
+    timestamp_ns: 1790744720429531181
+- program_destroyed:
+    id: 6
+    timestamp_ns: 1790744720429533516
+- program_compile_started:
+    id: 5
+    timestamp_ns: 1790744720429537543
+- program_kernel_compile_finished:
+    id: 5
+    timestamp_ns: 1790744720687411167
+    duration_ns: 257873624
+    watcher_kernel_id: 12
+    name: writer_unary_interleaved_start_id_metal2
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/writer_unary_interleaved_start_id_metal2/17830440502960243602/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/writer_unary_interleaved_start_id_metal2.cpp
+- program_kernel_compile_finished:
+    id: 5
+    timestamp_ns: 1790744720749789330
+    duration_ns: 320251787
+    watcher_kernel_id: 11
+    name: reader_unary_pad_dims_split_rows_multicore
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_unary_pad_dims_split_rows_multicore/10445489234749463444/
+    source: ttnn/cpp/ttnn/operations/data_movement/tilize_with_val_padding/device/kernels/dataflow/reader_unary_pad_dims_split_rows_multicore.cpp
+- program_kernel_compile_finished:
+    id: 5
+    timestamp_ns: 1790744720882384003
+    duration_ns: 452846460
+    watcher_kernel_id: 13
+    name: tilize_metal2
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/tilize_metal2/15782944479675164860/
+    source: ttnn/cpp/ttnn/kernel/compute/tilize_metal2.cpp
+- program_compile_finished:
+    id: 5
+    timestamp_ns: 1790744720882414200
+    duration_ns: 452876657
+- program_created:
+    id: 7
+    timestamp_ns: 1790744720882791901
+- program_created:
+    id: 8
+    timestamp_ns: 1790744720882993721
+- program_destroyed:
+    id: 8
+    timestamp_ns: 1790744720882995454
+- program_compile_started:
+    id: 7
+    timestamp_ns: 1790744720883007196
+- program_kernel_compile_finished:
+    id: 7
+    timestamp_ns: 1790744721151666653
+    duration_ns: 268659457
+    watcher_kernel_id: 15
+    name: writer_interleaved_scalar
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/writer_interleaved_scalar/11697434250987423743/
+    source: ttnn/cpp/ttnn/operations/eltwise/binary_ng/device/kernels/dataflow/writer_interleaved_scalar.cpp
+- program_kernel_compile_finished:
+    id: 7
+    timestamp_ns: 1790744721160610902
+    duration_ns: 277603706
+    watcher_kernel_id: 14
+    name: reader_interleaved_no_bcast
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_interleaved_no_bcast/15107140422773903669/
+    source: ttnn/cpp/ttnn/operations/eltwise/binary_ng/device/kernels/dataflow/reader_interleaved_no_bcast.cpp
+- program_kernel_compile_finished:
+    id: 7
+    timestamp_ns: 1790744721414254951
+    duration_ns: 531247755
+    watcher_kernel_id: 16
+    name: eltwise_binary_sfpu_scalar
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/eltwise_binary_sfpu_scalar/10959560188185293684/
+    source: ttnn/cpp/ttnn/operations/eltwise/binary_ng/device/kernels/compute/eltwise_binary_sfpu_scalar.cpp
+- program_compile_finished:
+    id: 7
+    timestamp_ns: 1790744721414286210
+    duration_ns: 531279014
+- program_created:
+    id: 9
+    timestamp_ns: 1790744721414868255
+- program_created:
+    id: 10
+    timestamp_ns: 1790744721415052612
+- program_destroyed:
+    id: 10
+    timestamp_ns: 1790744721415054836
+- program_compile_started:
+    id: 9
+    timestamp_ns: 1790744721415066278
+- program_kernel_compile_finished:
+    id: 9
+    timestamp_ns: 1790744721660467198
+    duration_ns: 245400920
+    watcher_kernel_id: 17
+    name: reader_unary
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_unary/4570029292699727327/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/reader_unary.cpp
+- program_kernel_compile_finished:
+    id: 9
+    timestamp_ns: 1790744721662542135
+    duration_ns: 247475857
+    watcher_kernel_id: 18
+    name: writer_unary
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/writer_unary/11297289213028194881/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/writer_unary.cpp
+- program_kernel_compile_finished:
+    id: 9
+    timestamp_ns: 1790744721927129124
+    duration_ns: 512062846
+    watcher_kernel_id: 19
+    name: eltwise_sfpu
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/eltwise_sfpu/425264612231547294/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/compute/eltwise_sfpu.cpp
+- program_compile_finished:
+    id: 9
+    timestamp_ns: 1790744721927152799
+    duration_ns: 512086521
+- program_created:
+    id: 11
+    timestamp_ns: 1790744721927753049
+- program_created:
+    id: 12
+    timestamp_ns: 1790744721927937887
+- program_destroyed:
+    id: 12
+    timestamp_ns: 1790744721927939630
+- program_compile_started:
+    id: 11
+    timestamp_ns: 1790744721927951182
+- program_kernel_compile_finished:
+    id: 11
+    timestamp_ns: 1790744721928015002
+    duration_ns: 63820
+    watcher_kernel_id: 21
+    name: writer_unary
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/writer_unary/11297289213028194881/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/writer_unary.cpp
+- program_kernel_compile_finished:
+    id: 11
+    timestamp_ns: 1790744721928038095
+    duration_ns: 86913
+    watcher_kernel_id: 20
+    name: reader_unary
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_unary/4570029292699727327/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/reader_unary.cpp
+- program_kernel_compile_finished:
+    id: 11
+    timestamp_ns: 1790744722416071670
+    duration_ns: 488120488
+    watcher_kernel_id: 22
+    name: eltwise_sfpu
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/eltwise_sfpu/9795024153729518502/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/compute/eltwise_sfpu.cpp
+- program_compile_finished:
+    id: 11
+    timestamp_ns: 1790744722416095094
+    duration_ns: 488143912
+- program_created:
+    id: 13
+    timestamp_ns: 1790744722416791565
+- program_created:
+    id: 14
+    timestamp_ns: 1790744722416913856
+- program_destroyed:
+    id: 14
+    timestamp_ns: 1790744722416915479
+- program_compile_started:
+    id: 13
+    timestamp_ns: 1790744722416923764
+- program_kernel_compile_finished:
+    id: 13
+    timestamp_ns: 1790744722695717527
+    duration_ns: 278793763
+    watcher_kernel_id: 24
+    name: reader_bmm_tile_layout_in0_receiver
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in0_receiver/17749169170954844530/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in0_receiver.cpp
+- program_kernel_compile_finished:
+    id: 13
+    timestamp_ns: 1790744722786755604
+    duration_ns: 369831840
+    watcher_kernel_id: 25
+    name: reader_bmm_tile_layout_in1_sender_writer_padding
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in1_sender_writer_padding/1840182661100713568/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in1_sender_writer_padding.cpp
+- program_kernel_compile_finished:
+    id: 13
+    timestamp_ns: 1790744722798766145
+    duration_ns: 381842381
+    watcher_kernel_id: 23
+    name: reader_bmm_tile_layout_in0_sender_padding
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in0_sender_padding/16668277198106481285/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in0_sender_padding.cpp
+- program_kernel_compile_finished:
+    id: 13
+    timestamp_ns: 1790744722925498228
+    duration_ns: 508574464
+    watcher_kernel_id: 26
+    name: bmm_large_block_zm_fused_bias_activation
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/bmm_large_block_zm_fused_bias_activation/6158842329547536577/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/compute/bmm_large_block_zm_fused_bias_activation.cpp
+- program_compile_finished:
+    id: 13
+    timestamp_ns: 1790744722925521993
+    duration_ns: 508598229
+- program_created:
+    id: 15
+    timestamp_ns: 1790744722925922918
+- program_created:
+    id: 16
+    timestamp_ns: 1790744722926129116
+- program_destroyed:
+    id: 16
+    timestamp_ns: 1790744722926130899
+- program_compile_started:
+    id: 15
+    timestamp_ns: 1790744722926144836
+- program_kernel_compile_finished:
+    id: 15
+    timestamp_ns: 1790744723174180462
+    duration_ns: 248035626
+    watcher_kernel_id: 27
+    name: reader_unary
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_unary/11673362274797460072/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/reader_unary.cpp
+- program_kernel_compile_finished:
+    id: 15
+    timestamp_ns: 1790744723175992614
+    duration_ns: 249847778
+    watcher_kernel_id: 28
+    name: writer_unary
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/writer_unary/10302810499830831091/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/writer_unary.cpp
+- program_kernel_compile_finished:
+    id: 15
+    timestamp_ns: 1790744723441306958
+    duration_ns: 515162122
+    watcher_kernel_id: 29
+    name: eltwise_sfpu
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/eltwise_sfpu/1004326972724049362/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/compute/eltwise_sfpu.cpp
+- program_compile_finished:
+    id: 15
+    timestamp_ns: 1790744723441340791
+    duration_ns: 515195955
+- program_created:
+    id: 17
+    timestamp_ns: 1790744723441872773
+- program_created:
+    id: 18
+    timestamp_ns: 1790744723442073471
+- program_destroyed:
+    id: 18
+    timestamp_ns: 1790744723442075244
+- program_compile_started:
+    id: 17
+    timestamp_ns: 1790744723442088920
+- program_kernel_compile_finished:
+    id: 17
+    timestamp_ns: 1790744723442157749
+    duration_ns: 68829
+    watcher_kernel_id: 31
+    name: writer_unary
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/writer_unary/10302810499830831091/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/writer_unary.cpp
+- program_kernel_compile_finished:
+    id: 17
+    timestamp_ns: 1790744723442166616
+    duration_ns: 77696
+    watcher_kernel_id: 30
+    name: reader_unary
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_unary/11673362274797460072/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/reader_unary.cpp
+- program_kernel_compile_finished:
+    id: 17
+    timestamp_ns: 1790744723950901097
+    duration_ns: 508812177
+    watcher_kernel_id: 32
+    name: eltwise_sfpu
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/eltwise_sfpu/2910530883926506198/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/compute/eltwise_sfpu.cpp
+- program_compile_finished:
+    id: 17
+    timestamp_ns: 1790744723950928829
+    duration_ns: 508839909
+- program_created:
+    id: 19
+    timestamp_ns: 1790744723951425945
+- program_created:
+    id: 20
+    timestamp_ns: 1790744723951525763
+- program_destroyed:
+    id: 20
+    timestamp_ns: 1790744723951527626
+- program_compile_started:
+    id: 19
+    timestamp_ns: 1790744723951538937
+- program_kernel_compile_finished:
+    id: 19
+    timestamp_ns: 1790744724196375770
+    duration_ns: 244836833
+    watcher_kernel_id: 34
+    name: writer_unary_interleaved_start_id
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/writer_unary_interleaved_start_id/15606080769221373313/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/writer_unary_interleaved_start_id.cpp
+- program_kernel_compile_finished:
+    id: 19
+    timestamp_ns: 1790744724214566265
+    duration_ns: 263027328
+    watcher_kernel_id: 33
+    name: reader_concat_interleaved_start_id
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_concat_interleaved_start_id/2267779611782008684/
+    source: ttnn/cpp/ttnn/operations/data_movement/concat/device/kernels/dataflow/reader_concat_interleaved_start_id.cpp
+- program_compile_finished:
+    id: 19
+    timestamp_ns: 1790744724214583818
+    duration_ns: 263044881
+- program_created:
+    id: 21
+    timestamp_ns: 1790744724214992988
+- program_created:
+    id: 22
+    timestamp_ns: 1790744724215149483
+- program_destroyed:
+    id: 22
+    timestamp_ns: 1790744724215154262
+- program_compile_started:
+    id: 21
+    timestamp_ns: 1790744724215165744
+- program_kernel_compile_finished:
+    id: 21
+    timestamp_ns: 1790744724493471753
+    duration_ns: 278306009
+    watcher_kernel_id: 36
+    name: reader_bmm_tile_layout_in0_receiver
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in0_receiver/10371590255133483705/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in0_receiver.cpp
+- program_kernel_compile_finished:
+    id: 21
+    timestamp_ns: 1790744724569090180
+    duration_ns: 353924436
+    watcher_kernel_id: 35
+    name: reader_bmm_tile_layout_in0_sender_padding
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in0_sender_padding/10193287320148573599/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in0_sender_padding.cpp
+- program_kernel_compile_finished:
+    id: 21
+    timestamp_ns: 1790744724584943194
+    duration_ns: 369777450
+    watcher_kernel_id: 37
+    name: reader_bmm_tile_layout_in1_sender_writer_padding
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in1_sender_writer_padding/13056671362641503489/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in1_sender_writer_padding.cpp
+- program_kernel_compile_finished:
+    id: 21
+    timestamp_ns: 1790744724741835364
+    duration_ns: 526669620
+    watcher_kernel_id: 38
+    name: bmm_large_block_zm_fused_bias_activation
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/bmm_large_block_zm_fused_bias_activation/10607085473068295535/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/compute/bmm_large_block_zm_fused_bias_activation.cpp
+- program_compile_finished:
+    id: 21
+    timestamp_ns: 1790744724741860251
+    duration_ns: 526694507
+- program_created:
+    id: 23
+    timestamp_ns: 1790744724742299147
+- program_created:
+    id: 24
+    timestamp_ns: 1790744724742537506
+- program_destroyed:
+    id: 24
+    timestamp_ns: 1790744724742540171
+- program_compile_started:
+    id: 23
+    timestamp_ns: 1790744724742554949
+- program_kernel_compile_finished:
+    id: 23
+    timestamp_ns: 1790744725021457862
+    duration_ns: 278902913
+    watcher_kernel_id: 40
+    name: writer_interleaved_no_bcast
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/writer_interleaved_no_bcast/11267553301625746577/
+    source: ttnn/cpp/ttnn/operations/eltwise/binary_ng/device/kernels_ng/dataflow/writer_interleaved_no_bcast.cpp
+- program_kernel_compile_finished:
+    id: 23
+    timestamp_ns: 1790744725045225846
+    duration_ns: 302670897
+    watcher_kernel_id: 39
+    name: reader_interleaved_no_bcast
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_interleaved_no_bcast/6711606597565343639/
+    source: ttnn/cpp/ttnn/operations/eltwise/binary_ng/device/kernels_ng/dataflow/reader_interleaved_no_bcast.cpp
+- program_kernel_compile_finished:
+    id: 23
+    timestamp_ns: 1790744725179670446
+    duration_ns: 437115497
+    watcher_kernel_id: 41
+    name: eltwise_binary_no_bcast
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/eltwise_binary_no_bcast/11140126220398883765/
+    source: ttnn/cpp/ttnn/operations/eltwise/binary_ng/device/kernels/compute/eltwise_binary_no_bcast.cpp
+- program_compile_finished:
+    id: 23
+    timestamp_ns: 1790744725179692568
+    duration_ns: 437137619
+- program_created:
+    id: 25
+    timestamp_ns: 1790744725180200794
+- program_created:
+    id: 26
+    timestamp_ns: 1790744725180397775
+- program_destroyed:
+    id: 26
+    timestamp_ns: 1790744725180400160
+- program_compile_started:
+    id: 25
+    timestamp_ns: 1790744725180413395
+- program_kernel_compile_finished:
+    id: 25
+    timestamp_ns: 1790744725427276799
+    duration_ns: 246863404
+    watcher_kernel_id: 42
+    name: reader_unary
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_unary/1190800260428498179/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/reader_unary.cpp
+- program_kernel_compile_finished:
+    id: 25
+    timestamp_ns: 1790744725430244416
+    duration_ns: 249831021
+    watcher_kernel_id: 43
+    name: writer_unary
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/writer_unary/12647958816283315264/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/writer_unary.cpp
+- program_kernel_compile_finished:
+    id: 25
+    timestamp_ns: 1790744725836073512
+    duration_ns: 655660117
+    watcher_kernel_id: 44
+    name: eltwise_sfpu
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/eltwise_sfpu/13529569123175794027/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/compute/eltwise_sfpu.cpp
+- program_compile_finished:
+    id: 25
+    timestamp_ns: 1790744725836092438
+    duration_ns: 655679043
+- program_created:
+    id: 27
+    timestamp_ns: 1790744725836741500
+- program_created:
+    id: 28
+    timestamp_ns: 1790744725836996079
+- program_destroyed:
+    id: 28
+    timestamp_ns: 1790744725836998453
+- program_compile_started:
+    id: 27
+    timestamp_ns: 1790744725837017089
+- program_kernel_compile_finished:
+    id: 27
+    timestamp_ns: 1790744725837080979
+    duration_ns: 63890
+    watcher_kernel_id: 47
+    name: reader_bmm_tile_layout_in1_sender_writer_padding
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in1_sender_writer_padding/13056671362641503489/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in1_sender_writer_padding.cpp
+- program_kernel_compile_finished:
+    id: 27
+    timestamp_ns: 1790744725837090306
+    duration_ns: 73217
+    watcher_kernel_id: 46
+    name: reader_bmm_tile_layout_in0_receiver
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in0_receiver/10371590255133483705/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in0_receiver.cpp
+- program_kernel_compile_finished:
+    id: 27
+    timestamp_ns: 1790744725837104844
+    duration_ns: 87755
+    watcher_kernel_id: 48
+    name: bmm_large_block_zm_fused_bias_activation
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/bmm_large_block_zm_fused_bias_activation/10607085473068295535/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/compute/bmm_large_block_zm_fused_bias_activation.cpp
+- program_kernel_compile_finished:
+    id: 27
+    timestamp_ns: 1790744726188693538
+    duration_ns: 351676449
+    watcher_kernel_id: 45
+    name: reader_bmm_tile_layout_in0_sender_padding
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in0_sender_padding/3026004110350748133/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in0_sender_padding.cpp
+- program_compile_finished:
+    id: 27
+    timestamp_ns: 1790744726188722652
+    duration_ns: 351705563
+- program_created:
+    id: 29
+    timestamp_ns: 1790744728313891340
+- program_created:
+    id: 30
+    timestamp_ns: 1790744728314076108
+- program_destroyed:
+    id: 30
+    timestamp_ns: 1790744728314078222
+- program_compile_started:
+    id: 29
+    timestamp_ns: 1790744728314092228
+- program_kernel_compile_finished:
+    id: 29
+    timestamp_ns: 1790744728563002118
+    duration_ns: 248909890
+    watcher_kernel_id: 50
+    name: writer_unary_interleaved_start_id_wh
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/writer_unary_interleaved_start_id_wh/13379454232366769309/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/writer_unary_interleaved_start_id_wh.cpp
+- program_kernel_compile_finished:
+    id: 29
+    timestamp_ns: 1790744728665401388
+    duration_ns: 351309160
+    watcher_kernel_id: 49
+    name: reader_unary_pad_multicore_both_dims
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_unary_pad_multicore_both_dims/4357315404708222646/
+    source: ttnn/cpp/ttnn/operations/data_movement/tilize_with_val_padding/device/kernels/dataflow/reader_unary_pad_multicore_both_dims.cpp
+- program_kernel_compile_finished:
+    id: 29
+    timestamp_ns: 1790744728766586412
+    duration_ns: 452494184
+    watcher_kernel_id: 51
+    name: tilize_wh
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/tilize_wh/14622304233572646118/
+    source: ttnn/cpp/ttnn/operations/data_movement/tilize/device/kernels/compute/tilize_wh.cpp
+- program_compile_finished:
+    id: 29
+    timestamp_ns: 1790744728766612341
+    duration_ns: 452520113
+- program_created:
+    id: 31
+    timestamp_ns: 1790744728787318471
+- program_created:
+    id: 32
+    timestamp_ns: 1790744728787535479
+- program_destroyed:
+    id: 32
+    timestamp_ns: 1790744728787538625
+- program_compile_started:
+    id: 31
+    timestamp_ns: 1790744728787551279
+- program_kernel_compile_finished:
+    id: 31
+    timestamp_ns: 1790744728787638143
+    duration_ns: 86864
+    watcher_kernel_id: 54
+    name: tilize_wh
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/tilize_wh/14622304233572646118/
+    source: ttnn/cpp/ttnn/operations/data_movement/tilize/device/kernels/compute/tilize_wh.cpp
+- program_kernel_compile_finished:
+    id: 31
+    timestamp_ns: 1790744729030115463
+    duration_ns: 242564184
+    watcher_kernel_id: 53
+    name: writer_unary_interleaved_start_id_wh
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/writer_unary_interleaved_start_id_wh/8466638971934327640/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/writer_unary_interleaved_start_id_wh.cpp
+- program_kernel_compile_finished:
+    id: 31
+    timestamp_ns: 1790744729130459302
+    duration_ns: 342908023
+    watcher_kernel_id: 52
+    name: reader_unary_pad_multicore_both_dims
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_unary_pad_multicore_both_dims/13317679255645897669/
+    source: ttnn/cpp/ttnn/operations/data_movement/tilize_with_val_padding/device/kernels/dataflow/reader_unary_pad_multicore_both_dims.cpp
+- program_compile_finished:
+    id: 31
+    timestamp_ns: 1790744729130478208
+    duration_ns: 342926929
+- program_created:
+    id: 33
+    timestamp_ns: 1790744729135934690
+- program_created:
+    id: 34
+    timestamp_ns: 1790744729136033085
+- program_destroyed:
+    id: 34
+    timestamp_ns: 1790744729136035049
+- program_compile_started:
+    id: 33
+    timestamp_ns: 1790744729136039026
+- program_kernel_compile_finished:
+    id: 33
+    timestamp_ns: 1790744729410963237
+    duration_ns: 274924211
+    watcher_kernel_id: 55
+    name: fill_pad_reader
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/fill_pad_reader/10642199631092568862/
+    source: ttnn/cpp/ttnn/operations/data_movement/fill_pad/device/kernels/dataflow/fill_pad_reader.cpp
+- program_kernel_compile_finished:
+    id: 33
+    timestamp_ns: 1790744729424758938
+    duration_ns: 288719912
+    watcher_kernel_id: 56
+    name: fill_pad_writer
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/fill_pad_writer/2622298607352993813/
+    source: ttnn/cpp/ttnn/operations/data_movement/fill_pad/device/kernels/dataflow/fill_pad_writer.cpp
+- program_kernel_compile_finished:
+    id: 33
+    timestamp_ns: 1790744729613107318
+    duration_ns: 477068292
+    watcher_kernel_id: 57
+    name: fill_pad_compute
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/fill_pad_compute/762673799566741904/
+    source: ttnn/cpp/ttnn/operations/data_movement/fill_pad/device/kernels/compute/fill_pad_compute.cpp
+- program_compile_finished:
+    id: 33
+    timestamp_ns: 1790744729613126033
+    duration_ns: 477087007
+- program_created:
+    id: 35
+    timestamp_ns: 1790744729613673874
+- program_created:
+    id: 36
+    timestamp_ns: 1790744729613785194
+- program_destroyed:
+    id: 36
+    timestamp_ns: 1790744729613786847
+- program_compile_started:
+    id: 35
+    timestamp_ns: 1790744729613794672
+- program_kernel_compile_finished:
+    id: 35
+    timestamp_ns: 1790744729613874582
+    duration_ns: 79910
+    watcher_kernel_id: 60
+    name: tilize_wh
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/tilize_wh/14622304233572646118/
+    source: ttnn/cpp/ttnn/operations/data_movement/tilize/device/kernels/compute/tilize_wh.cpp
+- program_kernel_compile_finished:
+    id: 35
+    timestamp_ns: 1790744729864441279
+    duration_ns: 250646607
+    watcher_kernel_id: 59
+    name: writer_unary_interleaved_start_id_wh
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/writer_unary_interleaved_start_id_wh/2591622858089787981/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/writer_unary_interleaved_start_id_wh.cpp
+- program_kernel_compile_finished:
+    id: 35
+    timestamp_ns: 1790744729962819478
+    duration_ns: 349024806
+    watcher_kernel_id: 58
+    name: reader_unary_pad_multicore_both_dims
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_unary_pad_multicore_both_dims/1441577010309811155/
+    source: ttnn/cpp/ttnn/operations/data_movement/tilize_with_val_padding/device/kernels/dataflow/reader_unary_pad_multicore_both_dims.cpp
+- program_compile_finished:
+    id: 35
+    timestamp_ns: 1790744729962841590
+    duration_ns: 349046918
+- program_created:
+    id: 37
+    timestamp_ns: 1790744730035310744
+- program_created:
+    id: 38
+    timestamp_ns: 1790744730035612872
+- program_destroyed:
+    id: 38
+    timestamp_ns: 1790744730035616088
+- program_compile_started:
+    id: 37
+    timestamp_ns: 1790744730035631117
+- program_kernel_compile_finished:
+    id: 37
+    timestamp_ns: 1790744730296267498
+    duration_ns: 260636381
+    watcher_kernel_id: 62
+    name: writer_unary_interleaved_start_id_wh
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/writer_unary_interleaved_start_id_wh/15980275019080903918/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/writer_unary_interleaved_start_id_wh.cpp
+- program_kernel_compile_finished:
+    id: 37
+    timestamp_ns: 1790744730296383446
+    duration_ns: 260752329
+    watcher_kernel_id: 64
+    name: writer_unary_interleaved_start_id_wh
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/writer_unary_interleaved_start_id_wh/13331861499476332793/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/writer_unary_interleaved_start_id_wh.cpp
+- program_kernel_compile_finished:
+    id: 37
+    timestamp_ns: 1790744730407220739
+    duration_ns: 371589622
+    watcher_kernel_id: 61
+    name: reader_unary_pad_multicore_both_dims
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_unary_pad_multicore_both_dims/14817246144294701050/
+    source: ttnn/cpp/ttnn/operations/data_movement/tilize_with_val_padding/device/kernels/dataflow/reader_unary_pad_multicore_both_dims.cpp
+- program_kernel_compile_finished:
+    id: 37
+    timestamp_ns: 1790744730417800405
+    duration_ns: 382169288
+    watcher_kernel_id: 63
+    name: reader_unary_pad_multicore_both_dims
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_unary_pad_multicore_both_dims/6473485930243946795/
+    source: ttnn/cpp/ttnn/operations/data_movement/tilize_with_val_padding/device/kernels/dataflow/reader_unary_pad_multicore_both_dims.cpp
+- program_kernel_compile_finished:
+    id: 37
+    timestamp_ns: 1790744730525736195
+    duration_ns: 490105078
+    watcher_kernel_id: 66
+    name: tilize_wh
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/tilize_wh/17486919114016440340/
+    source: ttnn/cpp/ttnn/operations/data_movement/tilize/device/kernels/compute/tilize_wh.cpp
+- program_kernel_compile_finished:
+    id: 37
+    timestamp_ns: 1790744730536293911
+    duration_ns: 500662794
+    watcher_kernel_id: 67
+    name: tilize_wh
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/tilize_wh/11769987577339358541/
+    source: ttnn/cpp/ttnn/operations/data_movement/tilize/device/kernels/compute/tilize_wh.cpp
+- program_kernel_compile_finished:
+    id: 37
+    timestamp_ns: 1790744730540605728
+    duration_ns: 504974611
+    watcher_kernel_id: 65
+    name: tilize_wh
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/tilize_wh/870129148855361805/
+    source: ttnn/cpp/ttnn/operations/data_movement/tilize/device/kernels/compute/tilize_wh.cpp
+- program_compile_finished:
+    id: 37
+    timestamp_ns: 1790744730540625134
+    duration_ns: 504994017
+- program_created:
+    id: 39
+    timestamp_ns: 1790744732175171786
+- program_created:
+    id: 40
+    timestamp_ns: 1790744732175276123
+- program_destroyed:
+    id: 40
+    timestamp_ns: 1790744732175278156
+- program_compile_started:
+    id: 39
+    timestamp_ns: 1790744732175282084
+- program_kernel_compile_finished:
+    id: 39
+    timestamp_ns: 1790744732175381651
+    duration_ns: 99567
+    watcher_kernel_id: 69
+    name: writer_unary_interleaved_start_id_metal2
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/writer_unary_interleaved_start_id_metal2/17830440502960243602/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/writer_unary_interleaved_start_id_metal2.cpp
+- program_kernel_compile_finished:
+    id: 39
+    timestamp_ns: 1790744732505391453
+    duration_ns: 330109369
+    watcher_kernel_id: 68
+    name: reader_unary_pad_dims_split_rows_multicore
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_unary_pad_dims_split_rows_multicore/1625626524190452292/
+    source: ttnn/cpp/ttnn/operations/data_movement/tilize_with_val_padding/device/kernels/dataflow/reader_unary_pad_dims_split_rows_multicore.cpp
+- program_kernel_compile_finished:
+    id: 39
+    timestamp_ns: 1790744732635150904
+    duration_ns: 459868820
+    watcher_kernel_id: 70
+    name: tilize_metal2
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/tilize_metal2/3238051910262114290/
+    source: ttnn/cpp/ttnn/kernel/compute/tilize_metal2.cpp
+- program_compile_finished:
+    id: 39
+    timestamp_ns: 1790744732635174088
+    duration_ns: 459892004
+- program_created:
+    id: 41
+    timestamp_ns: 1790744732635615599
+- program_created:
+    id: 42
+    timestamp_ns: 1790744732635783205
+- program_destroyed:
+    id: 42
+    timestamp_ns: 1790744732635784918
+- program_compile_started:
+    id: 41
+    timestamp_ns: 1790744732635795478
+- program_kernel_compile_finished:
+    id: 41
+    timestamp_ns: 1790744732635844390
+    duration_ns: 48912
+    watcher_kernel_id: 72
+    name: writer_unary
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/writer_unary/11297289213028194881/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/writer_unary.cpp
+- program_kernel_compile_finished:
+    id: 41
+    timestamp_ns: 1790744732635856202
+    duration_ns: 60724
+    watcher_kernel_id: 71
+    name: reader_unary
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_unary/4570029292699727327/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/reader_unary.cpp
+- program_kernel_compile_finished:
+    id: 41
+    timestamp_ns: 1790744733131898798
+    duration_ns: 496103320
+    watcher_kernel_id: 73
+    name: eltwise_sfpu
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/eltwise_sfpu/9815294770180760189/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/compute/eltwise_sfpu.cpp
+- program_compile_finished:
+    id: 41
+    timestamp_ns: 1790744733131922844
+    duration_ns: 496127366
+- program_created:
+    id: 43
+    timestamp_ns: 1790744733132443554
+- program_created:
+    id: 44
+    timestamp_ns: 1790744733132650423
+- program_destroyed:
+    id: 44
+    timestamp_ns: 1790744733132652287
+- program_compile_started:
+    id: 43
+    timestamp_ns: 1790744733132668127
+- program_kernel_compile_finished:
+    id: 43
+    timestamp_ns: 1790744733406262143
+    duration_ns: 273594016
+    watcher_kernel_id: 75
+    name: writer_interleaved_no_bcast
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/writer_interleaved_no_bcast/16820589336694641117/
+    source: ttnn/cpp/ttnn/operations/eltwise/binary_ng/device/kernels_ng/dataflow/writer_interleaved_no_bcast.cpp
+- program_kernel_compile_finished:
+    id: 43
+    timestamp_ns: 1790744733431250574
+    duration_ns: 298582447
+    watcher_kernel_id: 74
+    name: reader_interleaved_no_bcast
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_interleaved_no_bcast/10726389460499118557/
+    source: ttnn/cpp/ttnn/operations/eltwise/binary_ng/device/kernels_ng/dataflow/reader_interleaved_no_bcast.cpp
+- program_kernel_compile_finished:
+    id: 43
+    timestamp_ns: 1790744733757618386
+    duration_ns: 624950259
+    watcher_kernel_id: 76
+    name: eltwise_binary_sfpu_no_bcast
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/eltwise_binary_sfpu_no_bcast/10248889055262812080/
+    source: ttnn/cpp/ttnn/operations/eltwise/binary_ng/device/kernels/compute/eltwise_binary_sfpu_no_bcast.cpp
+- program_compile_finished:
+    id: 43
+    timestamp_ns: 1790744733757640999
+    duration_ns: 624972872
+- program_created:
+    id: 45
+    timestamp_ns: 1790744733758234486
+- program_created:
+    id: 46
+    timestamp_ns: 1790744733758378828
+- program_destroyed:
+    id: 46
+    timestamp_ns: 1790744733758381333
+- program_compile_started:
+    id: 45
+    timestamp_ns: 1790744733758390129
+- program_kernel_compile_finished:
+    id: 45
+    timestamp_ns: 1790744734006323881
+    duration_ns: 247933752
+    watcher_kernel_id: 78
+    name: writer_unary_interleaved_start_id_wh
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/writer_unary_interleaved_start_id_wh/2354607916112510096/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/writer_unary_interleaved_start_id_wh.cpp
+- program_kernel_compile_finished:
+    id: 45
+    timestamp_ns: 1790744734101846871
+    duration_ns: 343456742
+    watcher_kernel_id: 77
+    name: reader_unary_pad_multicore_both_dims
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_unary_pad_multicore_both_dims/4685771385450565893/
+    source: ttnn/cpp/ttnn/operations/data_movement/tilize_with_val_padding/device/kernels/dataflow/reader_unary_pad_multicore_both_dims.cpp
+- program_kernel_compile_finished:
+    id: 45
+    timestamp_ns: 1790744734209736731
+    duration_ns: 451346602
+    watcher_kernel_id: 79
+    name: tilize_wh
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/tilize_wh/9540254837781717913/
+    source: ttnn/cpp/ttnn/operations/data_movement/tilize/device/kernels/compute/tilize_wh.cpp
+- program_compile_finished:
+    id: 45
+    timestamp_ns: 1790744734209754404
+    duration_ns: 451364275
+- program_created:
+    id: 47
+    timestamp_ns: 1790744734210369933
+- program_created:
+    id: 48
+    timestamp_ns: 1790744734210454863
+- program_destroyed:
+    id: 48
+    timestamp_ns: 1790744734210456596
+- program_compile_started:
+    id: 47
+    timestamp_ns: 1790744734210460463
+- program_kernel_compile_finished:
+    id: 47
+    timestamp_ns: 1790744734498912427
+    duration_ns: 288451964
+    watcher_kernel_id: 80
+    name: reader_reshape_tiled
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_reshape_tiled/9621533370854119856/
+    source: ttnn/cpp/ttnn/operations/data_movement/reshape_view/device/device/dataflow/reader_reshape_tiled.cpp
+- program_kernel_compile_finished:
+    id: 47
+    timestamp_ns: 1790744734514287731
+    duration_ns: 303827268
+    watcher_kernel_id: 81
+    name: writer_reshape_tiled
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/writer_reshape_tiled/778401629336596706/
+    source: ttnn/cpp/ttnn/operations/data_movement/reshape_view/device/device/dataflow/writer_reshape_tiled.cpp
+- program_compile_finished:
+    id: 47
+    timestamp_ns: 1790744734514312307
+    duration_ns: 303851844
+- program_created:
+    id: 49
+    timestamp_ns: 1790744734514805856
+- program_created:
+    id: 50
+    timestamp_ns: 1790744734515025059
+- program_destroyed:
+    id: 50
+    timestamp_ns: 1790744734515026662
+- program_compile_started:
+    id: 49
+    timestamp_ns: 1790744734515038805
+- program_kernel_compile_finished:
+    id: 49
+    timestamp_ns: 1790744734791308586
+    duration_ns: 276269781
+    watcher_kernel_id: 83
+    name: writer_interleaved_no_bcast
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/writer_interleaved_no_bcast/13388187070069570384/
+    source: ttnn/cpp/ttnn/operations/eltwise/binary_ng/device/kernels_ng/dataflow/writer_interleaved_no_bcast.cpp
+- program_kernel_compile_finished:
+    id: 49
+    timestamp_ns: 1790744734819793138
+    duration_ns: 304754333
+    watcher_kernel_id: 82
+    name: reader_interleaved_row_col_mixed_bcast
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_interleaved_row_col_mixed_bcast/5793630062606471224/
+    source: ttnn/cpp/ttnn/operations/eltwise/binary_ng/device/kernels_ng/dataflow/reader_interleaved_row_col_mixed_bcast.cpp
+- program_kernel_compile_finished:
+    id: 49
+    timestamp_ns: 1790744735087282279
+    duration_ns: 572243474
+    watcher_kernel_id: 84
+    name: eltwise_binary_sfpu
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/eltwise_binary_sfpu/3282875507602902190/
+    source: ttnn/cpp/ttnn/operations/eltwise/binary_ng/device/kernels/compute/eltwise_binary_sfpu.cpp
+- program_compile_finished:
+    id: 49
+    timestamp_ns: 1790744735087299852
+    duration_ns: 572261047
+- program_created:
+    id: 51
+    timestamp_ns: 1790744735087827645
+- program_created:
+    id: 52
+    timestamp_ns: 1790744735087983018
+- program_destroyed:
+    id: 52
+    timestamp_ns: 1790744735087984691
+- program_compile_started:
+    id: 51
+    timestamp_ns: 1790744735087998126
+- program_kernel_compile_finished:
+    id: 51
+    timestamp_ns: 1790744735088060133
+    duration_ns: 62007
+    watcher_kernel_id: 86
+    name: writer_unary
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/writer_unary/11297289213028194881/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/writer_unary.cpp
+- program_kernel_compile_finished:
+    id: 51
+    timestamp_ns: 1790744735088068739
+    duration_ns: 70613
+    watcher_kernel_id: 85
+    name: reader_unary
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_unary/4570029292699727327/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/reader_unary.cpp
+- program_kernel_compile_finished:
+    id: 51
+    timestamp_ns: 1790744735600290390
+    duration_ns: 512292264
+    watcher_kernel_id: 87
+    name: eltwise_sfpu
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/eltwise_sfpu/12581013164601910475/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/compute/eltwise_sfpu.cpp
+- program_compile_finished:
+    id: 51
+    timestamp_ns: 1790744735600316770
+    duration_ns: 512318644
+- program_created:
+    id: 53
+    timestamp_ns: 1790744735600824025
+- program_created:
+    id: 54
+    timestamp_ns: 1790744735600986230
+- program_destroyed:
+    id: 54
+    timestamp_ns: 1790744735600987863
+- program_compile_started:
+    id: 53
+    timestamp_ns: 1790744735601001499
+- program_kernel_compile_finished:
+    id: 53
+    timestamp_ns: 1790744735601048678
+    duration_ns: 47179
+    watcher_kernel_id: 89
+    name: writer_unary
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/writer_unary/11297289213028194881/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/writer_unary.cpp
+- program_kernel_compile_finished:
+    id: 53
+    timestamp_ns: 1790744735601065439
+    duration_ns: 63940
+    watcher_kernel_id: 88
+    name: reader_unary
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_unary/4570029292699727327/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/reader_unary.cpp
+- program_kernel_compile_finished:
+    id: 53
+    timestamp_ns: 1790744736101795376
+    duration_ns: 500793877
+    watcher_kernel_id: 90
+    name: eltwise_sfpu
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/eltwise_sfpu/5838728545804367911/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/compute/eltwise_sfpu.cpp
+- program_compile_finished:
+    id: 53
+    timestamp_ns: 1790744736101811747
+    duration_ns: 500810248
+- program_created:
+    id: 55
+    timestamp_ns: 1790744736102315636
+- program_created:
+    id: 56
+    timestamp_ns: 1790744736102450520
+- program_destroyed:
+    id: 56
+    timestamp_ns: 1790744736102453004
+- program_compile_started:
+    id: 55
+    timestamp_ns: 1790744736102464556
+- program_kernel_compile_finished:
+    id: 55
+    timestamp_ns: 1790744736349476356
+    duration_ns: 247011800
+    watcher_kernel_id: 92
+    name: writer_unary_interleaved_start_id
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/writer_unary_interleaved_start_id/4020488398353562478/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/writer_unary_interleaved_start_id.cpp
+- program_kernel_compile_finished:
+    id: 55
+    timestamp_ns: 1790744736365424628
+    duration_ns: 262960072
+    watcher_kernel_id: 91
+    name: reader_concat_interleaved_start_id
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_concat_interleaved_start_id/10930933180877255717/
+    source: ttnn/cpp/ttnn/operations/data_movement/concat/device/kernels/dataflow/reader_concat_interleaved_start_id.cpp
+- program_compile_finished:
+    id: 55
+    timestamp_ns: 1790744736365445627
+    duration_ns: 262981071
+- program_created:
+    id: 57
+    timestamp_ns: 1790744736366162857
+- program_created:
+    id: 58
+    timestamp_ns: 1790744736366276692
+- program_destroyed:
+    id: 58
+    timestamp_ns: 1790744736366278405
+- program_compile_started:
+    id: 57
+    timestamp_ns: 1790744736366282493
+- program_kernel_compile_finished:
+    id: 57
+    timestamp_ns: 1790744736627199348
+    duration_ns: 260916855
+    watcher_kernel_id: 93
+    name: reader_unary_interleaved_start_id_metal2
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_unary_interleaved_start_id_metal2/8557533944321158828/
+    source: ttnn/cpp/ttnn/operations/copy/typecast/device/kernels/dataflow/reader_unary_interleaved_start_id_metal2.cpp
+- program_kernel_compile_finished:
+    id: 57
+    timestamp_ns: 1790744736628699582
+    duration_ns: 262417089
+    watcher_kernel_id: 94
+    name: writer_unary_interleaved_start_id_metal2
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/writer_unary_interleaved_start_id_metal2/12928412971075128710/
+    source: ttnn/cpp/ttnn/operations/copy/typecast/device/kernels/dataflow/writer_unary_interleaved_start_id_metal2.cpp
+- program_kernel_compile_finished:
+    id: 57
+    timestamp_ns: 1790744736856211424
+    duration_ns: 489928931
+    watcher_kernel_id: 96
+    name: eltwise_typecast
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/eltwise_typecast/8366114495518088117/
+    source: ttnn/cpp/ttnn/operations/copy/typecast/device/kernels/compute/eltwise_typecast.cpp
+- program_kernel_compile_finished:
+    id: 57
+    timestamp_ns: 1790744736858867253
+    duration_ns: 492584760
+    watcher_kernel_id: 95
+    name: eltwise_typecast
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/eltwise_typecast/4650046167784199928/
+    source: ttnn/cpp/ttnn/operations/copy/typecast/device/kernels/compute/eltwise_typecast.cpp
+- program_compile_finished:
+    id: 57
+    timestamp_ns: 1790744736858885187
+    duration_ns: 492602694
+- program_created:
+    id: 59
+    timestamp_ns: 1790744736872071169
+- program_created:
+    id: 60
+    timestamp_ns: 1790744736872241570
+- program_destroyed:
+    id: 60
+    timestamp_ns: 1790744736872243483
+- program_compile_started:
+    id: 59
+    timestamp_ns: 1790744736872260265
+- program_kernel_compile_finished:
+    id: 59
+    timestamp_ns: 1790744737121516428
+    duration_ns: 249256163
+    watcher_kernel_id: 98
+    name: writer_unary_interleaved_start_id
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/writer_unary_interleaved_start_id/14660559388725072472/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/writer_unary_interleaved_start_id.cpp
+- program_kernel_compile_finished:
+    id: 59
+    timestamp_ns: 1790744737142730924
+    duration_ns: 270470659
+    watcher_kernel_id: 97
+    name: reader_concat_interleaved_start_id
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_concat_interleaved_start_id/9874031405435381649/
+    source: ttnn/cpp/ttnn/operations/data_movement/concat/device/kernels/dataflow/reader_concat_interleaved_start_id.cpp
+- program_compile_finished:
+    id: 59
+    timestamp_ns: 1790744737142745541
+    duration_ns: 270485276
+- program_created:
+    id: 61
+    timestamp_ns: 1790744746621205838
+- program_created:
+    id: 62
+    timestamp_ns: 1790744746621393121
+- program_destroyed:
+    id: 62
+    timestamp_ns: 1790744746621395876
+- program_compile_started:
+    id: 61
+    timestamp_ns: 1790744746621411435
+- program_kernel_compile_finished:
+    id: 61
+    timestamp_ns: 1790744746621478672
+    duration_ns: 67237
+    watcher_kernel_id: 100
+    name: writer_unary_interleaved_start_id
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/writer_unary_interleaved_start_id/14660559388725072472/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/writer_unary_interleaved_start_id.cpp
+- program_kernel_compile_finished:
+    id: 61
+    timestamp_ns: 1790744746621486918
+    duration_ns: 75483
+    watcher_kernel_id: 99
+    name: reader_concat_interleaved_start_id
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_concat_interleaved_start_id/9874031405435381649/
+    source: ttnn/cpp/ttnn/operations/data_movement/concat/device/kernels/dataflow/reader_concat_interleaved_start_id.cpp
+- program_compile_finished:
+    id: 61
+    timestamp_ns: 1790744746621494802
+    duration_ns: 83367
+- program_created:
+    id: 63
+    timestamp_ns: 1790744748582405687
+- program_created:
+    id: 64
+    timestamp_ns: 1790744748582638766
+- program_destroyed:
+    id: 64
+    timestamp_ns: 1790744748582640850
+- program_compile_started:
+    id: 63
+    timestamp_ns: 1790744748582657121
+- program_kernel_compile_finished:
+    id: 63
+    timestamp_ns: 1790744748860984231
+    duration_ns: 278327110
+    watcher_kernel_id: 102
+    name: reader_bmm_tile_layout_in0_receiver
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in0_receiver/16719796260856312799/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in0_receiver.cpp
+- program_kernel_compile_finished:
+    id: 63
+    timestamp_ns: 1790744748941555264
+    duration_ns: 358898143
+    watcher_kernel_id: 101
+    name: reader_bmm_tile_layout_in0_sender_padding
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in0_sender_padding/2416559890111771105/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in0_sender_padding.cpp
+- program_kernel_compile_finished:
+    id: 63
+    timestamp_ns: 1790744748953873682
+    duration_ns: 371216561
+    watcher_kernel_id: 103
+    name: reader_bmm_tile_layout_in1_sender_writer_padding
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in1_sender_writer_padding/241691128669166350/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in1_sender_writer_padding.cpp
+- program_kernel_compile_finished:
+    id: 63
+    timestamp_ns: 1790744749117473925
+    duration_ns: 534816804
+    watcher_kernel_id: 104
+    name: bmm_large_block_zm_fused_bias_activation
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/bmm_large_block_zm_fused_bias_activation/12319104551130087549/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/compute/bmm_large_block_zm_fused_bias_activation.cpp
+- program_compile_finished:
+    id: 63
+    timestamp_ns: 1790744749117495625
+    duration_ns: 534838504
+- program_created:
+    id: 65
+    timestamp_ns: 1790744749118047935
+- program_created:
+    id: 66
+    timestamp_ns: 1790744749118279842
+- program_destroyed:
+    id: 66
+    timestamp_ns: 1790744749118281465
+- program_compile_started:
+    id: 65
+    timestamp_ns: 1790744749118295671
+- program_kernel_compile_finished:
+    id: 65
+    timestamp_ns: 1790744749118358580
+    duration_ns: 62909
+    watcher_kernel_id: 107
+    name: eltwise_binary_no_bcast
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/eltwise_binary_no_bcast/11140126220398883765/
+    source: ttnn/cpp/ttnn/operations/eltwise/binary_ng/device/kernels/compute/eltwise_binary_no_bcast.cpp
+- program_kernel_compile_finished:
+    id: 65
+    timestamp_ns: 1790744749387205192
+    duration_ns: 268909521
+    watcher_kernel_id: 106
+    name: writer_interleaved_no_bcast
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/writer_interleaved_no_bcast/11118617272742540494/
+    source: ttnn/cpp/ttnn/operations/eltwise/binary_ng/device/kernels_ng/dataflow/writer_interleaved_no_bcast.cpp
+- program_kernel_compile_finished:
+    id: 65
+    timestamp_ns: 1790744749409554331
+    duration_ns: 291258660
+    watcher_kernel_id: 105
+    name: reader_interleaved_no_bcast
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_interleaved_no_bcast/4273547701791798600/
+    source: ttnn/cpp/ttnn/operations/eltwise/binary_ng/device/kernels_ng/dataflow/reader_interleaved_no_bcast.cpp
+- program_compile_finished:
+    id: 65
+    timestamp_ns: 1790744749409576703
+    duration_ns: 291281032
+- program_created:
+    id: 67
+    timestamp_ns: 1790744749410127650
+- program_created:
+    id: 68
+    timestamp_ns: 1790744749410234391
+- program_destroyed:
+    id: 68
+    timestamp_ns: 1790744749410236355
+- program_compile_started:
+    id: 67
+    timestamp_ns: 1790744749410247616
+- program_kernel_compile_finished:
+    id: 67
+    timestamp_ns: 1790744749673327634
+    duration_ns: 263080018
+    watcher_kernel_id: 108
+    name: reader_unary_unpad_dims_interleaved_start_id
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_unary_unpad_dims_interleaved_start_id/3343466676292999942/
+    source: ttnn/cpp/ttnn/operations/data_movement/slice/device/kernels/dataflow/reader_unary_unpad_dims_interleaved_start_id.cpp
+- program_kernel_compile_finished:
+    id: 67
+    timestamp_ns: 1790744749674341993
+    duration_ns: 264094377
+    watcher_kernel_id: 109
+    name: writer_unary_interleaved_start_id
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/writer_unary_interleaved_start_id/11575135435617425714/
+    source: ttnn/cpp/ttnn/operations/data_movement/slice/device/kernels/dataflow/writer_unary_interleaved_start_id.cpp
+- program_compile_finished:
+    id: 67
+    timestamp_ns: 1790744749674361039
+    duration_ns: 264113423
+- program_created:
+    id: 69
+    timestamp_ns: 1790744749674691972
+- program_created:
+    id: 70
+    timestamp_ns: 1790744749674788674
+- program_destroyed:
+    id: 70
+    timestamp_ns: 1790744749674790297
+- program_compile_started:
+    id: 69
+    timestamp_ns: 1790744749674800256
+- program_kernel_compile_finished:
+    id: 69
+    timestamp_ns: 1790744749674857714
+    duration_ns: 57458
+    watcher_kernel_id: 111
+    name: writer_unary_interleaved_start_id
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/writer_unary_interleaved_start_id/11575135435617425714/
+    source: ttnn/cpp/ttnn/operations/data_movement/slice/device/kernels/dataflow/writer_unary_interleaved_start_id.cpp
+- program_kernel_compile_finished:
+    id: 69
+    timestamp_ns: 1790744749674889363
+    duration_ns: 89107
+    watcher_kernel_id: 110
+    name: reader_unary_unpad_dims_interleaved_start_id
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_unary_unpad_dims_interleaved_start_id/3343466676292999942/
+    source: ttnn/cpp/ttnn/operations/data_movement/slice/device/kernels/dataflow/reader_unary_unpad_dims_interleaved_start_id.cpp
+- program_compile_finished:
+    id: 69
+    timestamp_ns: 1790744749674901296
+    duration_ns: 101040
+- program_created:
+    id: 71
+    timestamp_ns: 1790744749675002526
+- program_created:
+    id: 72
+    timestamp_ns: 1790744749675060275
+- program_destroyed:
+    id: 72
+    timestamp_ns: 1790744749675061638
+- program_compile_started:
+    id: 71
+    timestamp_ns: 1790744749675067639
+- program_kernel_compile_finished:
+    id: 71
+    timestamp_ns: 1790744749675106191
+    duration_ns: 38552
+    watcher_kernel_id: 113
+    name: writer_unary_interleaved_start_id
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/writer_unary_interleaved_start_id/11575135435617425714/
+    source: ttnn/cpp/ttnn/operations/data_movement/slice/device/kernels/dataflow/writer_unary_interleaved_start_id.cpp
+- program_kernel_compile_finished:
+    id: 71
+    timestamp_ns: 1790744749675135396
+    duration_ns: 67757
+    watcher_kernel_id: 112
+    name: reader_unary_unpad_dims_interleaved_start_id
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_unary_unpad_dims_interleaved_start_id/3343466676292999942/
+    source: ttnn/cpp/ttnn/operations/data_movement/slice/device/kernels/dataflow/reader_unary_unpad_dims_interleaved_start_id.cpp
+- program_compile_finished:
+    id: 71
+    timestamp_ns: 1790744749675149463
+    duration_ns: 81824
+- program_created:
+    id: 73
+    timestamp_ns: 1790744770068531556
+- program_created:
+    id: 74
+    timestamp_ns: 1790744770068669385
+- program_destroyed:
+    id: 74
+    timestamp_ns: 1790744770068671810
+- program_compile_started:
+    id: 73
+    timestamp_ns: 1790744770068684994
+- program_kernel_compile_finished:
+    id: 73
+    timestamp_ns: 1790744770319743729
+    duration_ns: 251058735
+    watcher_kernel_id: 114
+    name: reader_unary_stick_layout_split_rows_multicore
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_unary_stick_layout_split_rows_multicore/14192847714738453437/
+    source: ttnn/cpp/ttnn/operations/data_movement/tilize/device/kernels/dataflow/reader_unary_stick_layout_split_rows_multicore.cpp
+- program_kernel_compile_finished:
+    id: 73
+    timestamp_ns: 1790744770321015744
+    duration_ns: 252330750
+    watcher_kernel_id: 115
+    name: writer_unary_interleaved_start_id
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/writer_unary_interleaved_start_id/11214730677192940700/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/writer_unary_interleaved_start_id.cpp
+- program_kernel_compile_finished:
+    id: 73
+    timestamp_ns: 1790744770522815325
+    duration_ns: 454130331
+    watcher_kernel_id: 116
+    name: tilize
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/tilize/6870346675623813947/
+    source: ttnn/cpp/ttnn/kernel/compute/tilize.cpp
+- program_compile_finished:
+    id: 73
+    timestamp_ns: 1790744770522834581
+    duration_ns: 454149587
+- program_created:
+    id: 75
+    timestamp_ns: 1790744770523230616
+- program_created:
+    id: 76
+    timestamp_ns: 1790744770523375369
+- program_destroyed:
+    id: 76
+    timestamp_ns: 1790744770523378334
+- program_compile_started:
+    id: 75
+    timestamp_ns: 1790744770523389365
+- program_kernel_compile_finished:
+    id: 75
+    timestamp_ns: 1790744770828502820
+    duration_ns: 305113455
+    watcher_kernel_id: 118
+    name: reader_bmm_tile_layout_in0_receiver
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in0_receiver/5609806348383266413/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in0_receiver.cpp
+- program_kernel_compile_finished:
+    id: 75
+    timestamp_ns: 1790744770882898983
+    duration_ns: 359509618
+    watcher_kernel_id: 117
+    name: reader_bmm_tile_layout_in0_sender_padding
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in0_sender_padding/14602457417522746917/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in0_sender_padding.cpp
+- program_kernel_compile_finished:
+    id: 75
+    timestamp_ns: 1790744770894485601
+    duration_ns: 371096236
+    watcher_kernel_id: 119
+    name: reader_bmm_tile_layout_in1_sender_writer_padding
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in1_sender_writer_padding/1317144172335254981/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in1_sender_writer_padding.cpp
+- program_kernel_compile_finished:
+    id: 75
+    timestamp_ns: 1790744771073180384
+    duration_ns: 549791019
+    watcher_kernel_id: 120
+    name: bmm_large_block_zm_fused_bias_activation
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/bmm_large_block_zm_fused_bias_activation/7317396873073445060/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/compute/bmm_large_block_zm_fused_bias_activation.cpp
+- program_compile_finished:
+    id: 75
+    timestamp_ns: 1790744771073204540
+    duration_ns: 549815175
+- program_created:
+    id: 77
+    timestamp_ns: 1790744771073625452
+- program_created:
+    id: 78
+    timestamp_ns: 1790744771073849804
+- program_destroyed:
+    id: 78
+    timestamp_ns: 1790744771073851508
+- program_compile_started:
+    id: 77
+    timestamp_ns: 1790744771073866426
+- program_kernel_compile_finished:
+    id: 77
+    timestamp_ns: 1790744771352138769
+    duration_ns: 278272343
+    watcher_kernel_id: 122
+    name: writer_interleaved_no_bcast
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/writer_interleaved_no_bcast/7876266774512395636/
+    source: ttnn/cpp/ttnn/operations/eltwise/binary_ng/device/kernels_ng/dataflow/writer_interleaved_no_bcast.cpp
+- program_kernel_compile_finished:
+    id: 77
+    timestamp_ns: 1790744771357925371
+    duration_ns: 284058945
+    watcher_kernel_id: 121
+    name: reader_interleaved_row_bcast
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_interleaved_row_bcast/16910352588845094422/
+    source: ttnn/cpp/ttnn/operations/eltwise/binary_ng/device/kernels_ng/dataflow/reader_interleaved_row_bcast.cpp
+- program_kernel_compile_finished:
+    id: 77
+    timestamp_ns: 1790744771534529438
+    duration_ns: 460663012
+    watcher_kernel_id: 123
+    name: eltwise_binary_row_bcast
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/eltwise_binary_row_bcast/12757773017839679128/
+    source: ttnn/cpp/ttnn/operations/eltwise/binary_ng/device/kernels_ng/compute/eltwise_binary_row_bcast.cpp
+- program_compile_finished:
+    id: 77
+    timestamp_ns: 1790744771534547201
+    duration_ns: 460680775
+- program_created:
+    id: 79
+    timestamp_ns: 1790744771536602790
+- program_created:
+    id: 80
+    timestamp_ns: 1790744771536707347
+- program_destroyed:
+    id: 80
+    timestamp_ns: 1790744771536709040
+- program_compile_started:
+    id: 79
+    timestamp_ns: 1790744771536713088
+- program_kernel_compile_finished:
+    id: 79
+    timestamp_ns: 1790744771833719181
+    duration_ns: 297006093
+    watcher_kernel_id: 125
+    name: writer_unary_interleaved_start_id_blocked
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/writer_unary_interleaved_start_id_blocked/5165440042515436660/
+    source: ttnn/cpp/ttnn/operations/normalization/layernorm/device/kernels/dataflow/writer_unary_interleaved_start_id_blocked.cpp
+- program_kernel_compile_finished:
+    id: 79
+    timestamp_ns: 1790744771940196589
+    duration_ns: 403483501
+    watcher_kernel_id: 124
+    name: reader_unary_interleaved_ln
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_unary_interleaved_ln/18200230412933559033/
+    source: ttnn/cpp/ttnn/operations/normalization/layernorm/device/kernels/dataflow/reader_unary_interleaved_ln.cpp
+- program_kernel_compile_finished:
+    id: 79
+    timestamp_ns: 1790744772428400023
+    duration_ns: 891686935
+    watcher_kernel_id: 126
+    name: layernorm
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/layernorm/314024262731013318/
+    source: ttnn/cpp/ttnn/operations/normalization/layernorm/device/kernels/compute/layernorm.cpp
+- program_compile_finished:
+    id: 79
+    timestamp_ns: 1790744772428423658
+    duration_ns: 891710570
+- program_created:
+    id: 81
+    timestamp_ns: 1790744772428957993
+- program_created:
+    id: 82
+    timestamp_ns: 1790744772429259962
+- program_destroyed:
+    id: 82
+    timestamp_ns: 1790744772429261625
+- program_compile_started:
+    id: 81
+    timestamp_ns: 1790744772429271934
+- program_kernel_compile_finished:
+    id: 81
+    timestamp_ns: 1790744772711185619
+    duration_ns: 281913685
+    watcher_kernel_id: 130
+    name: reader_bmm_tile_layout_in0_receiver
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in0_receiver/14271316901042696526/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in0_receiver.cpp
+- program_kernel_compile_finished:
+    id: 81
+    timestamp_ns: 1790744772711499740
+    duration_ns: 282227806
+    watcher_kernel_id: 132
+    name: reader_bmm_tile_layout_in0_receiver
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in0_receiver/11176762876995804908/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in0_receiver.cpp
+- program_kernel_compile_finished:
+    id: 81
+    timestamp_ns: 1790744772799278994
+    duration_ns: 370007060
+    watcher_kernel_id: 127
+    name: reader_bmm_tile_layout_in0_sender_padding
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in0_sender_padding/1504563515540044977/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in0_sender_padding.cpp
+- program_kernel_compile_finished:
+    id: 81
+    timestamp_ns: 1790744772799349717
+    duration_ns: 370077783
+    watcher_kernel_id: 129
+    name: reader_bmm_tile_layout_in1_receiver_writer_padding
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in1_receiver_writer_padding/2175245998187381584/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in1_receiver_writer_padding.cpp
+- program_kernel_compile_finished:
+    id: 81
+    timestamp_ns: 1790744772799678997
+    duration_ns: 370407063
+    watcher_kernel_id: 131
+    name: reader_bmm_tile_layout_in1_receiver_writer_padding
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in1_receiver_writer_padding/11198569706403704815/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in1_receiver_writer_padding.cpp
+- program_kernel_compile_finished:
+    id: 81
+    timestamp_ns: 1790744772883342314
+    duration_ns: 454070380
+    watcher_kernel_id: 128
+    name: reader_bmm_tile_layout_in1_sender_writer_padding
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in1_sender_writer_padding/12246233605577001946/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in1_sender_writer_padding.cpp
+- program_kernel_compile_finished:
+    id: 81
+    timestamp_ns: 1790744772988302806
+    duration_ns: 559030872
+    watcher_kernel_id: 133
+    name: bmm_large_block_zm_fused_bias_activation
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/bmm_large_block_zm_fused_bias_activation/16260169516904337050/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/compute/bmm_large_block_zm_fused_bias_activation.cpp
+- program_compile_finished:
+    id: 81
+    timestamp_ns: 1790744772988326480
+    duration_ns: 559054546
+- program_created:
+    id: 83
+    timestamp_ns: 1790744772988887837
+- program_created:
+    id: 84
+    timestamp_ns: 1790744772988964491
+- program_destroyed:
+    id: 84
+    timestamp_ns: 1790744772988966264
+- program_compile_started:
+    id: 83
+    timestamp_ns: 1790744772988976674
+- program_kernel_compile_finished:
+    id: 83
+    timestamp_ns: 1790744773243800520
+    duration_ns: 254823846
+    watcher_kernel_id: 134
+    name: reader_tm_tile_layout_nlp_create_qkv_heads
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_tm_tile_layout_nlp_create_qkv_heads/13073231872354651902/
+    source: ttnn/cpp/ttnn/operations/experimental/transformer/nlp_create_qkv_heads/device/kernels/dataflow/reader_tm_tile_layout_nlp_create_qkv_heads.cpp
+- program_kernel_compile_finished:
+    id: 83
+    timestamp_ns: 1790744773256857214
+    duration_ns: 267880540
+    watcher_kernel_id: 135
+    name: writer_tm_tile_layout_nlp_create_qkv_heads
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/writer_tm_tile_layout_nlp_create_qkv_heads/9359374455939798330/
+    source: ttnn/cpp/ttnn/operations/experimental/transformer/nlp_create_qkv_heads/device/kernels/dataflow/writer_tm_tile_layout_nlp_create_qkv_heads.cpp
+- program_compile_finished:
+    id: 83
+    timestamp_ns: 1790744773256887662
+    duration_ns: 267910988
+- program_created:
+    id: 85
+    timestamp_ns: 1790744773257329263
+- program_created:
+    id: 86
+    timestamp_ns: 1790744773257502819
+- program_destroyed:
+    id: 86
+    timestamp_ns: 1790744773257505805
+- program_compile_started:
+    id: 85
+    timestamp_ns: 1790744773257519441
+- program_kernel_compile_finished:
+    id: 85
+    timestamp_ns: 1790744773627088283
+    duration_ns: 369568842
+    watcher_kernel_id: 137
+    name: writer_interleaved
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/writer_interleaved/9718546318352864525/
+    source: ttnn/cpp/ttnn/operations/transformer/sdpa/device/kernels/dataflow/writer_interleaved.cpp
+- program_kernel_compile_finished:
+    id: 85
+    timestamp_ns: 1790744773769597907
+    duration_ns: 512078466
+    watcher_kernel_id: 136
+    name: reader_interleaved
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_interleaved/11392512975671430464/
+    source: ttnn/cpp/ttnn/operations/transformer/sdpa/device/kernels/dataflow/reader_interleaved.cpp
+- program_kernel_compile_finished:
+    id: 85
+    timestamp_ns: 1790744774199045948
+    duration_ns: 941526507
+    watcher_kernel_id: 138
+    name: sdpa
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/sdpa/8715492650489827852/
+    source: ttnn/cpp/ttnn/operations/transformer/sdpa/device/kernels/compute/sdpa.cpp
+- program_compile_finished:
+    id: 85
+    timestamp_ns: 1790744774199075724
+    duration_ns: 941556283
+- program_created:
+    id: 87
+    timestamp_ns: 1790744774199618877
+- program_created:
+    id: 88
+    timestamp_ns: 1790744774199692636
+- program_destroyed:
+    id: 88
+    timestamp_ns: 1790744774199694359
+- program_compile_started:
+    id: 87
+    timestamp_ns: 1790744774199698386
+- program_kernel_compile_finished:
+    id: 87
+    timestamp_ns: 1790744774452121271
+    duration_ns: 252422885
+    watcher_kernel_id: 140
+    name: writer_unary_interleaved_start_id_metal2
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/writer_unary_interleaved_start_id_metal2/6220854577996338675/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/writer_unary_interleaved_start_id_metal2.cpp
+- program_kernel_compile_finished:
+    id: 87
+    timestamp_ns: 1790744774464680930
+    duration_ns: 264982544
+    watcher_kernel_id: 139
+    name: reader_tm_tile_layout_nlp_concat_heads
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_tm_tile_layout_nlp_concat_heads/12352106892272187322/
+    source: ttnn/cpp/ttnn/operations/experimental/transformer/nlp_concat_heads/device/kernels/dataflow/reader_tm_tile_layout_nlp_concat_heads.cpp
+- program_compile_finished:
+    id: 87
+    timestamp_ns: 1790744774464702871
+    duration_ns: 265004485
+- program_created:
+    id: 89
+    timestamp_ns: 1790744774465116139
+- program_created:
+    id: 90
+    timestamp_ns: 1790744774465394523
+- program_destroyed:
+    id: 90
+    timestamp_ns: 1790744774465397038
+- program_compile_started:
+    id: 89
+    timestamp_ns: 1790744774465408299
+- program_kernel_compile_finished:
+    id: 89
+    timestamp_ns: 1790744774744981794
+    duration_ns: 279573495
+    watcher_kernel_id: 146
+    name: reader_bmm_tile_layout_in0_receiver
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in0_receiver/15439905634256619238/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in0_receiver.cpp
+- program_kernel_compile_finished:
+    id: 89
+    timestamp_ns: 1790744774745925841
+    duration_ns: 280517542
+    watcher_kernel_id: 144
+    name: reader_bmm_tile_layout_in0_receiver
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in0_receiver/9319319570399821971/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in0_receiver.cpp
+- program_kernel_compile_finished:
+    id: 89
+    timestamp_ns: 1790744774814773292
+    duration_ns: 349364993
+    watcher_kernel_id: 143
+    name: reader_bmm_tile_layout_in1_receiver_writer_padding
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in1_receiver_writer_padding/17924885776424228056/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in1_receiver_writer_padding.cpp
+- program_kernel_compile_finished:
+    id: 89
+    timestamp_ns: 1790744774821234863
+    duration_ns: 355826564
+    watcher_kernel_id: 145
+    name: reader_bmm_tile_layout_in1_receiver_writer_padding
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in1_receiver_writer_padding/14924474586934721608/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in1_receiver_writer_padding.cpp
+- program_kernel_compile_finished:
+    id: 89
+    timestamp_ns: 1790744774842893227
+    duration_ns: 377484928
+    watcher_kernel_id: 141
+    name: reader_bmm_tile_layout_in0_sender_padding
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in0_sender_padding/2878895868555413162/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in0_sender_padding.cpp
+- program_kernel_compile_finished:
+    id: 89
+    timestamp_ns: 1790744774923891627
+    duration_ns: 458483328
+    watcher_kernel_id: 142
+    name: reader_bmm_tile_layout_in1_sender_writer_padding
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in1_sender_writer_padding/5458713544312512118/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in1_sender_writer_padding.cpp
+- program_kernel_compile_finished:
+    id: 89
+    timestamp_ns: 1790744775025387716
+    duration_ns: 559979417
+    watcher_kernel_id: 147
+    name: bmm_large_block_zm_fused_bias_activation
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/bmm_large_block_zm_fused_bias_activation/15279597441817261280/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/compute/bmm_large_block_zm_fused_bias_activation.cpp
+- program_compile_finished:
+    id: 89
+    timestamp_ns: 1790744775025414216
+    duration_ns: 560005917
+- program_created:
+    id: 91
+    timestamp_ns: 1790744775026015247
+- program_created:
+    id: 92
+    timestamp_ns: 1790744775026223570
+- program_destroyed:
+    id: 92
+    timestamp_ns: 1790744775026225253
+- program_compile_started:
+    id: 91
+    timestamp_ns: 1790744775026241263
+- program_kernel_compile_finished:
+    id: 91
+    timestamp_ns: 1790744775026293681
+    duration_ns: 52418
+    watcher_kernel_id: 149
+    name: writer_interleaved_no_bcast
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/writer_interleaved_no_bcast/11267553301625746577/
+    source: ttnn/cpp/ttnn/operations/eltwise/binary_ng/device/kernels_ng/dataflow/writer_interleaved_no_bcast.cpp
+- program_kernel_compile_finished:
+    id: 91
+    timestamp_ns: 1790744775026311765
+    duration_ns: 70502
+    watcher_kernel_id: 150
+    name: eltwise_binary_no_bcast
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/eltwise_binary_no_bcast/11140126220398883765/
+    source: ttnn/cpp/ttnn/operations/eltwise/binary_ng/device/kernels/compute/eltwise_binary_no_bcast.cpp
+- program_kernel_compile_finished:
+    id: 91
+    timestamp_ns: 1790744775325009633
+    duration_ns: 298768370
+    watcher_kernel_id: 148
+    name: reader_interleaved_no_bcast
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_interleaved_no_bcast/12489042733914036518/
+    source: ttnn/cpp/ttnn/operations/eltwise/binary_ng/device/kernels_ng/dataflow/reader_interleaved_no_bcast.cpp
+- program_compile_finished:
+    id: 91
+    timestamp_ns: 1790744775325035502
+    duration_ns: 298794239
+- program_created:
+    id: 93
+    timestamp_ns: 1790744775325735309
+- program_created:
+    id: 94
+    timestamp_ns: 1790744775326041836
+- program_destroyed:
+    id: 94
+    timestamp_ns: 1790744775326043439
+- program_compile_started:
+    id: 93
+    timestamp_ns: 1790744775326054290
+- program_kernel_compile_finished:
+    id: 93
+    timestamp_ns: 1790744775326132216
+    duration_ns: 77926
+    watcher_kernel_id: 156
+    name: reader_bmm_tile_layout_in0_receiver
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in0_receiver/11176762876995804908/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in0_receiver.cpp
+- program_kernel_compile_finished:
+    id: 93
+    timestamp_ns: 1790744775326149930
+    duration_ns: 95640
+    watcher_kernel_id: 151
+    name: reader_bmm_tile_layout_in0_sender_padding
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in0_sender_padding/1504563515540044977/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in0_sender_padding.cpp
+- program_kernel_compile_finished:
+    id: 93
+    timestamp_ns: 1790744775326164297
+    duration_ns: 110007
+    watcher_kernel_id: 154
+    name: reader_bmm_tile_layout_in0_receiver
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in0_receiver/14271316901042696526/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in0_receiver.cpp
+- program_kernel_compile_finished:
+    id: 93
+    timestamp_ns: 1790744775680419540
+    duration_ns: 354365250
+    watcher_kernel_id: 153
+    name: reader_bmm_tile_layout_in1_receiver_writer_padding
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in1_receiver_writer_padding/15728681266892299536/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in1_receiver_writer_padding.cpp
+- program_kernel_compile_finished:
+    id: 93
+    timestamp_ns: 1790744775681093589
+    duration_ns: 355039299
+    watcher_kernel_id: 155
+    name: reader_bmm_tile_layout_in1_receiver_writer_padding
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in1_receiver_writer_padding/17882723635428705397/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in1_receiver_writer_padding.cpp
+- program_kernel_compile_finished:
+    id: 93
+    timestamp_ns: 1790744775776451184
+    duration_ns: 450396894
+    watcher_kernel_id: 152
+    name: reader_bmm_tile_layout_in1_sender_writer_padding
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in1_sender_writer_padding/7822155821142582701/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in1_sender_writer_padding.cpp
+- program_kernel_compile_finished:
+    id: 93
+    timestamp_ns: 1790744776104779640
+    duration_ns: 778725350
+    watcher_kernel_id: 157
+    name: bmm_large_block_zm_fused_bias_activation
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/bmm_large_block_zm_fused_bias_activation/2854825741117512613/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/compute/bmm_large_block_zm_fused_bias_activation.cpp
+- program_compile_finished:
+    id: 93
+    timestamp_ns: 1790744776104808154
+    duration_ns: 778753864
+- program_created:
+    id: 95
+    timestamp_ns: 1790744776105438851
+- program_created:
+    id: 96
+    timestamp_ns: 1790744776105701325
+- program_destroyed:
+    id: 96
+    timestamp_ns: 1790744776105702888
+- program_compile_started:
+    id: 95
+    timestamp_ns: 1790744776105715892
+- program_kernel_compile_finished:
+    id: 95
+    timestamp_ns: 1790744776384505618
+    duration_ns: 278789726
+    watcher_kernel_id: 161
+    name: reader_bmm_tile_layout_in0_receiver
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in0_receiver/773989501522160866/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in0_receiver.cpp
+- program_kernel_compile_finished:
+    id: 95
+    timestamp_ns: 1790744776385077074
+    duration_ns: 279361182
+    watcher_kernel_id: 163
+    name: reader_bmm_tile_layout_in0_receiver
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in0_receiver/1653987827501046598/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in0_receiver.cpp
+- program_kernel_compile_finished:
+    id: 95
+    timestamp_ns: 1790744776470109675
+    duration_ns: 364393783
+    watcher_kernel_id: 160
+    name: reader_bmm_tile_layout_in1_receiver_writer_padding
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in1_receiver_writer_padding/1472603215513344059/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in1_receiver_writer_padding.cpp
+- program_kernel_compile_finished:
+    id: 95
+    timestamp_ns: 1790744776470851611
+    duration_ns: 365135719
+    watcher_kernel_id: 162
+    name: reader_bmm_tile_layout_in1_receiver_writer_padding
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in1_receiver_writer_padding/12630843312321237878/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in1_receiver_writer_padding.cpp
+- program_kernel_compile_finished:
+    id: 95
+    timestamp_ns: 1790744776490932887
+    duration_ns: 385216995
+    watcher_kernel_id: 158
+    name: reader_bmm_tile_layout_in0_sender_padding
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in0_sender_padding/305815169118489833/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in0_sender_padding.cpp
+- program_kernel_compile_finished:
+    id: 95
+    timestamp_ns: 1790744776545214251
+    duration_ns: 439498359
+    watcher_kernel_id: 159
+    name: reader_bmm_tile_layout_in1_sender_writer_padding
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in1_sender_writer_padding/12965558760735129230/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in1_sender_writer_padding.cpp
+- program_kernel_compile_finished:
+    id: 95
+    timestamp_ns: 1790744776659278724
+    duration_ns: 553562832
+    watcher_kernel_id: 164
+    name: bmm_large_block_zm_fused_bias_activation
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/bmm_large_block_zm_fused_bias_activation/3379279092333577134/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/compute/bmm_large_block_zm_fused_bias_activation.cpp
+- program_compile_finished:
+    id: 95
+    timestamp_ns: 1790744776659300475
+    duration_ns: 553584583
+- program_created:
+    id: 97
+    timestamp_ns: 1790744776667503965
+- program_created:
+    id: 98
+    timestamp_ns: 1790744776667594185
+- program_destroyed:
+    id: 98
+    timestamp_ns: 1790744776667595818
+- program_compile_started:
+    id: 97
+    timestamp_ns: 1790744776667599545
+- program_kernel_compile_finished:
+    id: 97
+    timestamp_ns: 1790744776667649960
+    duration_ns: 50415
+    watcher_kernel_id: 166
+    name: writer_unary_interleaved_start_id_blocked
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/writer_unary_interleaved_start_id_blocked/5165440042515436660/
+    source: ttnn/cpp/ttnn/operations/normalization/layernorm/device/kernels/dataflow/writer_unary_interleaved_start_id_blocked.cpp
+- program_kernel_compile_finished:
+    id: 97
+    timestamp_ns: 1790744776667668905
+    duration_ns: 69360
+    watcher_kernel_id: 167
+    name: layernorm
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/layernorm/314024262731013318/
+    source: ttnn/cpp/ttnn/operations/normalization/layernorm/device/kernels/compute/layernorm.cpp
+- program_kernel_compile_finished:
+    id: 97
+    timestamp_ns: 1790744776667682391
+    duration_ns: 82846
+    watcher_kernel_id: 165
+    name: reader_unary_interleaved_ln
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_unary_interleaved_ln/18200230412933559033/
+    source: ttnn/cpp/ttnn/operations/normalization/layernorm/device/kernels/dataflow/reader_unary_interleaved_ln.cpp
+- program_compile_finished:
+    id: 97
+    timestamp_ns: 1790744776667690867
+    duration_ns: 91322
+- program_created:
+    id: 99
+    timestamp_ns: 1790744776667874172
+- program_created:
+    id: 100
+    timestamp_ns: 1790744776668012512
+- program_destroyed:
+    id: 100
+    timestamp_ns: 1790744776668013764
+- program_compile_started:
+    id: 99
+    timestamp_ns: 1790744776668022140
+- program_kernel_compile_finished:
+    id: 99
+    timestamp_ns: 1790744776945875514
+    duration_ns: 277853374
+    watcher_kernel_id: 169
+    name: reader_bmm_tile_layout_in0_receiver
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in0_receiver/3263534331522618385/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in0_receiver.cpp
+- program_kernel_compile_finished:
+    id: 99
+    timestamp_ns: 1790744777035044089
+    duration_ns: 367021949
+    watcher_kernel_id: 168
+    name: reader_bmm_tile_layout_in0_sender_padding
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in0_sender_padding/6429543445178325364/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in0_sender_padding.cpp
+- program_kernel_compile_finished:
+    id: 99
+    timestamp_ns: 1790744777043435854
+    duration_ns: 375413714
+    watcher_kernel_id: 170
+    name: reader_bmm_tile_layout_in1_sender_writer_padding
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in1_sender_writer_padding/6137549545281431948/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in1_sender_writer_padding.cpp
+- program_kernel_compile_finished:
+    id: 99
+    timestamp_ns: 1790744777214450032
+    duration_ns: 546427892
+    watcher_kernel_id: 171
+    name: bmm_large_block_zm_fused_bias_activation
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/bmm_large_block_zm_fused_bias_activation/14165401459979445768/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/compute/bmm_large_block_zm_fused_bias_activation.cpp
+- program_compile_finished:
+    id: 99
+    timestamp_ns: 1790744777214481240
+    duration_ns: 546459100
+- program_created:
+    id: 101
+    timestamp_ns: 1790744777215099344
+- program_created:
+    id: 102
+    timestamp_ns: 1790744777215194102
+- program_destroyed:
+    id: 102
+    timestamp_ns: 1790744777215195675
+- program_compile_started:
+    id: 101
+    timestamp_ns: 1790744777215203540
+- program_kernel_compile_finished:
+    id: 101
+    timestamp_ns: 1790744777468675613
+    duration_ns: 253472073
+    watcher_kernel_id: 173
+    name: writer_unary_interleaved_start_id
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/writer_unary_interleaved_start_id/9260733755039430785/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/writer_unary_interleaved_start_id.cpp
+- program_kernel_compile_finished:
+    id: 101
+    timestamp_ns: 1790744777470797216
+    duration_ns: 255593676
+    watcher_kernel_id: 172
+    name: embeddings_tilize
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/embeddings_tilize/3015212046509372067/
+    source: ttnn/cpp/ttnn/operations/embedding/device/kernels/dataflow/embeddings_tilize.cpp
+- program_kernel_compile_finished:
+    id: 101
+    timestamp_ns: 1790744777666597985
+    duration_ns: 451394445
+    watcher_kernel_id: 174
+    name: tilize
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/tilize/12642992902476717368/
+    source: ttnn/cpp/ttnn/operations/data_movement/tilize/device/kernels/compute/tilize.cpp
+- program_compile_finished:
+    id: 101
+    timestamp_ns: 1790744777666621138
+    duration_ns: 451417598
+- program_created:
+    id: 103
+    timestamp_ns: 1790744777667025750
+- program_created:
+    id: 104
+    timestamp_ns: 1790744777667236627
+- program_destroyed:
+    id: 104
+    timestamp_ns: 1790744777667238420
+- program_compile_started:
+    id: 103
+    timestamp_ns: 1790744777667253248
+- program_kernel_compile_finished:
+    id: 103
+    timestamp_ns: 1790744777933617766
+    duration_ns: 266364518
+    watcher_kernel_id: 176
+    name: writer_interleaved_scalar
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/writer_interleaved_scalar/1285151664236095339/
+    source: ttnn/cpp/ttnn/operations/eltwise/binary_ng/device/kernels/dataflow/writer_interleaved_scalar.cpp
+- program_kernel_compile_finished:
+    id: 103
+    timestamp_ns: 1790744777943293878
+    duration_ns: 276040630
+    watcher_kernel_id: 175
+    name: reader_interleaved_no_bcast
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_interleaved_no_bcast/8901725231886664469/
+    source: ttnn/cpp/ttnn/operations/eltwise/binary_ng/device/kernels/dataflow/reader_interleaved_no_bcast.cpp
+- program_kernel_compile_finished:
+    id: 103
+    timestamp_ns: 1790744778201685678
+    duration_ns: 534432430
+    watcher_kernel_id: 177
+    name: eltwise_binary_sfpu_scalar
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/eltwise_binary_sfpu_scalar/7819725861456139596/
+    source: ttnn/cpp/ttnn/operations/eltwise/binary_ng/device/kernels/compute/eltwise_binary_sfpu_scalar.cpp
+- program_compile_finished:
+    id: 103
+    timestamp_ns: 1790744778201709784
+    duration_ns: 534456536
+- program_created:
+    id: 105
+    timestamp_ns: 1790744778202249159
+- program_created:
+    id: 106
+    timestamp_ns: 1790744778202402237
+- program_destroyed:
+    id: 106
+    timestamp_ns: 1790744778202405062
+- program_compile_started:
+    id: 105
+    timestamp_ns: 1790744778202417275
+- program_kernel_compile_finished:
+    id: 105
+    timestamp_ns: 1790744778451483965
+    duration_ns: 249066690
+    watcher_kernel_id: 179
+    name: writer_unary_interleaved_start_id
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/writer_unary_interleaved_start_id/15138934181990549214/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/writer_unary_interleaved_start_id.cpp
+- program_kernel_compile_finished:
+    id: 105
+    timestamp_ns: 1790744778462900181
+    duration_ns: 260482906
+    watcher_kernel_id: 178
+    name: reader_concat_interleaved_start_id
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_concat_interleaved_start_id/12940889387247946538/
+    source: ttnn/cpp/ttnn/operations/data_movement/concat/device/kernels/dataflow/reader_concat_interleaved_start_id.cpp
+- program_compile_finished:
+    id: 105
+    timestamp_ns: 1790744778462935478
+    duration_ns: 260518203
+- program_created:
+    id: 107
+    timestamp_ns: 1790744778463785067
+- program_created:
+    id: 108
+    timestamp_ns: 1790744778463888822
+- program_destroyed:
+    id: 108
+    timestamp_ns: 1790744778463890605
+- program_compile_started:
+    id: 107
+    timestamp_ns: 1790744778463894483
+- program_kernel_compile_finished:
+    id: 107
+    timestamp_ns: 1790744778763585693
+    duration_ns: 299691210
+    watcher_kernel_id: 181
+    name: writer_unary_interleaved_start_id_blocked
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/writer_unary_interleaved_start_id_blocked/7671877838995608917/
+    source: ttnn/cpp/ttnn/operations/normalization/layernorm/device/kernels/dataflow/writer_unary_interleaved_start_id_blocked.cpp
+- program_kernel_compile_finished:
+    id: 107
+    timestamp_ns: 1790744778843745051
+    duration_ns: 379850568
+    watcher_kernel_id: 180
+    name: reader_unary_interleaved_ln
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_unary_interleaved_ln/7604705320047491095/
+    source: ttnn/cpp/ttnn/operations/normalization/layernorm/device/kernels/dataflow/reader_unary_interleaved_ln.cpp
+- program_kernel_compile_finished:
+    id: 107
+    timestamp_ns: 1790744779259121701
+    duration_ns: 795227218
+    watcher_kernel_id: 182
+    name: layernorm
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/layernorm/13773976788821442444/
+    source: ttnn/cpp/ttnn/operations/normalization/layernorm/device/kernels/compute/layernorm.cpp
+- program_compile_finished:
+    id: 107
+    timestamp_ns: 1790744779259153802
+    duration_ns: 795259319
+- program_created:
+    id: 109
+    timestamp_ns: 1790744779259774470
+- program_created:
+    id: 110
+    timestamp_ns: 1790744779260224006
+- program_destroyed:
+    id: 110
+    timestamp_ns: 1790744779260226601
+- program_compile_started:
+    id: 109
+    timestamp_ns: 1790744779260242551
+- program_kernel_compile_finished:
+    id: 109
+    timestamp_ns: 1790744779541934833
+    duration_ns: 281692282
+    watcher_kernel_id: 186
+    name: reader_bmm_tile_layout_in0_receiver
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in0_receiver/6930127598895288733/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in0_receiver.cpp
+- program_kernel_compile_finished:
+    id: 109
+    timestamp_ns: 1790744779542616115
+    duration_ns: 282373564
+    watcher_kernel_id: 188
+    name: reader_bmm_tile_layout_in0_receiver
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in0_receiver/7392966474544036237/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in0_receiver.cpp
+- program_kernel_compile_finished:
+    id: 109
+    timestamp_ns: 1790744779614476794
+    duration_ns: 354234243
+    watcher_kernel_id: 185
+    name: reader_bmm_tile_layout_in1_receiver_writer_padding
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in1_receiver_writer_padding/1009654222172510493/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in1_receiver_writer_padding.cpp
+- program_kernel_compile_finished:
+    id: 109
+    timestamp_ns: 1790744779615601009
+    duration_ns: 355358458
+    watcher_kernel_id: 187
+    name: reader_bmm_tile_layout_in1_receiver_writer_padding
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in1_receiver_writer_padding/9266531042986540005/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in1_receiver_writer_padding.cpp
+- program_kernel_compile_finished:
+    id: 109
+    timestamp_ns: 1790744779635252295
+    duration_ns: 375009744
+    watcher_kernel_id: 183
+    name: reader_bmm_tile_layout_in0_sender_padding
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in0_sender_padding/10966660864169432664/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in0_sender_padding.cpp
+- program_kernel_compile_finished:
+    id: 109
+    timestamp_ns: 1790744779670167549
+    duration_ns: 409924998
+    watcher_kernel_id: 184
+    name: reader_bmm_tile_layout_in1_sender_writer_padding
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in1_sender_writer_padding/17999352951660445408/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in1_sender_writer_padding.cpp
+- program_kernel_compile_finished:
+    id: 109
+    timestamp_ns: 1790744779804863750
+    duration_ns: 544621199
+    watcher_kernel_id: 189
+    name: bmm_large_block_zm_fused_bias_activation
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/bmm_large_block_zm_fused_bias_activation/17901170406644962611/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/compute/bmm_large_block_zm_fused_bias_activation.cpp
+- program_compile_finished:
+    id: 109
+    timestamp_ns: 1790744779804898115
+    duration_ns: 544655564
+- program_created:
+    id: 111
+    timestamp_ns: 1790744779805460303
+- program_created:
+    id: 112
+    timestamp_ns: 1790744779805551855
+- program_destroyed:
+    id: 112
+    timestamp_ns: 1790744779805553749
+- program_compile_started:
+    id: 111
+    timestamp_ns: 1790744779805564559
+- program_kernel_compile_finished:
+    id: 111
+    timestamp_ns: 1790744780064554533
+    duration_ns: 258989974
+    watcher_kernel_id: 190
+    name: reader_tm_tile_layout_nlp_create_qkv_heads
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_tm_tile_layout_nlp_create_qkv_heads/9357061018439901458/
+    source: ttnn/cpp/ttnn/operations/experimental/transformer/nlp_create_qkv_heads/device/kernels/dataflow/reader_tm_tile_layout_nlp_create_qkv_heads.cpp
+- program_kernel_compile_finished:
+    id: 111
+    timestamp_ns: 1790744780076720680
+    duration_ns: 271156121
+    watcher_kernel_id: 191
+    name: writer_tm_tile_layout_nlp_create_qkv_heads
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/writer_tm_tile_layout_nlp_create_qkv_heads/3612093201153632743/
+    source: ttnn/cpp/ttnn/operations/experimental/transformer/nlp_create_qkv_heads/device/kernels/dataflow/writer_tm_tile_layout_nlp_create_qkv_heads.cpp
+- program_compile_finished:
+    id: 111
+    timestamp_ns: 1790744780076750006
+    duration_ns: 271185447
+- program_created:
+    id: 113
+    timestamp_ns: 1790744780077149698
+- program_created:
+    id: 114
+    timestamp_ns: 1790744780077291785
+- program_destroyed:
+    id: 114
+    timestamp_ns: 1790744780077293449
+- program_compile_started:
+    id: 113
+    timestamp_ns: 1790744780077305722
+- program_kernel_compile_finished:
+    id: 113
+    timestamp_ns: 1790744780077350105
+    duration_ns: 44383
+    watcher_kernel_id: 193
+    name: writer_unary_interleaved_start_id
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/writer_unary_interleaved_start_id/11575135435617425714/
+    source: ttnn/cpp/ttnn/operations/data_movement/slice/device/kernels/dataflow/writer_unary_interleaved_start_id.cpp
+- program_kernel_compile_finished:
+    id: 113
+    timestamp_ns: 1790744780336298950
+    duration_ns: 258993228
+    watcher_kernel_id: 192
+    name: reader_unary_unpad_dims_interleaved_start_id
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_unary_unpad_dims_interleaved_start_id/1999364113318169079/
+    source: ttnn/cpp/ttnn/operations/data_movement/slice/device/kernels/dataflow/reader_unary_unpad_dims_interleaved_start_id.cpp
+- program_compile_finished:
+    id: 113
+    timestamp_ns: 1790744780336341580
+    duration_ns: 259035858
+- program_created:
+    id: 115
+    timestamp_ns: 1790744780336902215
+- program_created:
+    id: 116
+    timestamp_ns: 1790744780337018293
+- program_destroyed:
+    id: 116
+    timestamp_ns: 1790744780337020087
+- program_compile_started:
+    id: 115
+    timestamp_ns: 1790744780337027932
+- program_kernel_compile_finished:
+    id: 115
+    timestamp_ns: 1790744780587567499
+    duration_ns: 250539567
+    watcher_kernel_id: 195
+    name: writer_rotary_embedding_interleaved_start_id
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/writer_rotary_embedding_interleaved_start_id/10950665623120304081/
+    source: ttnn/cpp/ttnn/operations/experimental/transformer/rotary_embedding/device/kernels/dataflow/writer_rotary_embedding_interleaved_start_id.cpp
+- program_kernel_compile_finished:
+    id: 115
+    timestamp_ns: 1790744780620246624
+    duration_ns: 283218692
+    watcher_kernel_id: 194
+    name: reader_rotary_embedding_interleaved_start_id
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_rotary_embedding_interleaved_start_id/17178935548620656950/
+    source: ttnn/cpp/ttnn/operations/experimental/transformer/rotary_embedding/device/kernels/dataflow/reader_rotary_embedding_interleaved_start_id.cpp
+- program_kernel_compile_finished:
+    id: 115
+    timestamp_ns: 1790744780851032313
+    duration_ns: 514004381
+    watcher_kernel_id: 196
+    name: rotary_embedding
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/rotary_embedding/3768766767848743720/
+    source: ttnn/cpp/ttnn/operations/experimental/transformer/rotary_embedding/device/kernels/compute/rotary_embedding.cpp
+- program_compile_finished:
+    id: 115
+    timestamp_ns: 1790744780851061258
+    duration_ns: 514033326
+- program_created:
+    id: 117
+    timestamp_ns: 1790744780851497429
+- program_created:
+    id: 118
+    timestamp_ns: 1790744780851575586
+- program_destroyed:
+    id: 118
+    timestamp_ns: 1790744780851577299
+- program_compile_started:
+    id: 117
+    timestamp_ns: 1790744780851581186
+- program_kernel_compile_finished:
+    id: 117
+    timestamp_ns: 1790744781090531501
+    duration_ns: 238950315
+    watcher_kernel_id: 197
+    name: reader_fill_cache_interleaved_start_id
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_fill_cache_interleaved_start_id/8086295030861166163/
+    source: ttnn/cpp/ttnn/operations/kv_cache/device/kernels/dataflow/reader_fill_cache_interleaved_start_id.cpp
+- program_kernel_compile_finished:
+    id: 117
+    timestamp_ns: 1790744781100574823
+    duration_ns: 248993637
+    watcher_kernel_id: 198
+    name: writer_unary_interleaved_start_id_metal2
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/writer_unary_interleaved_start_id_metal2/4932760887959279414/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/writer_unary_interleaved_start_id_metal2.cpp
+- program_compile_finished:
+    id: 117
+    timestamp_ns: 1790744781100601043
+    duration_ns: 249019857
+- program_created:
+    id: 119
+    timestamp_ns: 1790744781101019129
+- program_created:
+    id: 120
+    timestamp_ns: 1790744781101208065
+- program_destroyed:
+    id: 120
+    timestamp_ns: 1790744781101209858
+- program_compile_started:
+    id: 119
+    timestamp_ns: 1790744781101227431
+- program_kernel_compile_finished:
+    id: 119
+    timestamp_ns: 1790744781101281072
+    duration_ns: 53641
+    watcher_kernel_id: 202
+    name: rotary_embedding
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/rotary_embedding/3768766767848743720/
+    source: ttnn/cpp/ttnn/operations/experimental/transformer/rotary_embedding/device/kernels/compute/rotary_embedding.cpp
+- program_kernel_compile_finished:
+    id: 119
+    timestamp_ns: 1790744781101299377
+    duration_ns: 71946
+    watcher_kernel_id: 200
+    name: writer_rotary_embedding_interleaved_start_id
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/writer_rotary_embedding_interleaved_start_id/10950665623120304081/
+    source: ttnn/cpp/ttnn/operations/experimental/transformer/rotary_embedding/device/kernels/dataflow/writer_rotary_embedding_interleaved_start_id.cpp
+- program_kernel_compile_finished:
+    id: 119
+    timestamp_ns: 1790744781101312742
+    duration_ns: 85311
+    watcher_kernel_id: 199
+    name: reader_rotary_embedding_interleaved_start_id
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_rotary_embedding_interleaved_start_id/17178935548620656950/
+    source: ttnn/cpp/ttnn/operations/experimental/transformer/rotary_embedding/device/kernels/dataflow/reader_rotary_embedding_interleaved_start_id.cpp
+- program_kernel_compile_finished:
+    id: 119
+    timestamp_ns: 1790744781619191902
+    duration_ns: 517964471
+    watcher_kernel_id: 201
+    name: rotary_embedding
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/rotary_embedding/2368791822830723775/
+    source: ttnn/cpp/ttnn/operations/experimental/transformer/rotary_embedding/device/kernels/compute/rotary_embedding.cpp
+- program_compile_finished:
+    id: 119
+    timestamp_ns: 1790744781619225385
+    duration_ns: 517997954
+- program_created:
+    id: 121
+    timestamp_ns: 1790744781619859559
+- program_created:
+    id: 122
+    timestamp_ns: 1790744781620061399
+- program_destroyed:
+    id: 122
+    timestamp_ns: 1790744781620063152
+- program_compile_started:
+    id: 121
+    timestamp_ns: 1790744781620076958
+- program_kernel_compile_finished:
+    id: 121
+    timestamp_ns: 1790744781620146759
+    duration_ns: 69801
+    watcher_kernel_id: 203
+    name: reader_interleaved_no_bcast
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_interleaved_no_bcast/8901725231886664469/
+    source: ttnn/cpp/ttnn/operations/eltwise/binary_ng/device/kernels/dataflow/reader_interleaved_no_bcast.cpp
+- program_kernel_compile_finished:
+    id: 121
+    timestamp_ns: 1790744781620162479
+    duration_ns: 85521
+    watcher_kernel_id: 205
+    name: eltwise_binary_sfpu_scalar
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/eltwise_binary_sfpu_scalar/7819725861456139596/
+    source: ttnn/cpp/ttnn/operations/eltwise/binary_ng/device/kernels/compute/eltwise_binary_sfpu_scalar.cpp
+- program_kernel_compile_finished:
+    id: 121
+    timestamp_ns: 1790744781880301151
+    duration_ns: 260224193
+    watcher_kernel_id: 204
+    name: writer_interleaved_scalar
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/writer_interleaved_scalar/10638918030087198719/
+    source: ttnn/cpp/ttnn/operations/eltwise/binary_ng/device/kernels/dataflow/writer_interleaved_scalar.cpp
+- program_compile_finished:
+    id: 121
+    timestamp_ns: 1790744781880329143
+    duration_ns: 260252185
+- program_created:
+    id: 123
+    timestamp_ns: 1790744781880850525
+- program_created:
+    id: 124
+    timestamp_ns: 1790744781881077001
+- program_destroyed:
+    id: 124
+    timestamp_ns: 1790744781881078854
+- program_compile_started:
+    id: 123
+    timestamp_ns: 1790744781881092670
+- program_kernel_compile_finished:
+    id: 123
+    timestamp_ns: 1790744782249251212
+    duration_ns: 368158542
+    watcher_kernel_id: 207
+    name: writer_interleaved
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/writer_interleaved/5918651414147550771/
+    source: ttnn/cpp/ttnn/operations/transformer/sdpa/device/kernels/dataflow/writer_interleaved.cpp
+- program_kernel_compile_finished:
+    id: 123
+    timestamp_ns: 1790744782379617100
+    duration_ns: 498524430
+    watcher_kernel_id: 206
+    name: reader_interleaved
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_interleaved/3236402712228990604/
+    source: ttnn/cpp/ttnn/operations/transformer/sdpa/device/kernels/dataflow/reader_interleaved.cpp
+- program_kernel_compile_finished:
+    id: 123
+    timestamp_ns: 1790744782849896099
+    duration_ns: 968803429
+    watcher_kernel_id: 208
+    name: sdpa
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/sdpa/10101469545553597236/
+    source: ttnn/cpp/ttnn/operations/transformer/sdpa/device/kernels/compute/sdpa.cpp
+- program_compile_finished:
+    id: 123
+    timestamp_ns: 1790744782849926646
+    duration_ns: 968833976
+- program_created:
+    id: 125
+    timestamp_ns: 1790744782850566140
+- program_created:
+    id: 126
+    timestamp_ns: 1790744782850644498
+- program_destroyed:
+    id: 126
+    timestamp_ns: 1790744782850646241
+- program_compile_started:
+    id: 125
+    timestamp_ns: 1790744782850649908
+- program_kernel_compile_finished:
+    id: 125
+    timestamp_ns: 1790744782850726652
+    duration_ns: 76744
+    watcher_kernel_id: 210
+    name: writer_unary_interleaved_start_id_metal2
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/writer_unary_interleaved_start_id_metal2/4932760887959279414/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/writer_unary_interleaved_start_id_metal2.cpp
+- program_kernel_compile_finished:
+    id: 125
+    timestamp_ns: 1790744783114136608
+    duration_ns: 263486700
+    watcher_kernel_id: 209
+    name: reader_tm_tile_layout_nlp_concat_heads
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_tm_tile_layout_nlp_concat_heads/3220687632812458825/
+    source: ttnn/cpp/ttnn/operations/experimental/transformer/nlp_concat_heads/device/kernels/dataflow/reader_tm_tile_layout_nlp_concat_heads.cpp
+- program_compile_finished:
+    id: 125
+    timestamp_ns: 1790744783114171063
+    duration_ns: 263521155
+- program_created:
+    id: 127
+    timestamp_ns: 1790744783114728332
+- program_created:
+    id: 128
+    timestamp_ns: 1790744783115013759
+- program_destroyed:
+    id: 128
+    timestamp_ns: 1790744783115026473
+- program_compile_started:
+    id: 127
+    timestamp_ns: 1790744783115037043
+- program_kernel_compile_finished:
+    id: 127
+    timestamp_ns: 1790744783388967687
+    duration_ns: 273930644
+    watcher_kernel_id: 216
+    name: reader_bmm_tile_layout_in0_receiver
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in0_receiver/17656560007686428722/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in0_receiver.cpp
+- program_kernel_compile_finished:
+    id: 127
+    timestamp_ns: 1790744783393250618
+    duration_ns: 278213575
+    watcher_kernel_id: 214
+    name: reader_bmm_tile_layout_in0_receiver
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in0_receiver/9324480159437529200/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in0_receiver.cpp
+- program_kernel_compile_finished:
+    id: 127
+    timestamp_ns: 1790744783465908495
+    duration_ns: 350871452
+    watcher_kernel_id: 213
+    name: reader_bmm_tile_layout_in1_receiver_writer_padding
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in1_receiver_writer_padding/10195494885566375300/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in1_receiver_writer_padding.cpp
+- program_kernel_compile_finished:
+    id: 127
+    timestamp_ns: 1790744783467324400
+    duration_ns: 352287357
+    watcher_kernel_id: 215
+    name: reader_bmm_tile_layout_in1_receiver_writer_padding
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in1_receiver_writer_padding/11984180099388448361/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in1_receiver_writer_padding.cpp
+- program_kernel_compile_finished:
+    id: 127
+    timestamp_ns: 1790744783480474219
+    duration_ns: 365437176
+    watcher_kernel_id: 211
+    name: reader_bmm_tile_layout_in0_sender_padding
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in0_sender_padding/3071802655938416510/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in0_sender_padding.cpp
+- program_kernel_compile_finished:
+    id: 127
+    timestamp_ns: 1790744783526998540
+    duration_ns: 411961497
+    watcher_kernel_id: 212
+    name: reader_bmm_tile_layout_in1_sender_writer_padding
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in1_sender_writer_padding/17566085968470111289/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in1_sender_writer_padding.cpp
+- program_kernel_compile_finished:
+    id: 127
+    timestamp_ns: 1790744783666287832
+    duration_ns: 551250789
+    watcher_kernel_id: 217
+    name: bmm_large_block_zm_fused_bias_activation
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/bmm_large_block_zm_fused_bias_activation/17400796943125859059/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/compute/bmm_large_block_zm_fused_bias_activation.cpp
+- program_compile_finished:
+    id: 127
+    timestamp_ns: 1790744783666306737
+    duration_ns: 551269694
+- program_created:
+    id: 129
+    timestamp_ns: 1790744783666936112
+- program_created:
+    id: 130
+    timestamp_ns: 1790744783667136679
+- program_destroyed:
+    id: 130
+    timestamp_ns: 1790744783667142480
+- program_compile_started:
+    id: 129
+    timestamp_ns: 1790744783667157318
+- program_kernel_compile_finished:
+    id: 129
+    timestamp_ns: 1790744783940775034
+    duration_ns: 273617716
+    watcher_kernel_id: 219
+    name: writer_interleaved_no_bcast
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/writer_interleaved_no_bcast/7533879753103486344/
+    source: ttnn/cpp/ttnn/operations/eltwise/binary_ng/device/kernels_ng/dataflow/writer_interleaved_no_bcast.cpp
+- program_kernel_compile_finished:
+    id: 129
+    timestamp_ns: 1790744783964542666
+    duration_ns: 297385348
+    watcher_kernel_id: 218
+    name: reader_interleaved_no_bcast
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_interleaved_no_bcast/10688126878587284356/
+    source: ttnn/cpp/ttnn/operations/eltwise/binary_ng/device/kernels_ng/dataflow/reader_interleaved_no_bcast.cpp
+- program_kernel_compile_finished:
+    id: 129
+    timestamp_ns: 1790744784098799556
+    duration_ns: 431642238
+    watcher_kernel_id: 220
+    name: eltwise_binary_no_bcast
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/eltwise_binary_no_bcast/4624652519574783329/
+    source: ttnn/cpp/ttnn/operations/eltwise/binary_ng/device/kernels/compute/eltwise_binary_no_bcast.cpp
+- program_compile_finished:
+    id: 129
+    timestamp_ns: 1790744784098823180
+    duration_ns: 431665862
+- program_created:
+    id: 131
+    timestamp_ns: 1790744784099424031
+- program_created:
+    id: 132
+    timestamp_ns: 1790744784099556250
+- program_destroyed:
+    id: 132
+    timestamp_ns: 1790744784099557923
+- program_compile_started:
+    id: 131
+    timestamp_ns: 1790744784099567952
+- program_kernel_compile_finished:
+    id: 131
+    timestamp_ns: 1790744784363924045
+    duration_ns: 264356093
+    watcher_kernel_id: 221
+    name: reader_unary_unpad_dims_interleaved_start_id
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_unary_unpad_dims_interleaved_start_id/12417435500981377958/
+    source: ttnn/cpp/ttnn/operations/data_movement/slice/device/kernels/dataflow/reader_unary_unpad_dims_interleaved_start_id.cpp
+- program_kernel_compile_finished:
+    id: 131
+    timestamp_ns: 1790744784366256615
+    duration_ns: 266688663
+    watcher_kernel_id: 222
+    name: writer_unary_interleaved_start_id
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/writer_unary_interleaved_start_id/12898405839453344302/
+    source: ttnn/cpp/ttnn/operations/data_movement/slice/device/kernels/dataflow/writer_unary_interleaved_start_id.cpp
+- program_compile_finished:
+    id: 131
+    timestamp_ns: 1790744784366278977
+    duration_ns: 266711025
+- program_created:
+    id: 133
+    timestamp_ns: 1790744784366809525
+- program_created:
+    id: 134
+    timestamp_ns: 1790744784367009382
+- program_destroyed:
+    id: 134
+    timestamp_ns: 1790744784367011245
+- program_compile_started:
+    id: 133
+    timestamp_ns: 1790744784367023538
+- program_kernel_compile_finished:
+    id: 133
+    timestamp_ns: 1790744784640687198
+    duration_ns: 273663660
+    watcher_kernel_id: 224
+    name: reader_bmm_tile_layout_in0_receiver
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in0_receiver/16543128059060653858/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in0_receiver.cpp
+- program_kernel_compile_finished:
+    id: 133
+    timestamp_ns: 1790744784722377003
+    duration_ns: 355353465
+    watcher_kernel_id: 223
+    name: reader_bmm_tile_layout_in0_sender_padding
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in0_sender_padding/4217399707518072494/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in0_sender_padding.cpp
+- program_kernel_compile_finished:
+    id: 133
+    timestamp_ns: 1790744784735208893
+    duration_ns: 368185355
+    watcher_kernel_id: 225
+    name: reader_bmm_tile_layout_in1_sender_writer_padding
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in1_sender_writer_padding/13195018881382812976/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in1_sender_writer_padding.cpp
+- program_kernel_compile_finished:
+    id: 133
+    timestamp_ns: 1790744784901351613
+    duration_ns: 534328075
+    watcher_kernel_id: 226
+    name: bmm_large_block_zm_fused_bias_activation
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/bmm_large_block_zm_fused_bias_activation/10826977358564632075/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/compute/bmm_large_block_zm_fused_bias_activation.cpp
+- program_compile_finished:
+    id: 133
+    timestamp_ns: 1790744784901378294
+    duration_ns: 534354756
+- program_created:
+    id: 135
+    timestamp_ns: 1790744784901910054
+- program_created:
+    id: 136
+    timestamp_ns: 1790744784902070857
+- program_destroyed:
+    id: 136
+    timestamp_ns: 1790744784902072480
+- program_compile_started:
+    id: 135
+    timestamp_ns: 1790744784902086306
+- program_kernel_compile_finished:
+    id: 135
+    timestamp_ns: 1790744785156743524
+    duration_ns: 254657218
+    watcher_kernel_id: 227
+    name: reader_unary
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_unary/17174167729001345192/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/reader_unary.cpp
+- program_kernel_compile_finished:
+    id: 135
+    timestamp_ns: 1790744785159998059
+    duration_ns: 257911753
+    watcher_kernel_id: 228
+    name: writer_unary
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/writer_unary/5062309045884243280/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/writer_unary.cpp
+- program_kernel_compile_finished:
+    id: 135
+    timestamp_ns: 1790744785563058468
+    duration_ns: 660972162
+    watcher_kernel_id: 229
+    name: eltwise_sfpu
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/eltwise_sfpu/8926552635093463325/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/compute/eltwise_sfpu.cpp
+- program_compile_finished:
+    id: 135
+    timestamp_ns: 1790744785563084798
+    duration_ns: 660998492
+- program_created:
+    id: 137
+    timestamp_ns: 1790744785563673696
+- program_created:
+    id: 138
+    timestamp_ns: 1790744785563883641
+- program_destroyed:
+    id: 138
+    timestamp_ns: 1790744785563885445
+- program_compile_started:
+    id: 137
+    timestamp_ns: 1790744785563897848
+- program_kernel_compile_finished:
+    id: 137
+    timestamp_ns: 1790744785563963201
+    duration_ns: 65353
+    watcher_kernel_id: 231
+    name: reader_bmm_tile_layout_in0_receiver
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in0_receiver/16543128059060653858/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in0_receiver.cpp
+- program_kernel_compile_finished:
+    id: 137
+    timestamp_ns: 1790744785563973671
+    duration_ns: 75823
+    watcher_kernel_id: 233
+    name: bmm_large_block_zm_fused_bias_activation
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/bmm_large_block_zm_fused_bias_activation/10826977358564632075/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/compute/bmm_large_block_zm_fused_bias_activation.cpp
+- program_kernel_compile_finished:
+    id: 137
+    timestamp_ns: 1790744785563982277
+    duration_ns: 84429
+    watcher_kernel_id: 230
+    name: reader_bmm_tile_layout_in0_sender_padding
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in0_sender_padding/4217399707518072494/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in0_sender_padding.cpp
+- program_kernel_compile_finished:
+    id: 137
+    timestamp_ns: 1790744785563990462
+    duration_ns: 92614
+    watcher_kernel_id: 232
+    name: reader_bmm_tile_layout_in1_sender_writer_padding
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in1_sender_writer_padding/13195018881382812976/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in1_sender_writer_padding.cpp
+- program_compile_finished:
+    id: 137
+    timestamp_ns: 1790744785564000641
+    duration_ns: 102793
+- program_created:
+    id: 139
+    timestamp_ns: 1790744785564296268
+- program_created:
+    id: 140
+    timestamp_ns: 1790744785564472399
+- program_destroyed:
+    id: 140
+    timestamp_ns: 1790744785564474764
+- program_compile_started:
+    id: 139
+    timestamp_ns: 1790744785564485484
+- program_kernel_compile_finished:
+    id: 139
+    timestamp_ns: 1790744785836801786
+    duration_ns: 272316302
+    watcher_kernel_id: 235
+    name: writer_interleaved_no_bcast
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/writer_interleaved_no_bcast/3595199576552760937/
+    source: ttnn/cpp/ttnn/operations/eltwise/binary_ng/device/kernels_ng/dataflow/writer_interleaved_no_bcast.cpp
+- program_kernel_compile_finished:
+    id: 139
+    timestamp_ns: 1790744785859163512
+    duration_ns: 294678028
+    watcher_kernel_id: 234
+    name: reader_interleaved_no_bcast
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_interleaved_no_bcast/18303673990738227510/
+    source: ttnn/cpp/ttnn/operations/eltwise/binary_ng/device/kernels_ng/dataflow/reader_interleaved_no_bcast.cpp
+- program_kernel_compile_finished:
+    id: 139
+    timestamp_ns: 1790744785997601559
+    duration_ns: 433116075
+    watcher_kernel_id: 236
+    name: eltwise_binary_no_bcast
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/eltwise_binary_no_bcast/16756228581603511459/
+    source: ttnn/cpp/ttnn/operations/eltwise/binary_ng/device/kernels/compute/eltwise_binary_no_bcast.cpp
+- program_compile_finished:
+    id: 139
+    timestamp_ns: 1790744785997628760
+    duration_ns: 433143276
+- program_created:
+    id: 141
+    timestamp_ns: 1790744785998206798
+- program_created:
+    id: 142
+    timestamp_ns: 1790744785998389612
+- program_destroyed:
+    id: 142
+    timestamp_ns: 1790744785998392478
+- program_compile_started:
+    id: 141
+    timestamp_ns: 1790744785998403769
+- program_kernel_compile_finished:
+    id: 141
+    timestamp_ns: 1790744786277165339
+    duration_ns: 278761570
+    watcher_kernel_id: 238
+    name: reader_bmm_tile_layout_in0_receiver
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in0_receiver/2139208358040425872/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in0_receiver.cpp
+- program_kernel_compile_finished:
+    id: 141
+    timestamp_ns: 1790744786362905866
+    duration_ns: 364502097
+    watcher_kernel_id: 237
+    name: reader_bmm_tile_layout_in0_sender_padding
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in0_sender_padding/4091148697947023879/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in0_sender_padding.cpp
+- program_kernel_compile_finished:
+    id: 141
+    timestamp_ns: 1790744786373712645
+    duration_ns: 375308876
+    watcher_kernel_id: 239
+    name: reader_bmm_tile_layout_in1_sender_writer_padding
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in1_sender_writer_padding/10998694730308263599/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in1_sender_writer_padding.cpp
+- program_kernel_compile_finished:
+    id: 141
+    timestamp_ns: 1790744786531716164
+    duration_ns: 533312395
+    watcher_kernel_id: 240
+    name: bmm_large_block_zm_fused_bias_activation
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/bmm_large_block_zm_fused_bias_activation/6420460830344907596/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/compute/bmm_large_block_zm_fused_bias_activation.cpp
+- program_compile_finished:
+    id: 141
+    timestamp_ns: 1790744786531741802
+    duration_ns: 533338033
+- program_created:
+    id: 143
+    timestamp_ns: 1790744786532266229
+- program_created:
+    id: 144
+    timestamp_ns: 1790744786532418576
+- program_destroyed:
+    id: 144
+    timestamp_ns: 1790744786532421251
+- program_compile_started:
+    id: 143
+    timestamp_ns: 1790744786532434296
+- program_kernel_compile_finished:
+    id: 143
+    timestamp_ns: 1790744786532497645
+    duration_ns: 63349
+    watcher_kernel_id: 242
+    name: writer_unary_interleaved_start_id
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/writer_unary_interleaved_start_id/12898405839453344302/
+    source: ttnn/cpp/ttnn/operations/data_movement/slice/device/kernels/dataflow/writer_unary_interleaved_start_id.cpp
+- program_kernel_compile_finished:
+    id: 143
+    timestamp_ns: 1790744786532507584
+    duration_ns: 73288
+    watcher_kernel_id: 241
+    name: reader_unary_unpad_dims_interleaved_start_id
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_unary_unpad_dims_interleaved_start_id/12417435500981377958/
+    source: ttnn/cpp/ttnn/operations/data_movement/slice/device/kernels/dataflow/reader_unary_unpad_dims_interleaved_start_id.cpp
+- program_compile_finished:
+    id: 143
+    timestamp_ns: 1790744786532516400
+    duration_ns: 82104
+- program_created:
+    id: 145
+    timestamp_ns: 1790744786532934747
+- program_created:
+    id: 146
+    timestamp_ns: 1790744786533033493
+- program_destroyed:
+    id: 146
+    timestamp_ns: 1790744786533034886
+- program_compile_started:
+    id: 145
+    timestamp_ns: 1790744786533042370
+- program_kernel_compile_finished:
+    id: 145
+    timestamp_ns: 1790744786533076114
+    duration_ns: 33744
+    watcher_kernel_id: 244
+    name: writer_unary_interleaved_start_id
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/writer_unary_interleaved_start_id/12898405839453344302/
+    source: ttnn/cpp/ttnn/operations/data_movement/slice/device/kernels/dataflow/writer_unary_interleaved_start_id.cpp
+- program_kernel_compile_finished:
+    id: 145
+    timestamp_ns: 1790744786533090461
+    duration_ns: 48091
+    watcher_kernel_id: 243
+    name: reader_unary_unpad_dims_interleaved_start_id
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_unary_unpad_dims_interleaved_start_id/12417435500981377958/
+    source: ttnn/cpp/ttnn/operations/data_movement/slice/device/kernels/dataflow/reader_unary_unpad_dims_interleaved_start_id.cpp
+- program_compile_finished:
+    id: 145
+    timestamp_ns: 1790744786533100339
+    duration_ns: 57969
+- program_created:
+    id: 147
+    timestamp_ns: 1790744786533304754
+- program_created:
+    id: 148
+    timestamp_ns: 1790744786533478050
+- program_destroyed:
+    id: 148
+    timestamp_ns: 1790744786533480274
+- program_compile_started:
+    id: 147
+    timestamp_ns: 1790744786533488610
+- program_kernel_compile_finished:
+    id: 147
+    timestamp_ns: 1790744786809689932
+    duration_ns: 276201322
+    watcher_kernel_id: 246
+    name: reader_bmm_tile_layout_in0_receiver
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in0_receiver/7764896855923278255/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in0_receiver.cpp
+- program_kernel_compile_finished:
+    id: 147
+    timestamp_ns: 1790744786900240972
+    duration_ns: 366752362
+    watcher_kernel_id: 247
+    name: reader_bmm_tile_layout_in1_sender_writer_padding
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in1_sender_writer_padding/17981073206876282663/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in1_sender_writer_padding.cpp
+- program_kernel_compile_finished:
+    id: 147
+    timestamp_ns: 1790744786901332166
+    duration_ns: 367843556
+    watcher_kernel_id: 245
+    name: reader_bmm_tile_layout_in0_sender_padding
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in0_sender_padding/14511546193055362388/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in0_sender_padding.cpp
+- program_kernel_compile_finished:
+    id: 147
+    timestamp_ns: 1790744787073202793
+    duration_ns: 539714183
+    watcher_kernel_id: 248
+    name: bmm_large_block_zm_fused_bias_activation
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/bmm_large_block_zm_fused_bias_activation/10747218328698223142/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/compute/bmm_large_block_zm_fused_bias_activation.cpp
+- program_compile_finished:
+    id: 147
+    timestamp_ns: 1790744787073241796
+    duration_ns: 539753186
+- program_created:
+    id: 149
+    timestamp_ns: 1790744787073912488
+- program_created:
+    id: 150
+    timestamp_ns: 1790744787074118817
+- program_destroyed:
+    id: 150
+    timestamp_ns: 1790744787074120380
+- program_compile_started:
+    id: 149
+    timestamp_ns: 1790744787074130549
+- program_kernel_compile_finished:
+    id: 149
+    timestamp_ns: 1790744787074190311
+    duration_ns: 59762
+    watcher_kernel_id: 252
+    name: bmm_large_block_zm_fused_bias_activation
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/bmm_large_block_zm_fused_bias_activation/10747218328698223142/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/compute/bmm_large_block_zm_fused_bias_activation.cpp
+- program_kernel_compile_finished:
+    id: 149
+    timestamp_ns: 1790744787074203266
+    duration_ns: 72717
+    watcher_kernel_id: 250
+    name: reader_bmm_tile_layout_in0_receiver
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in0_receiver/7764896855923278255/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in0_receiver.cpp
+- program_kernel_compile_finished:
+    id: 149
+    timestamp_ns: 1790744787074220268
+    duration_ns: 89719
+    watcher_kernel_id: 249
+    name: reader_bmm_tile_layout_in0_sender_padding
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in0_sender_padding/14511546193055362388/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in0_sender_padding.cpp
+- program_kernel_compile_finished:
+    id: 149
+    timestamp_ns: 1790744787074231459
+    duration_ns: 100910
+    watcher_kernel_id: 251
+    name: reader_bmm_tile_layout_in1_sender_writer_padding
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in1_sender_writer_padding/17981073206876282663/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in1_sender_writer_padding.cpp
+- program_compile_finished:
+    id: 149
+    timestamp_ns: 1790744787074244243
+    duration_ns: 113694
+- program_created:
+    id: 151
+    timestamp_ns: 1790744787074584934
+- program_created:
+    id: 152
+    timestamp_ns: 1790744787074712063
+- program_destroyed:
+    id: 152
+    timestamp_ns: 1790744787074713376
+- program_compile_started:
+    id: 151
+    timestamp_ns: 1790744787074720750
+- program_kernel_compile_finished:
+    id: 151
+    timestamp_ns: 1790744787354106152
+    duration_ns: 279385402
+    watcher_kernel_id: 254
+    name: reader_bmm_tile_layout_in0_receiver
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in0_receiver/14011858420722521980/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in0_receiver.cpp
+- program_kernel_compile_finished:
+    id: 151
+    timestamp_ns: 1790744787428555678
+    duration_ns: 353834928
+    watcher_kernel_id: 253
+    name: reader_bmm_tile_layout_in0_sender_padding
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in0_sender_padding/9120379727093630418/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in0_sender_padding.cpp
+- program_kernel_compile_finished:
+    id: 151
+    timestamp_ns: 1790744787442739092
+    duration_ns: 368018342
+    watcher_kernel_id: 255
+    name: reader_bmm_tile_layout_in1_sender_writer_padding
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_bmm_tile_layout_in1_sender_writer_padding/16780306313118293274/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in1_sender_writer_padding.cpp
+- program_kernel_compile_finished:
+    id: 151
+    timestamp_ns: 1790744787616025182
+    duration_ns: 541304432
+    watcher_kernel_id: 256
+    name: bmm_large_block_zm_fused_bias_activation
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/bmm_large_block_zm_fused_bias_activation/6436961734333158941/
+    source: ttnn/cpp/ttnn/operations/matmul/device/kernels/compute/bmm_large_block_zm_fused_bias_activation.cpp
+- program_compile_finished:
+    id: 151
+    timestamp_ns: 1790744787616060268
+    duration_ns: 541339518
+- program_created:
+    id: 153
+    timestamp_ns: 1790744787616597539
+- program_created:
+    id: 154
+    timestamp_ns: 1790744787616747331
+- program_destroyed:
+    id: 154
+    timestamp_ns: 1790744787616749174
+- program_compile_started:
+    id: 153
+    timestamp_ns: 1790744787616760806
+- program_kernel_compile_finished:
+    id: 153
+    timestamp_ns: 1790744787867368879
+    duration_ns: 250608073
+    watcher_kernel_id: 258
+    name: writer_unary_interleaved_start_id
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/writer_unary_interleaved_start_id/14851635357329292706/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/writer_unary_interleaved_start_id.cpp
+- program_kernel_compile_finished:
+    id: 153
+    timestamp_ns: 1790744787879161653
+    duration_ns: 262400847
+    watcher_kernel_id: 257
+    name: reader_concat_interleaved_start_id
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_concat_interleaved_start_id/13484414597952350580/
+    source: ttnn/cpp/ttnn/operations/data_movement/concat/device/kernels/dataflow/reader_concat_interleaved_start_id.cpp
+- program_compile_finished:
+    id: 153
+    timestamp_ns: 1790744787879188393
+    duration_ns: 262427587
+- program_created:
+    id: 155
+    timestamp_ns: 1790744787879717108
+- program_created:
+    id: 156
+    timestamp_ns: 1790744787879861701
+- program_destroyed:
+    id: 156
+    timestamp_ns: 1790744787879863434
+- program_compile_started:
+    id: 155
+    timestamp_ns: 1790744787879875697
+- program_kernel_compile_finished:
+    id: 155
+    timestamp_ns: 1790744787879919289
+    duration_ns: 43592
+    watcher_kernel_id: 260
+    name: writer_unary_interleaved_start_id
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/writer_unary_interleaved_start_id/14851635357329292706/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/writer_unary_interleaved_start_id.cpp
+- program_kernel_compile_finished:
+    id: 155
+    timestamp_ns: 1790744787879929829
+    duration_ns: 54132
+    watcher_kernel_id: 259
+    name: reader_concat_interleaved_start_id
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/reader_concat_interleaved_start_id/13484414597952350580/
+    source: ttnn/cpp/ttnn/operations/data_movement/concat/device/kernels/dataflow/reader_concat_interleaved_start_id.cpp
+- program_compile_finished:
+    id: 155
+    timestamp_ns: 1790744787879939988
+    duration_ns: 64291
+- program_created:
+    id: 157
+    timestamp_ns: 1790744787894514918
+- program_created:
+    id: 158
+    timestamp_ns: 1790744787894687303
+- program_destroyed:
+    id: 158
+    timestamp_ns: 1790744787894688786
+- program_compile_started:
+    id: 157
+    timestamp_ns: 1790744787894712090
+- program_kernel_compile_finished:
+    id: 157
+    timestamp_ns: 1790744788179237093
+    duration_ns: 284525003
+    watcher_kernel_id: 261
+    name: mk_ncrisc
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/mk_ncrisc/17427689768869965715/
+    source: /home/deepgadget/experiments/tt-models/ports/tt-pi-0.5/models/experimental/pi0_5/tt/megakernel/kernels/mk_ncrisc.cpp
+- program_kernel_compile_finished:
+    id: 157
+    timestamp_ns: 1790744788786016938
+    duration_ns: 891304848
+    watcher_kernel_id: 262
+    name: mk_brisc
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/mk_brisc/1043092842156155436/
+    source: /home/deepgadget/experiments/tt-models/ports/tt-pi-0.5/models/experimental/pi0_5/tt/megakernel/kernels/mk_brisc.cpp
+- program_kernel_compile_finished:
+    id: 157
+    timestamp_ns: 1790744789274305536
+    duration_ns: 1379593446
+    watcher_kernel_id: 263
+    name: mk_trisc
+    path: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/cache/tt-metal-cache9682618234936436297/kernels/mk_trisc/7690021841356538742/
+    source: /home/deepgadget/experiments/tt-models/ports/tt-pi-0.5/models/experimental/pi0_5/tt/megakernel/kernels/mk_trisc.cpp
+- program_compile_finished:
+    id: 157
+    timestamp_ns: 1790744789274340742
+    duration_ns: 1379628652
+- program_destroyed:
+    id: 0
+    timestamp_ns: 1790744791645657070
+- program_destroyed:
+    id: 157
+    timestamp_ns: 1790744791997303408
+- program_destroyed:
+    id: 155
+    timestamp_ns: 1790744791997447579
+- program_destroyed:
+    id: 153
+    timestamp_ns: 1790744791997525486
+- program_destroyed:
+    id: 145
+    timestamp_ns: 1790744791997584948
+- program_destroyed:
+    id: 139
+    timestamp_ns: 1790744791997642176
+- program_destroyed:
+    id: 137
+    timestamp_ns: 1790744791997746091
+- program_destroyed:
+    id: 129
+    timestamp_ns: 1790744791997810623
+- program_destroyed:
+    id: 127
+    timestamp_ns: 1790744791997905261
+- program_destroyed:
+    id: 125
+    timestamp_ns: 1790744791997975533
+- program_destroyed:
+    id: 121
+    timestamp_ns: 1790744791998036638
+- program_destroyed:
+    id: 119
+    timestamp_ns: 1790744791998108533
+- program_destroyed:
+    id: 51
+    timestamp_ns: 1790744791998201057
+- program_destroyed:
+    id: 13
+    timestamp_ns: 1790744791998265659
+- program_destroyed:
+    id: 45
+    timestamp_ns: 1790744791998307428
+- program_destroyed:
+    id: 147
+    timestamp_ns: 1790744791998355939
+- program_destroyed:
+    id: 115
+    timestamp_ns: 1790744791998468651
+- program_destroyed:
+    id: 35
+    timestamp_ns: 1790744791998511542
+- program_destroyed:
+    id: 7
+    timestamp_ns: 1790744791998548702
+- program_destroyed:
+    id: 141
+    timestamp_ns: 1790744791998616209
+- program_destroyed:
+    id: 133
+    timestamp_ns: 1790744791998702902
+- program_destroyed:
+    id: 15
+    timestamp_ns: 1790744791998776941
+- program_destroyed:
+    id: 33
+    timestamp_ns: 1790744791998832165
+- program_destroyed:
+    id: 31
+    timestamp_ns: 1790744791998882059
+- program_destroyed:
+    id: 123
+    timestamp_ns: 1790744791998933306
+- program_destroyed:
+    id: 71
+    timestamp_ns: 1790744791999045937
+- program_destroyed:
+    id: 1
+    timestamp_ns: 1790744791999070313
+- program_destroyed:
+    id: 135
+    timestamp_ns: 1790744791999100550
+- program_destroyed:
+    id: 39
+    timestamp_ns: 1790744791999179649
+- program_destroyed:
+    id: 29
+    timestamp_ns: 1790744791999207662
+- program_destroyed:
+    id: 25
+    timestamp_ns: 1790744791999256834
+- program_destroyed:
+    id: 11
+    timestamp_ns: 1790744791999343027
+- program_destroyed:
+    id: 57
+    timestamp_ns: 1790744791999416465
+- program_destroyed:
+    id: 5
+    timestamp_ns: 1790744791999474163
+- program_destroyed:
+    id: 65
+    timestamp_ns: 1790744791999503729
+- program_destroyed:
+    id: 43
+    timestamp_ns: 1790744791999575234
+- program_destroyed:
+    id: 17
+    timestamp_ns: 1790744791999651577
+- program_destroyed:
+    id: 27
+    timestamp_ns: 1790744791999709596
+- program_destroyed:
+    id: 49
+    timestamp_ns: 1790744791999752387
+- program_destroyed:
+    id: 55
+    timestamp_ns: 1790744791999815596
+- program_destroyed:
+    id: 37
+    timestamp_ns: 1790744791999858917
+- program_destroyed:
+    id: 103
+    timestamp_ns: 1790744792000065857
+- program_destroyed:
+    id: 111
+    timestamp_ns: 1790744792000149835
+- program_destroyed:
+    id: 151
+    timestamp_ns: 1790744792000180393
+- program_destroyed:
+    id: 47
+    timestamp_ns: 1790744792000249272
+- program_destroyed:
+    id: 67
+    timestamp_ns: 1790744792000288606
+- program_destroyed:
+    id: 3
+    timestamp_ns: 1790744792000311319
+- program_destroyed:
+    id: 149
+    timestamp_ns: 1790744792000336847
+- program_destroyed:
+    id: 143
+    timestamp_ns: 1790744792000432457
+- program_destroyed:
+    id: 41
+    timestamp_ns: 1790744792000492460
+- program_destroyed:
+    id: 105
+    timestamp_ns: 1790744792000574644
+- program_destroyed:
+    id: 59
+    timestamp_ns: 1790744792000628075
+- program_destroyed:
+    id: 9
+    timestamp_ns: 1790744792000682888
+- program_destroyed:
+    id: 117
+    timestamp_ns: 1790744792000741028
+- program_destroyed:
+    id: 19
+    timestamp_ns: 1790744792000800119
+- program_destroyed:
+    id: 91
+    timestamp_ns: 1790744792000835025
+- program_destroyed:
+    id: 61
+    timestamp_ns: 1790744792000923701
+- program_destroyed:
+    id: 63
+    timestamp_ns: 1790744792000973024
+- program_destroyed:
+    id: 131
+    timestamp_ns: 1790744792001034520
+- program_destroyed:
+    id: 53
+    timestamp_ns: 1790744792001115713
+- program_destroyed:
+    id: 69
+    timestamp_ns: 1790744792001170897
+- program_destroyed:
+    id: 77
+    timestamp_ns: 1790744792001201604
+- program_destroyed:
+    id: 79
+    timestamp_ns: 1790744792001285723
+- program_destroyed:
+    id: 81
+    timestamp_ns: 1790744792001341718
+- program_destroyed:
+    id: 83
+    timestamp_ns: 1790744792001426658
+- program_destroyed:
+    id: 23
+    timestamp_ns: 1790744792001456705
+- program_destroyed:
+    id: 73
+    timestamp_ns: 1790744792001519583
+- program_destroyed:
+    id: 87
+    timestamp_ns: 1790744792001569677
+- program_destroyed:
+    id: 85
+    timestamp_ns: 1790744792001601136
+- program_destroyed:
+    id: 93
+    timestamp_ns: 1790744792001663143
+- program_destroyed:
+    id: 95
+    timestamp_ns: 1790744792001744907
+- program_destroyed:
+    id: 97
+    timestamp_ns: 1790744792001816011
+- program_destroyed:
+    id: 99
+    timestamp_ns: 1790744792001872567
+- program_destroyed:
+    id: 89
+    timestamp_ns: 1790744792001935886
+- program_destroyed:
+    id: 101
+    timestamp_ns: 1790744792002003554
+- program_destroyed:
+    id: 107
+    timestamp_ns: 1790744792002027108
+- program_destroyed:
+    id: 113
+    timestamp_ns: 1790744792002078936
+- program_destroyed:
+    id: 75
+    timestamp_ns: 1790744792002123219
+- program_destroyed:
+    id: 21
+    timestamp_ns: 1790744792002178262
+- program_destroyed:
+    id: 109
+    timestamp_ns: 1790744792002226633
