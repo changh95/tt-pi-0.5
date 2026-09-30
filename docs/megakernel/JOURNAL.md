@@ -552,3 +552,33 @@ Files: docs/megakernel/publish_p1/{scripts,results}/ (copies of scratchpad/pub1)
   history at 2900530f). build/pi05-base-p150 was overwritten by the new package. 31 GB free after.
 Open (unchanged): base pytest 0.95 floor on seed 3 (both arms, pre-existing); mk_brisc.cpp:8 stale comment.
 Next: phase 2 (WP P2-0), whole model as one fused op, on this branch.
+
+## 2026-09-30 17:41:59 KST -- shipcheck-p1: independent check of the phase-1 release
+
+Files: scratchpad/shipcheck/ (fresh GitHub clone gh/, HF snapshot hf/ at 9f6b082b without image blobs, pull.log, serve_check.log, info.json, bench.json).
+- GitHub main = f7f173bd (merge of PR #2). HF main = 9f6b082b. diff -rq gh/models vs hf/code/models: identical except HF-only
+  models/common/lightweightmodule.py (byte-identical to tt-metal 668c2907's). models/ at a46beb5 == f7f173b (git diff empty).
+- Pull: removed local image fe0d2e3d68a7 (17:38:50), tt-model pull re-loaded image id fe0d2e3d68a7 (rc 0, 17:40:20).
+  Served the pulled package by repo id in one with-device hold (17:40:39-17:41:23): /info source.commit f7f173bd,
+  megakernel.backend expert, kernel_digest 328761c8a1ce3fd9; HF code/ smoke_test PASS; 30 warm requests: inference median
+  70.94 ms, total 72.5, identical actions; action head equals the card's example. Card says 70.81 (bench-c2): consistent.
+- Structure (scratchpad/ip1/out/ops_default_base.csv.gz, last 892 rows): exactly 1 GenericOp (mk_trisc) and 891 stock ops
+  (Matmul 298, BinaryNg 160, LayerNorm 90, ..., UpdateKVCache 36). "891 traced stock ops" is accurate.
+- LIBERO recomputed from megakernel-p1/tt_spatial.jsonl: 100 unique episodes, 99 successes, 0 errors, failure t9/i4 at 230 steps
+  (GPU 138), paired 0-4 49/50 vs GPU 50/50, 5-9 50/50, every line backend expert + mk_digest; server log 2,130 calls median
+  66.4 / p10 66.1 / p90 66.7 / max 71.2. HF demo/libero_eval.json per_task equals the JSONL. Demo steps equal the eval (95/131/78/108).
+  Previous run 98/100, paired 48/50, 77.6 ms: match fused/.
+- Card numbers vs files: O_ip1 (22/22, 0.99974/0.99916, off 0.99596; whole-call 0.804-0.9994 mean 0.975, off 0.764-0.9987 mean 0.969,
+  oracle 0.810-0.9995), A_* (69.5 / 82.8 replay), S_struct (17.49 / 30.31 ms, 1,660 ops), GPU ratios 1.41-2.03x, 1.52x: all match.
+- Videos: the 5 HF mp4s are byte-identical to megakernel-p1/demo/, fully decode with ffmpeg 7.0.2 (h264 High, 960x1080, 30 fps;
+  combined 29.63 s), moov atom at the front, HTTP HEAD 200 video/mp4. Looked at the title card, a t7 SUCCESS frame and the end card.
+- Discrepancies (all wording / labels, no wrong result):
+  1. "median of 60" for the in-process trace replay (HF card + tt-model.yaml long description, GPU_COMPARISON.md:13) and
+     "median of 60 calls" (GitHub README Latency): A_*.json hold 30 calls and 30 replays.
+  2. Card row "Device time ... (profiler, median of 21 replays)": true for the megakernel (n 21); the previous-path 30.31 ms is
+     post_cache_device_ms_first (the first of 5 sessions), not a median of 21.
+  3. tt-model.yaml:93 comment calls off "the previous all-stock-op expert path" and SERVING.md:53 "all-TT-NN": off also runs the
+     3 custom generic_op programs (540 GenericOps after the last cache write). README / card say "stock / custom" correctly.
+  4. Provenance: S_struct.json (the structural / profiler gate file) sits in integrate_p1/results/hold4_serve_invalid/, the
+     folder of the discarded served run, while the JOURNAL cites it as a valid result. Valid content (hold2 profile), misfiled.
+  5. Basis mix: the previous image's 84.02 / 85.35 are cycle 1 of the 09-29 bench (c2 was 84.05 / 85.30); current is c2. Negligible.
