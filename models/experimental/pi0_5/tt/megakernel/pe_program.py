@@ -102,6 +102,8 @@ class PrefixTensors:
         self.h_v = scratch([rows, 16384], b8)
         self.diag = ttnn.from_torch(torch.zeros(P.NCORES, 16, dtype=torch.int32), dtype=ttnn.uint32,
                                     layout=ttnn.ROW_MAJOR_LAYOUT, device=device, memory_config=dram)
+        self.times = ttnn.from_torch(torch.zeros(4096, 16, dtype=torch.int32), dtype=ttnn.uint32,
+                                     layout=ttnn.ROW_MAJOR_LAYOUT, device=device, memory_config=dram)
         self.embed = embed
         # request inputs (fixed addresses; the host rewrites their contents)
         self.im2col = scratch([512, P.S_KP * 32], b16)
@@ -113,7 +115,7 @@ class PrefixTensors:
         return (list(self.ws) + list(self.wv) + [self.wpatch, self.wproj, self.svec, self.gvec, self.vvec, self.consts,
                                                   self.pos] + list(self.rope)
                 + [self.x_s, self.xn_s, self.qkv_s, self.ctx_s, self.h_s, self.x_v, self.xn_v, self.q_v, self.ctx_v,
-                   self.h_v, self.diag, self.embed, self.im2col, self.tokens, self.vmask])
+                   self.h_v, self.diag, self.times, self.embed, self.im2col, self.tokens, self.vmask])
 
 
 class WholeMegakernel:
@@ -170,7 +172,7 @@ class WholeMegakernel:
             put(P.PR_NOCY0 + yy, mk.noc((x, yy))[1])
         return a + p
 
-    def common_args(self, p1_common: List[int], kv, first: int, stop: int) -> List[int]:
+    def common_args(self, p1_common: List[int], kv, first: int, stop: int, reps: int = 1) -> List[int]:
         t = self.t
         c = list(p1_common) + [0] * (P.PA0 - G.N_COMMON_ARGS)
         assert len(c) == P.PA0
@@ -181,7 +183,7 @@ class WholeMegakernel:
                        (P.PA_CTX_V, t.ctx_v), (P.PA_H_V, t.h_v), (P.PA_IM2COL, t.im2col), (P.PA_TOK, t.tokens),
                        (P.PA_EMB, t.embed), (P.PA_VMASK, t.vmask), (P.PA_POS, t.pos), (P.PA_SVEC, t.svec),
                        (P.PA_VVEC, t.vvec), (P.PA_GVEC, t.gvec), (P.PA_CONST, t.consts), (P.PA_WPATCH, t.wpatch),
-                       (P.PA_WPROJ, t.wproj), (P.PA_DIAG, t.diag)):
+                       (P.PA_WPROJ, t.wproj), (P.PA_DIAG, t.diag), (P.PA_TIMES, t.times)):
             c[i] = addr(ten)
         for i, ten in enumerate(t.rope):
             c[P.PA_COSQ + i] = addr(ten)
@@ -194,11 +196,12 @@ class WholeMegakernel:
             c[P.PA_VC + l] = addr(kv[l][1])
         c[P.PA_OPFIRST] = int(first)
         c[P.PA_DBGSTOP] = int(stop)
+        c[P.PA_REPS] = int(reps)
         return c
 
     # ------------------------------------------------------------------ program
     def program(self, kv, mask, tables, noise, out, whole: bool = True, first: int = 0, stop: int = P.N_OPS,
-                ngen: int = G.N_GEN):
+                ngen: int = G.N_GEN, reps: int = 1):
         import ttnn
 
         mk, sh, ps = self.mk, self.shape, self.ps
@@ -231,7 +234,7 @@ class WholeMegakernel:
         assert len(ct) - pe_ct0 == P.PT_ACC
         ct.extend(ttnn.TensorAccessorArgs(self.t.x_s).get_compile_time_args())
         ct.extend(ttnn.TensorAccessorArgs(kv[0][0]).get_compile_time_args())
-        common = self.common_args(mk.common_args(kv, mask, tables, noise, out, ngen), kv, first, stop)
+        common = self.common_args(mk.common_args(kv, mask, tables, noise, out, ngen), kv, first, stop, reps)
         rt = ttnn.RuntimeArgs()
         for x in range(G.GRID[0]):
             for y in range(G.GRID[1]):
@@ -248,6 +251,9 @@ class WholeMegakernel:
         defines = [("PE_CT0", str(pe_ct0)), ("PE_WHOLE", "1" if whole else "0")]
         if os.environ.get("PI05_MK_TRACE", "0") == "1":
             defines.append(("MK_TRACE", "1"))
+        for kv_ in filter(None, os.environ.get("PI05_PE_DEFINES", "").split(",")):  # debug arms only
+            k_, _, v_ = kv_.partition("=")
+            defines.append((k_, v_ or "1"))
         if os.environ.get("PI05_MK_FID8", "hifi2").lower() == "hifi2":
             defines.append(("MK_FID8_HIFI2", "1"))
         fp = ttnn.KernelDescriptor.SourceType.FILE_PATH
@@ -269,12 +275,13 @@ class WholeMegakernel:
     def io_tensors(self, kv, mask, tables, noise, out) -> List:
         return [t for t in self.t.all() if t is not None] + self.mk.io_tensors(kv, mask, tables, noise, out)
 
-    def run(self, kv, mask, tables, noise, out=None, whole: bool = True, first: int = 0, stop: int = P.N_OPS):
+    def run(self, kv, mask, tables, noise, out=None, whole: bool = True, first: int = 0, stop: int = P.N_OPS,
+            reps: int = 1):
         import ttnn
 
         if out is None:
             out = ttnn.allocate_tensor_on_device(ttnn.Shape([1, self.shape.suffix_rows, 32]), ttnn.bfloat16,
                                                  ttnn.TILE_LAYOUT, self.device, ttnn.L1_MEMORY_CONFIG)
-        prog = self.program(kv, mask, tables, noise, out, whole=whole, first=first, stop=stop)
+        prog = self.program(kv, mask, tables, noise, out, whole=whole, first=first, stop=stop, reps=reps)
         ttnn.generic_op(self.io_tensors(kv, mask, tables, noise, out), prog)
         return out

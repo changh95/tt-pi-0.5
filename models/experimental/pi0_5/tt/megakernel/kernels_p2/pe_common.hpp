@@ -264,7 +264,11 @@ struct Lay {
         d, cst, rm, tok, stage, stage_bytes, end;
 };
 constexpr uint32_t W_BUDGET = 8 * 34816;
+#ifdef PE_DBG_IN0_SLOTS
+constexpr uint32_t IN0_SLOTS = PE_DBG_IN0_SLOTS;
+#else
 constexpr uint32_t IN0_SLOTS = 4;
+#endif
 
 #if !defined(COMPILE_FOR_TRISC)
 PE_OS Lay layout(const Op& o) {

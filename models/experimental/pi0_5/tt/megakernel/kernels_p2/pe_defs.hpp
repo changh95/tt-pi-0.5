@@ -198,15 +198,20 @@ constexpr uint32_t PSTRIDE = 16;
 constexpr uint32_t PS_GO = 0;        // every core: barrier go (op index + 1), multicast by the hub
 constexpr uint32_t PS_ARR = 1;       // hub: barrier arrivals (cumulative)
 constexpr uint32_t PS_NCDONE = 2;    // local: ops the NCRISC finished (BRISC waits before it arrives)
-constexpr uint32_t PS_W_RDY = 3;     // weight feeder: receiver credits (cumulative)
 constexpr uint32_t PS_W_VAL = 4;     // receiver: weight pages valid ((op << 16) | pages)
-constexpr uint32_t PS_I_RDY = 5;     // in0 feeder: receiver credits (cumulative)
 constexpr uint32_t PS_I_VAL = 6;     // receiver: in0 pages valid ((op << 16) | pages)
 constexpr uint32_t PS_SRC_GO = 7;    // hub-local source of the go multicast
 constexpr uint32_t PS_SRC_W = 8;     // weight-feeder-local source of the valid multicast
 constexpr uint32_t PS_SRC_I = 9;     // in0-feeder-local source of the valid multicast
 constexpr uint32_t PS_DBG = 10;      // 10..13 NCRISC (op, phase, a, b), 14..15 BRISC (op, phase): last blocking step
-constexpr uint32_t PS_N = 16;
+// Ring credits are PER RECEIVER (cumulative pages each receiver has room for) and a feeder takes the MINIMUM: a
+// summed credit lets a receiver that runs ahead cover for one that lags, and the feeder then overwrites a slot the
+// laggard is still reading (ring depth > 1; reproduced 2026-09-30 on the VLM down op, bands far from the feeders).
+constexpr uint32_t PS_W_RDY0 = 16;   // weight feeder of column x: 16 + y = credits of receiver (x, y), y < 8
+constexpr uint32_t PS_I_RDY0 = 24;   // in0 feeder of band b: 24 + x = credits of receiver (x, b), x < 11
+constexpr uint32_t PS_N = 36;
+constexpr uint32_t PS_DIAG = 40;     // 40..43: diagnostics staging (8 words, written once at the end)
+constexpr uint32_t PS_TSTAMP = 44;   // 44..47: the hub's time-stamp record staging (16 B)
 
 // ---------------------------------------------------------------- common runtime args (appended after phase 1's)
 constexpr uint32_t PA0 = 100;
@@ -242,7 +247,9 @@ constexpr uint32_t PA_WS = 128;      // 128..154: SigLIP layer weight arenas (bf
 constexpr uint32_t PA_WV = 155;      // 155..172: VLM layer weight arenas
 constexpr uint32_t PA_KC = 173;      // 173..190: VLM layer K caches (L1, bfp8) -- the expert's inputs
 constexpr uint32_t PA_VC = 191;      // 191..208: V caches
-constexpr uint32_t PA_N = 209;       // common args in total
+constexpr uint32_t PA_REPS = 209;    // the op range [OPFIRST, DBGSTOP) runs this many times (timing; 1 in production)
+constexpr uint32_t PA_TIMES = 210;   // uint32 [4096, 16] ROW_MAJOR: the hub stamps (wall clock, k, op) at every go
+constexpr uint32_t PA_N = 211;       // common args in total
 
 // ---------------------------------------------------------------- per-core runtime args (appended after phase 1's)
 constexpr uint32_t PR0 = 48;

@@ -20,7 +20,7 @@ constexpr auto acc_l1 = TensorAccessorArgs<acc_dram.next_compile_time_args_offse
 FORCE_INLINE auto dram(uint32_t arg, uint32_t page) { return TensorAccessor(acc_dram, cra(arg), page); }
 
 struct NState {
-    uint32_t wbase = 0;  // weight-feeder credits consumed so far (cumulative, this core as a feeder)
+    uint32_t wbase[8] = {0, 0, 0, 0, 0, 0, 0, 0};  // weight feeder: pages each receiver row was sent so far
 };
 
 FORCE_INLINE uint32_t w_arena_arg(const Op& o) {
@@ -118,16 +118,36 @@ PE_OS void mm_receive(const Op& o, const Core& c, const Lay& L, uint32_t A, uint
     ps_dbg(k, 1, 0, 0);
     while (ip < ipages || wp < wpages || sp < spairs) {
         WAYPOINT("PRCV");
+#ifdef PE_DBG_IN0_DIRECT
+        if (o.mode == MM_S) {  // debug arm: every receiver reads its own in0 K block from DRAM (no band feeder)
+            if (ip < ipages && cb_free(icb) >= itiles) {
+                cb_reserve_back(icb, itiles);
+                const uint32_t a = get_write_ptr(icb);
+                const auto src = dram(PA_H_V, T8);
+                for (uint32_t r = 0; r < rp; ++r) {
+                    for (uint32_t kk = 0; kk < o.piece; ++kk) {
+                        noc_async_read_page((r0 + r) * o.kt + ip * o.piece + kk, src, a + (r * o.piece + kk) * T8);
+                    }
+                }
+                noc_async_read_barrier();
+                cb_push_back(icb, itiles);
+                ++ip;
+                ic = ip;
+            }
+        } else
+#endif
+        {
         if (ic < ipages && cb_free(icb) >= (ic - ip + 1) * itiles) {
-            inc_word(c.ifx, c.ify, PS_I_RDY);
+            inc_word(c.ifx, c.ify, PS_I_RDY0 + c.x);
             ++ic;
         }
         if (ip < ic && ps_read(PS_I_VAL) >= fl + ip + 1) {
             cb_push_back(icb, itiles);
             ++ip;
         }
+        }
         if (wc < wpages && cb_free(wcb) >= (wc - wp + 1) * pt) {
-            inc_word(c.wfx, c.wfy, PS_W_RDY);
+            inc_word(c.wfx, c.wfy, PS_W_RDY0 + c.y);
             ++wc;
         }
         if (wp < wc && ps_read(PS_W_VAL) >= fl + wp + 1) {
@@ -171,8 +191,9 @@ PE_OS void feed_w(const Op& o, const Core& c, const Lay& L, uint32_t A, uint32_t
         while (!ncrisc_noc_read_with_transaction_id_flushed(noc_index, 1 + (j & 1))) {
         }
         invalidate_l1_cache();
-        ps_dbg(k, 3, j, st.wbase + nr * (j + 1));
-        PWAIT_GE(PS_W_RDY, st.wbase + nr * (j + 1), "PWCR");
+        ps_dbg(k, 3, j, st.wbase[0] + j + 1);
+        WAYPOINT("PWCR");
+        wait_credits(PS_W_RDY0, nr, st.wbase, j + 1);
         mcast_flag(c.colx, y0, c.colx, y1, nr, s0 + (j & 1) * pb, dst + (j % L.w_slots) * pb, pb, PS_SRC_W, PS_W_VAL,
                    (k << 16) + j + 1);
         if (j + 2 < pages) {
@@ -180,7 +201,9 @@ PE_OS void feed_w(const Op& o, const Core& c, const Lay& L, uint32_t A, uint32_t
         }
     }
     noc_async_read_set_trid(0);
-    st.wbase += nr * pages;
+    for (uint32_t r = 0; r < nr; ++r) {
+        st.wbase[r] += pages;
+    }
 }
 
 PE_OS void read_consts(uint32_t A, const Lay& L) {
@@ -372,6 +395,8 @@ PE_OS void run_ncrisc() {
     const uint32_t A = arena_lo();
     NState st;
     uint32_t k = 0;
+    const uint32_t reps = cra(PA_REPS);
+    for (uint32_t rep = 0; rep < reps; ++rep)
     for (uint32_t op = first; op < stop; ++op, ++k) {
         const Op o = describe(op);
         const Lay L = layout(o);

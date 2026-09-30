@@ -19,7 +19,7 @@ constexpr auto bacc_l1 = TensorAccessorArgs<bacc_dram.next_compile_time_args_off
 FORCE_INLINE auto bdram(uint32_t arg, uint32_t page) { return TensorAccessor(bacc_dram, cra(arg), page); }
 
 struct BState {
-    uint32_t ibase = 0;  // in0-feeder credits consumed so far (cumulative)
+    uint32_t ibase[NCOL] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};  // in0 feeder: pages each receiver column was sent
 };
 
 // ---------------------------------------------------------------- matmul outputs
@@ -102,8 +102,9 @@ PE_OS void feed_in0(const Op& o, const Core& c, const Lay& L, uint32_t A, uint32
             }
             return n;
         };
-        ps_dbg(o.op, 2, st.ibase + nr);
-        PWAIT_GE(PS_I_RDY, st.ibase + nr, "PICR");
+        ps_dbg(o.op, 2, st.ibase[0] + 1);
+        WAYPOINT("PICR");
+        wait_credits(PS_I_RDY0, nr, st.ibase, 1);
         uint32_t n = read_chunk(0);
         noc_async_read_barrier();
         for (uint32_t ch = 0; ch < nch; ++ch) {
@@ -119,7 +120,9 @@ PE_OS void feed_in0(const Op& o, const Core& c, const Lay& L, uint32_t A, uint32
         }
         noc_async_write_barrier();  // every chunk landed before the flag
         mcast_flag(x0, y, x1, y, nr, 0, 0, 0, PS_SRC_I, PS_I_VAL, (k << 16) + 1);
-        st.ibase += nr;
+        for (uint32_t r = 0; r < nr; ++r) {
+            st.ibase[r] += 1;
+        }
     } else {
         const auto src = bdram(in0_arg(o), T8);
         const uint32_t pc = o.piece, nq = kt / pc, pt = rp * pc, pb = pt * T8;
@@ -135,7 +138,8 @@ PE_OS void feed_in0(const Op& o, const Core& c, const Lay& L, uint32_t A, uint32
         noc_async_read_barrier();
         for (uint32_t j = 0; j < nq; ++j) {
             ps_dbg(o.op, 3, j);
-            PWAIT_GE(PS_I_RDY, st.ibase + nr * (j + 1), "PISR");
+            WAYPOINT("PISR");
+            wait_credits(PS_I_RDY0, nr, st.ibase, j + 1);
             mcast_flag(x0, y, x1, y, nr, s0 + (j & 1) * pb, dst + (j % IN0_SLOTS) * pb, pb, PS_SRC_I, PS_I_VAL,
                        (k << 16) + j + 1);
             if (j + 1 < nq) {
@@ -143,7 +147,9 @@ PE_OS void feed_in0(const Op& o, const Core& c, const Lay& L, uint32_t A, uint32
                 noc_async_read_barrier();
             }
         }
-        st.ibase += nr * nq;
+        for (uint32_t r = 0; r < nr; ++r) {
+            st.ibase[r] += nq;
+        }
     }
 }
 
@@ -217,9 +223,18 @@ PE_OS void boot(const Core& c) {
     }
     WAYPOINT("PBGO");
     noc_semaphore_wait_min(reinterpret_cast<volatile tt_l1_ptr uint32_t*>(sem_go), 1);
+    if (c.is_hub()) {  // boot stamp: record 4095
+        volatile tt_l1_ptr uint32_t* ts = reinterpret_cast<volatile tt_l1_ptr uint32_t*>(ps_addr(PS_TSTAMP));
+        ts[0] = reg_read(RISCV_DEBUG_REG_WALL_CLOCK_L);
+        ts[1] = 0xFFFFFFFFu;
+        ts[2] = 0xFFFFFFFFu;
+        ts[3] = 0x424f4f54u;  // "BOOT"
+        noc_async_write_page(4095, bdram(PA_TIMES, 64), ps_addr(PS_TSTAMP), 16);
+        noc_async_writes_flushed();
+    }
 }
 
-PE_OS void op_end(const Core& c, uint32_t k) {
+PE_OS void op_end(const Core& c, uint32_t k, uint32_t op) {
     noc_async_write_barrier();
     noc_async_atomic_barrier();
     ps_dbg(k, 8);
@@ -229,6 +244,14 @@ PE_OS void op_end(const Core& c, uint32_t k) {
         PWAIT_GE(PS_ARR, NCORES * (k + 1), "PHUB");
         *ps_ptr(PS_GO) = k + 1;
         mcast_flag(c.gx0, c.gy0, c.gx1, c.gy1, NCORES - 1, 0, 0, 0, PS_SRC_GO, PS_GO, k + 1);
+        // time stamp of op k's end (wall clock) -> PA_TIMES record k % 4096 (the flush above freed the staging)
+        volatile tt_l1_ptr uint32_t* ts = reinterpret_cast<volatile tt_l1_ptr uint32_t*>(ps_addr(PS_TSTAMP));
+        ts[0] = reg_read(RISCV_DEBUG_REG_WALL_CLOCK_L);
+        ts[1] = k;
+        ts[2] = op;
+        ts[3] = 0x54494d45u;  // "TIME"
+        noc_async_write_page(k % 4096, bdram(PA_TIMES, 64), ps_addr(PS_TSTAMP), 16);
+        noc_async_writes_flushed();
     }
     PWAIT_GE(PS_GO, k + 1, "PBGW");
 }
@@ -244,6 +267,8 @@ PE_OS void run_brisc() {
     uint32_t need = 0;
     BState st;
     uint32_t k = 0;
+    const uint32_t reps = cra(PA_REPS);
+    for (uint32_t rep = 0; rep < reps; ++rep)
     for (uint32_t op = first; op < stop; ++op, ++k) {
         const Op o = describe(op);
         const Lay L = layout(o);
@@ -255,6 +280,11 @@ PE_OS void run_brisc() {
                 if (mm_compute(o, c)) {
                     mm_write(o, c, L, A);
                 } else if (mm_ifeeder(o, c)) {
+#ifdef PE_DBG_IN0_DIRECT
+                    if (o.mode == MM_S) {
+                        break;
+                    }
+#endif
                     feed_in0(o, c, L, A, k, st);
                 }
                 break;
@@ -275,10 +305,10 @@ PE_OS void run_brisc() {
                 break;
             default: break;
         }
-        op_end(c, k);
+        op_end(c, k, op);
     }
     // diagnostics (PA_DIAG page = this core): arena bounds as seen here, the largest op layout, ops executed
-    volatile tt_l1_ptr uint32_t* dg = ps_ptr(PS_N);
+    volatile tt_l1_ptr uint32_t* dg = ps_ptr(PS_DIAG);
     dg[0] = 0x50455047u;  // "PEPG"
     dg[1] = A;
     dg[2] = arena_hi();
@@ -287,7 +317,7 @@ PE_OS void run_brisc() {
     dg[5] = k;
     dg[6] = first;
     dg[7] = stop;
-    noc_async_write_page(c.lin, bdram(PA_DIAG, 64), ps_addr(PS_N), 32);
+    noc_async_write_page(c.lin, bdram(PA_DIAG, 64), ps_addr(PS_DIAG), 32);
     noc_async_write_barrier();
 }
 

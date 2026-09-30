@@ -54,6 +54,14 @@ FORCE_INLINE void ps_dbg(uint32_t op, uint32_t phase, uint32_t a = 0, uint32_t b
     }
 }
 
+// per-receiver credits: wait until every receiver r < n has credited `base[r] + add` pages (the MINIMUM, not the sum)
+FORCE_INLINE void wait_credits(uint32_t word0, uint32_t n, const uint32_t* base, uint32_t add) {
+    for (uint32_t r = 0; r < n; ++r) {
+        while (ps_read(word0 + r) < base[r] + add) {
+        }
+    }
+}
+
 #define PWAIT_GE(word, value, tag)             \
     do {                                       \
         WAYPOINT(tag);                         \
@@ -80,6 +88,12 @@ FORCE_INLINE void mcast_flag(uint32_t x0, uint32_t y0, uint32_t x1, uint32_t y1,
                              uint32_t dst, uint32_t bytes, uint32_t src_word, uint32_t flag_word, uint32_t value) {
     if (bytes) {
         noc_async_write_multicast(src, pmcast(x0, y0, x1, y1, dst), bytes, ndst, true);
+        // Blackhole: the data and the flag go through separate command buffers and may leave out of order unless the
+        // data is flushed first (ttnn reader_bmm_tile_layout_in1_sender_writer_padding.cpp does the same)
+        noc_async_writes_flushed();
+#ifdef PE_DBG_FLAG_BARRIER
+        noc_async_write_barrier();  // debug arm: data acknowledged by every receiver before the flag
+#endif
     }
     *ps_ptr(src_word) = value;
     noc_semaphore_set_multicast(ps_addr(src_word), pmcast(x0, y0, x1, y1, ps_addr(flag_word)), ndst);

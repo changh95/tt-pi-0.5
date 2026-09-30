@@ -582,3 +582,55 @@ Files: scratchpad/shipcheck/ (fresh GitHub clone gh/, HF snapshot hf/ at 9f6b082
   4. Provenance: S_struct.json (the structural / profiler gate file) sits in integrate_p1/results/hold4_serve_invalid/, the
      folder of the discarded served run, while the JOURNAL cites it as a valid result. Valid content (hold2 profile), misfiled.
   5. Basis mix: the previous image's 84.02 / 85.35 are cycle 1 of the 09-29 bench (c2 was 84.05 / 85.30); current is c2. Negligible.
+
+## 2026-09-30 18:03:49 KST -- session mk2-r0-s0: PHASE 2 (whole sample_actions as ONE generic_op), session start
+
+State found: HEAD 925758f (phase 1 shipped; main = f7f173b). No phase-2 code, no phase-2 journal entries: the "session died"
+note refers to this task's previous launch, which left nothing on disk (git status clean except untracked .omc/, generated/).
+Read: JOURNAL (all), DESIGN §0-§10, phase-1 kernels (mk_{brisc,ncrisc,trisc}.cpp, mk_defs/mk_dm.hpp), program.py, arena.py,
+geometry.py, the shipped prefix (ttnn_siglip.py, ttnn_paligemma.py, ttnn_gemma.py VLM paths), memory notes (k4 device facts incl.
+the F2 "fused Qwen3 layer at 7-8 % of peak" addenda, operand-format rules, cb-pop, mock compile, noclone).
+Plan for this session: implementation design v3 for the prefix engine (below), then WP-P2-0 (mock compile + size), then the
+single-op matmul measurement (the go/no-go input), then WP-P2-1 (one VLM layer).
+
+## 2026-09-30 18:59:40 KST -- mk2-r0-s0: prefix engine v1 on the device (layer-0 ops correct, one race fixed)
+
+Implementation design v3 (to be written into DESIGN.md §11; deviations from §5.3 recorded there): the prefix is a fixed
+sequence of 314 ops (patch, 27 x [LN1, qkv, attn, o, LN2, fc1, fc2], post-LN, projector, embedding, 17 x [RMS1, qkv, attn,
+o, RMS2, gate|up, down], RMS1 + qkv of layer 17) with ALL activations DRAM-staged between ops and ONE global barrier per op
+(hub (10, 9)). Matmuls: 8 bands (rows 0..7) x 11 columns; weights read once per column from a bank-striped arena by a
+feeder (x, 8) and multicast down the column; in0 bands multicast along the row by a feeder (b, 9); mode R (resident in0
+band, N-outer, K in DST) for every op but the VLM down (mode S: streamed K blocks, fp32 partials reloaded). CB ids 32..62
+declared tiny and RE-POINTED per op into the phase-1 CB region (+ a tail) by every RISC; the NCRISC hands the TRISCs a
+per-op descriptor (P_OPD, read_tile_value/mailbox) so no geometry code sits in the TRISC binaries. Kernels
+tt/megakernel/kernels_p2/ (whole_{brisc,ncrisc,trisc}.cpp include the phase-1 mk_*.cpp unchanged as
+mk_expert_kernel_main()); host pe_geometry.py / pe_host.py / pe_program.py; CPU tests tests/megakernel/test_cpu_pe.py
+(8 passed incl. the real-weight host model vs the torch reference: SigLIP+projector PCC > 0.99999, VLM K/V > 0.99999).
+- Size (mock compile, pe_size_check.py): whole program base 130,196 B (brisc 28,944, ncrisc 15,840, trisc0 35,680,
+  trisc1 30,528, trisc2 14,688 + args 3,444 + CB cfg 1,008) <= 131,072 gate (p2/results/size_check_mock8.log). First
+  build was 145,324 B; brought under by Os + noinline on control code, one fidelity-switched matmul K loop, and moving
+  describe/layout out of the TRISCs (P_OPD).
+- Device (tests/megakernel/pe_bringup.py, pe_debug.py; prefix-only program; results p2/results/b*.json): every layer-0
+  op vs the host decomposition on the device's own inputs: patch 0.9999992, SigLIP LN 0.9999986, qkv 0.99998, attn
+  0.99998, o 0.999997, fc1 0.99997, fc2 0.999994, whole SigLIP layer 0.99997 (rel-L2 0.0083); VLM RMS 0.999997, q/k/v
+  0.99988, attn 0.99975, o 0.99994, gate|up 0.99979, down 0.99996 (b10.json). No hang in any run.
+- Bugs found and fixed on the way (each localised by a device experiment, not guessed):
+  1. VLM attention PCC 0.81: P_SS (scores) ring of 8 with chunks of 6 tiles straddled the ring end (pack_tile/unpack
+     index past fifo_limit) -> P_SS is re-pointed per chunk to exactly n tiles (full-capacity cycles). SigLIP (chunks of
+     4) had passed by luck.
+  2. VLM down PCC 0.75, band-dependent (b7/b9 fits: middle K blocks missing on bands far from the feeders): SUMMED ring
+     credits. A receiver that runs ahead covered for a laggard and the feeder overwrote a slot still in use (the F0
+     fact 4 / DESIGN §3.2 rule I had read and still missed). Fix: one credit word per receiver, the feeder waits on the
+     MINIMUM (PS_W_RDY0 + row, PS_I_RDY0 + column). Discriminating arms: flag barrier (no change), 1 in0 slot (partial),
+     direct DRAM in0 (bands 0-1 still wrong -> the weight ring, not the in0 path).
+  3. Watcher NoC sanitizer false positive on re-pointed CBs ("NOC transaction overflows a circular buffer"): run the
+     watcher with TT_METAL_WATCHER_DISABLE_NOC_SANITIZE=1.
+  Also adopted ttnn's Blackhole rule: flush the data multicast before the flag multicast (separate command buffers).
+  Phase-1's mcast_round lacks that flush (latent; phase 1 unchanged).
+- Device time per op (hub wall-clock stamps, median of 20 in-kernel reps, b11.json): SigLIP layer 0.607 ms (LN 0.086 x2,
+  qkv 0.053, attn 0.147, o 0.043, fc1 0.093, fc2 0.099) vs TTNN 0.395 -> SLOWER, P2-2 gate (<= 0.355) not met yet;
+  VLM layer 1.611 ms (RMS 0.098 x2, qkv 0.089, attn 0.335, o 0.076, gate|up 0.555, down 0.360) vs TTNN 2.437 -> under the
+  P2-1 go bar 2.20 (its accuracy half, PCC vs the ttnn layer on real inputs, not yet run).
+Next: whole prefix end to end (all 314 ops, all arenas) vs the host model and the ttnn caches; then whole-model
+integration; speed work on SigLIP (norms: per-call inits; attention: single-chunk softmax; in0 fill overlap) and the
+weight feeders (VLM matmuls look feeder-bound: gate|up 2.95 us per 34.8 KB page per column).

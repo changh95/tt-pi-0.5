@@ -329,7 +329,7 @@ PFMT = {
 # P_SYNC, P_OPD (static) and P_TAIL (the arena extension) are declared separately (pe_program.py)
 # UnpackToDestFp32 (exact fp32 copies into DST; never FPU operands)
 P_FP32_UNPACK = (P_S32, P_PART, P_R, P_L, P_PL)
-PSYNC_BYTES = 32 * PSTRIDE  # 16 sync words + 16 words of diagnostics
+PSYNC_BYTES = 48 * PSTRIDE  # sync words (PS_N) + diagnostics staging (PS_DIAG..)
 
 
 def check_ops(ps: PShape) -> None:

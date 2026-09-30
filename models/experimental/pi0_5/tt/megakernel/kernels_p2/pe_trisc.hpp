@@ -328,7 +328,11 @@ PE_OS void run_norm(const TOp& o) {
 // ================================================================ attention
 // one key chunk of one q row tile: q tiles at q_off (dh), keys [t0, t0 + n) of the resident K / V (K at kv_k, V at
 // kv_v, [t][d] layout), optional mask tiles -> part (O dh tiles, m full tile, l fp32 full tile) pushed to OP / PM / PL
-PE_OS void flash_part(uint32_t kv_cb, uint32_t q_off, uint32_t dh, uint32_t t0, uint32_t n, uint32_t kv_v, bool mask) {
+PE_OS void flash_part(uint32_t kv_cb, uint32_t q_off, uint32_t dh, uint32_t t0, uint32_t n, uint32_t kv_v, bool mask,
+                      uint32_t ss_addr) {
+    // P_SS in full-capacity cycles of n tiles (a chunk may be shorter than the others: a ring of a fixed capacity
+    // would straddle its end and pack_tile / unpack index past it). P_SS is TRISC-private (pack -> unpack).
+    cb_point(P_SS, ss_addr, n, T16);
     cb_reserve_back(P_SS, n);
     tile_regs_acquire();
     mm_init_f<MathFidelity::HiFi2>(P_Q, kv_cb, 1);
@@ -519,7 +523,7 @@ PE_OS void run_attn(const TOp& o) {
         for (uint32_t h = 0; h < 2; ++h) {  // VLM: 2 heads of one q row tile; SigLIP: 2 q row tiles of one head
             for (uint32_t t0 = 0; t0 < nk; t0 += ch) {
                 const uint32_t n = nk - t0 < ch ? nk - t0 : ch;
-                flash_part(kv_cb, h * dh, dh, t0, n, kv_v, v);
+                flash_part(kv_cb, h * dh, dh, t0, n, kv_v, v, o.a[OA_SS]);
             }
             merge_parts(np, dh);
         }
@@ -581,6 +585,8 @@ PE_OS void run_trisc() {
     const uint32_t stop = get_common_arg_val<uint32_t>(PA_DBGSTOP);
     compute_kernel_hw_startup<SrcOrder::Reverse>(P_IN0, P_W8, P_O16);
     TOp o;
+    const uint32_t reps = get_common_arg_val<uint32_t>(PA_REPS);
+    for (uint32_t rep = 0; rep < reps; ++rep)
     for (uint32_t op = first; op < stop; ++op) {
         read_opd(o);
         switch (o.kind) {
