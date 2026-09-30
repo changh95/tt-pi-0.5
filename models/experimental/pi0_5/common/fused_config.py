@@ -12,6 +12,12 @@ unfused path cannot silently get the fused graph instead.
 
 Sub-knobs (every default is the recipe of ``reports/megakernel/pi05-base-p150.md`` for the device pass):
 
+``PI05_MEGAKERNEL``         ``expert`` (default since 2026-09-30): the 10-step x 18-layer action-expert loop, the
+                            action in / out projections and the Euler updates run as ONE persistent generic_op
+                            (tt/megakernel/, 110 cores) at the end of the trace; SigLIP + VLM prefill stay stock
+                            ttnn ops in the same trace. Needs the 64 KiB worker-L1 cut at device open
+                            (common/device_open.py). ``off``: the previous shipped path (stock ttnn expert ops +
+                            3 custom generic_ops), kept only as the comparator. ``whole``: phase 2, not built.
 ``PI05_TRACE``              ``1`` (default): capture the whole device graph in one Metal trace during
                             the first ``sample_actions_fused`` call (the server's warm-up) and replay
                             it per request; ``0``: run the same fused graph eagerly (debug / A/B).
@@ -224,11 +230,15 @@ class FusedConfig:
     #   per-row rsqrt is one small program and the fused attention / fused GeGLU apply it. -2 rms_norm launches and
     #   -1 geglu launch per layer.
     expert_norm_fold: bool = False
-    # ``megakernel`` (PI05_MEGAKERNEL): off | expert | whole. ``expert`` = phase 1 of docs/megakernel/DESIGN.md: the
-    #   whole 10 x 18 expert loop + action in / out projections + Euler as ONE persistent generic_op
-    #   (tt/megakernel/); the SigLIP / VLM prefix stays on the ttnn ops. ``whole`` (phase 2) is not built yet and
-    #   refuses. The device must be opened with the 64 KiB worker-L1 cut (common/device_open.py).
-    megakernel: str = "off"
+    # ``megakernel`` (PI05_MEGAKERNEL): expert (DEFAULT since 2026-09-30) | off | whole. ``expert`` = phase 1 of
+    #   docs/megakernel/DESIGN.md: the whole 10 x 18 expert loop + action in / out projections + Euler as ONE
+    #   persistent generic_op (tt/megakernel/); the SigLIP / VLM prefix stays on the traced ttnn ops. The device
+    #   must be opened with the 64 KiB worker-L1 cut (common/device_open.py; the model refuses a device without it).
+    #   ``off`` = the previous path (stock ttnn expert ops + 3 custom generic_ops, all traced), kept ONLY as the
+    #   comparator / oracle knob. ``whole`` (phase 2) is not built yet and refuses. An explicit ``expert`` on a
+    #   configuration the kernels do not compile (bf16 K/V, steps != 10, batch > 1, multi-chip) refuses; the
+    #   UNSET default resolves to ``off`` only on a multi-chip mesh (``resolved``), where no megakernel exists.
+    megakernel: str = "expert"
 
     def __post_init__(self):
         if self.megakernel not in ("off", "expert", "whole"):
@@ -292,7 +302,7 @@ class FusedConfig:
             expert_geglu=_bool(env, "PI05_EXPERT_GEGLU", False),
             expert_attn=env.get("PI05_EXPERT_ATTN", "ttnn").strip().lower() or "ttnn",
             expert_norm_fold=_bool(env, "PI05_EXPERT_NORM_FOLD", False),
-            megakernel=env.get("PI05_MEGAKERNEL", "off").strip().lower() or "off",
+            megakernel=env.get("PI05_MEGAKERNEL", "expert").strip().lower() or "expert",
         )
 
     def resolved(self, num_devices: int) -> "FusedConfig":
@@ -303,6 +313,10 @@ class FusedConfig:
         if tp > 1 and num_devices % tp != 0:
             raise ValueError(f"PI05_TP={tp} does not divide the mesh size {num_devices}")
         updates = {"tp": tp}
+        if int(num_devices) > 1 and "PI05_MEGAKERNEL" not in self.env_keys:
+            # the phase-1 megakernel is a single-p150a program (110 cores, one chip's DRAM arenas): on a mesh the
+            # UNSET default is the stock-op path; an explicit PI05_MEGAKERNEL=expert on a mesh still refuses (model)
+            updates["megakernel"] = "off"
         if tp > 1:
             # TP-mode defaults (1x4 sweep 2026-09-17, 2 cameras x 224 tokens, PCC vs torch on obs1):
             #   chunked MLP (256) + auto gate/up: 87.5 ms / 0.9958; unchunked + auto: 120.3 ms (the auto
@@ -362,6 +376,11 @@ class FusedConfig:
     def action_out_weight_dtype(self) -> str:
         """The Euler+out-proj fused op needs x_t (bf16) == weight format -> bf16."""
         return "bfloat16"
+
+    @property
+    def megakernel_explicit(self) -> bool:
+        """True when PI05_MEGAKERNEL was set in the environment (an explicit request refuses, never falls back)."""
+        return "PI05_MEGAKERNEL" in self.env_keys
 
     def describe(self) -> dict:
         return {f.name: getattr(self, f.name) for f in fields(self)}

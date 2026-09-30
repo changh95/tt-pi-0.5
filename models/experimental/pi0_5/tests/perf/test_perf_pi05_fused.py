@@ -83,10 +83,9 @@ def main():
     args = ap.parse_args()
 
     fused_cfg = FusedConfig.from_env()
-    kwargs = dict(device_id=int(os.environ.get("PI0_DEVICE_ID", "0")), l1_small_size=24576)
-    if fused_cfg.trace:
-        kwargs["trace_region_size"] = fused_cfg.trace_region_size
-    device = ttnn.open_device(**kwargs)
+    from models.experimental.pi0_5.common.device_open import device_kwargs  # adds the megakernel's worker-L1 cut
+
+    device = ttnn.open_device(**device_kwargs(fused_cfg, device_id=int(os.environ.get("PI0_DEVICE_ID", "0"))))
     device.enable_program_cache()
     try:
         torch.manual_seed(42)

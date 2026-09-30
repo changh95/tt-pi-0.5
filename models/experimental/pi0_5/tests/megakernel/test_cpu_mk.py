@@ -99,8 +99,20 @@ def test_cpu_share_orders_match_trisc_loops():
 
 
 def test_cpu_knob_and_refusals():
-    assert FusedConfig.from_env({}).megakernel == "off"
+    # the phase-1 megakernel is the DEFAULT since 2026-09-30; ``off`` (the previous path) is the comparator knob
+    assert FusedConfig.from_env({}).megakernel == "expert"
+    assert FusedConfig().megakernel == "expert"
+    assert not FusedConfig.from_env({}).megakernel_explicit
     assert FusedConfig.from_env({"PI05_MEGAKERNEL": "expert"}).megakernel == "expert"
+    assert FusedConfig.from_env({"PI05_MEGAKERNEL": "off"}).megakernel == "off"
+    assert FusedConfig.from_env({"PI05_MEGAKERNEL": ""}).megakernel == "expert"
+    # the resolved default: single chip keeps expert; on a mesh the UNSET default is off, an explicit expert stays
+    # (and the model refuses it on a mesh)
+    assert FusedConfig.from_env({}).resolved(1).megakernel == "expert"
+    assert FusedConfig.from_env({}).resolved(4).megakernel == "off"
+    assert FusedConfig.from_env({"PI05_MEGAKERNEL": "expert"}).resolved(4).megakernel == "expert"
+    assert FusedConfig.from_env({"PI05_MEGAKERNEL": "off"}).resolved(1).megakernel == "off"
+    assert FusedConfig.from_env({}).resolved(1).resolved(1) == FusedConfig.from_env({}).resolved(1)
     with pytest.raises(ValueError):
         FusedConfig.from_env({"PI05_MEGAKERNEL": "bogus"})
     assert G.shape_for(736, 64).name == "base" and G.shape_for(544, 32).name == "libero"
@@ -109,7 +121,37 @@ def test_cpu_knob_and_refusals():
     from models.experimental.pi0_5.common.device_open import device_kwargs
 
     assert device_kwargs(FusedConfig.from_env({"PI05_MEGAKERNEL": "expert"}))["worker_l1_size"] == 1_395_712
-    assert "worker_l1_size" not in device_kwargs(FusedConfig.from_env({}))
+    assert device_kwargs(FusedConfig.from_env({}))["worker_l1_size"] == 1_395_712  # the default path needs the cut
+    assert "worker_l1_size" not in device_kwargs(FusedConfig.from_env({"PI05_MEGAKERNEL": "off"}))
+
+
+def test_cpu_refuses_a_device_without_the_worker_l1_cut(monkeypatch):
+    """DESIGN.md §4.12 refusal (d): without the 64 KiB worker-L1 cut the program misses the kernel-config ring by
+    ~100 B (verify_p1_r1: an unnamed TT_FATAL at the first launch). The model names it before any upload."""
+    import types
+
+    import ttnn
+
+    from models.experimental.pi0_5.common.device_open import MEGAKERNEL_WORKER_L1_SIZE
+    from models.experimental.pi0_5.tt import ttnn_pi0_model as TM
+
+    def fake_view(l1_total, small):
+        def view(_dev, bt):
+            return types.SimpleNamespace(total_bytes_per_bank=l1_total if bt == ttnn.BufferType.L1 else small)
+        return view
+
+    small = 24_576
+    monkeypatch.setattr(TM.ttnn, "get_memory_view", fake_view(MEGAKERNEL_WORKER_L1_SIZE - small, small))
+    assert TM.PI0ModelTTNN.megakernel_device_refusal(object()) is None
+    monkeypatch.setattr(TM.ttnn, "get_memory_view", fake_view(MEGAKERNEL_WORKER_L1_SIZE - small + 65_536, small))
+    why = TM.PI0ModelTTNN.megakernel_device_refusal(object())
+    assert why and "worker-L1 cut" in why and "PI05_MEGAKERNEL=off" in why
+    # the model constructor path raises it by name (after the kv / steps / mesh checks, before any parameter build)
+    monkeypatch.setattr(TM, "_is_mesh", lambda _d: False)
+    stub = types.SimpleNamespace(fused_cfg=FusedConfig.from_env({}), denoise_config=types.SimpleNamespace(num_steps=10),
+                                 device=object(), megakernel_device_refusal=TM.PI0ModelTTNN.megakernel_device_refusal)
+    with pytest.raises(RuntimeError, match="worker-L1 cut"):
+        TM.PI0ModelTTNN._init_megakernel(stub)
 
 
 def test_cpu_one_producer_per_cb_on_h0():
@@ -151,7 +193,7 @@ def test_cpu_refuses_bf16_kv_and_other_step_counts():
                                      denoise_config=types.SimpleNamespace(num_steps=steps), device=None)
         with pytest.raises(RuntimeError, match=what):
             PI0ModelTTNN._init_megakernel(stub)
-    ok = types.SimpleNamespace(fused_cfg=FusedConfig.from_env({}), denoise_config=types.SimpleNamespace(num_steps=20),
+    ok = types.SimpleNamespace(fused_cfg=FusedConfig.from_env({"PI05_MEGAKERNEL": "off"}), denoise_config=types.SimpleNamespace(num_steps=20),
                                device=None)
     PI0ModelTTNN._init_megakernel(ok)  # PI05_MEGAKERNEL=off: any step count / dtype is the shipped path's business
     assert ok.megakernel_backend == "off"

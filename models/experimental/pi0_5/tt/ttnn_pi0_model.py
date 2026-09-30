@@ -153,6 +153,9 @@ class PI0ModelTTNN:
             raise RuntimeError(f"PI05_MEGAKERNEL=expert refused: {why}")
         if _is_mesh(self.device):
             raise RuntimeError("PI05_MEGAKERNEL=expert is single-chip: TT_MESH_SHAPE must be 1x1")
+        why = self.megakernel_device_refusal(self.device)
+        if why is not None:
+            raise RuntimeError(f"PI05_MEGAKERNEL=expert refused: {why}")
         from .megakernel.host_model import expert_params
         from .megakernel.program import KERNEL_SOURCES, kernel_digest
 
@@ -162,6 +165,22 @@ class PI0ModelTTNN:
                                         num_steps=self.denoise_config.num_steps)
         self.megakernel_program = {"kernel_digest": kernel_digest(),
                                    "sources": [os.path.basename(p) for p in KERNEL_SOURCES]}
+
+    @staticmethod
+    def megakernel_device_refusal(device) -> Optional[str]:
+        """DESIGN.md §4.12 refusal (d): the megakernel program needs the 136,192 B kernel-config ring that only the
+        64 KiB worker-L1 cut leaves (common/device_open.py). Without the cut, tt-metal fails at the first launch with
+        "Program size ... too large for kernel config buffer" by a margin of ~100 B (verify_p1_r1), so name it here,
+        before any weight upload. Worker L1 = the L1 + L1_SMALL allocator regions per bank."""
+        from models.experimental.pi0_5.common.device_open import MEGAKERNEL_WORKER_L1_SIZE
+
+        worker = sum(int(ttnn.get_memory_view(device, bt).total_bytes_per_bank)
+                     for bt in (ttnn.BufferType.L1, ttnn.BufferType.L1_SMALL))
+        if worker > MEGAKERNEL_WORKER_L1_SIZE:
+            return (f"the device was opened without the 64 KiB worker-L1 cut (worker L1 {worker} B per bank > "
+                    f"{MEGAKERNEL_WORKER_L1_SIZE}); open it with common/device_open.py (open_pi05_device / "
+                    "device_kwargs), or set PI05_MEGAKERNEL=off for the stock-op comparator path")
+        return None
 
     def l1_signature(self) -> Tuple:
         """L1 allocator state (DESIGN.md §4.12 replay guard): an execute_trace replay does not re-validate the

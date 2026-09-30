@@ -61,6 +61,12 @@ backbone-owned KV caches -> 10 fused expert steps) reads three persistent device
 into ONE Metal trace on the first warm-up call, i.e. before READY; every request then does 3 small
 host->device copies, ``execute_trace`` and one readback. The device is opened with ``trace_region_size``.
 
+``PI05_MEGAKERNEL``        ``expert`` (default): the 10-step action-expert loop + action in / out + Euler is ONE
+                           persistent generic_op (tt/megakernel/) at the end of the trace; the device is opened with
+                           the 64 KiB worker-L1 cut (common/device_open.py). Single chip, batch 1, bf8 K/V, 10 steps:
+                           any other configuration refuses at startup with a log line. ``off``: the previous path
+                           (stock ttnn expert ops), kept only as the comparator. On a multi-chip mesh the UNSET default
+                           is ``off`` (the megakernel is a single-p150a program).
 ``TT_FUSED``               unset or ``1``; ``0`` / ``false`` / ``off`` fails startup (the unfused path was removed)
 ``PI05_TRACE``             ``0`` runs the fused graph eagerly (no trace; debug / A/B). Default ``1``.
 ``PI05_TRACE_REGION_SIZE`` bytes for the trace region (default 160000000, an estimate).
@@ -474,9 +480,14 @@ class _Batcher:
         self._thread = threading.Thread(target=self._loop, name="pi05-batcher", daemon=True)
         self._thread.start()
 
-    def submit(self, images: List[torch.Tensor], ids: torch.Tensor, noise: Optional[torch.Tensor]) -> Future:
+    def submit(self, images: List[torch.Tensor], ids: torch.Tensor, mask: torch.Tensor,
+               noise: Optional[torch.Tensor]) -> Future:
+        """``mask``: the request's own ``(1, L)`` bool language mask (tokenizer attention mask, or the pre-tokenised
+        length). It is passed to the model as ``lang_masks``; the batcher never re-derives it from ``ids != 0``."""
+        if mask is None or tuple(mask.shape) != tuple(ids.shape):
+            raise ValueError(f"lang mask {None if mask is None else tuple(mask.shape)} != tokens {tuple(ids.shape)}")
         fut: Future = Future()
-        self.q.put((images, ids, noise, fut))
+        self.q.put((images, ids, mask, noise, fut))
         return fut
 
     def _pick_size(self, n: int) -> int:
@@ -504,23 +515,25 @@ class _Batcher:
             b = self._pick_size(n)
             try:
                 padded = group + [group[-1]] * (b - n)
-                images = [img for (imgs, _ids, _noise, _fut) in padded for img in imgs]
+                images = [img for (imgs, _ids, _mask, _noise, _fut) in padded for img in imgs]
                 ids = torch.cat([r[1] for r in padded], dim=0)
+                masks = torch.cat([r[2] for r in padded], dim=0).bool()
                 noise = None
-                if any(r[2] is not None for r in padded):
+                if any(r[3] is not None for r in padded):
                     default = self.model._default_noise_torch.reshape(1, ACTION_HORIZON, ACTION_DIM)
-                    noise = torch.cat([r[2] if r[2] is not None else default for r in padded], dim=0)
+                    noise = torch.cat([r[3] if r[3] is not None else default for r in padded], dim=0)
                 with torch.inference_mode():
-                    actions = self.model.sample_actions_fused(images=images, lang_tokens=ids, noise=noise)
+                    actions = self.model.sample_actions_fused(images=images, lang_tokens=ids, noise=noise,
+                                                              lang_masks=masks)
                 if tuple(actions.shape) != (b, ACTION_HORIZON, ACTION_DIM):
                     raise RuntimeError(f"unexpected action shape {tuple(actions.shape)} for batch {b}")
                 self.stats["forwards"] += 1
                 self.stats["requests"] += n
                 self.stats["by_batch"][str(b)] += 1
-                for i, (_imgs, _ids, _noise, fut) in enumerate(group):
+                for i, (_imgs, _ids, _mask, _noise, fut) in enumerate(group):
                     fut.set_result((actions[i : i + 1].clone(), b))
             except BaseException as e:  # noqa: BLE001
-                for _imgs, _ids, _noise, fut in group:
+                for _imgs, _ids, _mask, _noise, fut in group:
                     if not fut.done():
                         fut.set_exception(e)
 
@@ -538,12 +551,13 @@ class _DPRouter:
         self._lock = threading.Lock()
         self.stats = {"routed": [0] * len(batchers), "groups": [b.stats for b in batchers]}
 
-    def submit(self, images: List[torch.Tensor], ids: torch.Tensor, noise: Optional[torch.Tensor]) -> Future:
+    def submit(self, images: List[torch.Tensor], ids: torch.Tensor, mask: torch.Tensor,
+               noise: Optional[torch.Tensor]) -> Future:
         with self._lock:
             g = min(range(len(self.batchers)), key=lambda i: (self._inflight[i], i))
             self._inflight[g] += 1
             self.stats["routed"][g] += 1
-        fut = self.batchers[g].submit(images, ids, noise)
+        fut = self.batchers[g].submit(images, ids, mask, noise)
 
         def _done(_f, g=g):
             with self._lock:
@@ -621,14 +635,15 @@ def _start_dp(cfg: ServerConfig, config, loader, fused_cfg, device, tokenizer, n
             m.backbone.torch_weights = None
         _free_host_weights(models[0], loader)
 
-    images, ids, _mask, _state = _warmup_inputs(cfg, tokenizer)
+    images, ids, mask, _state = _warmup_inputs(cfg, tokenizer)
     latencies: List[float] = []
     for gi, m in enumerate(models):
         for b in cfg.batch_sizes:
             for i in range(cfg.warmup_runs):
                 t0 = time.perf_counter()
                 with torch.inference_mode():
-                    acts = m.sample_actions_fused(images=images * b, lang_tokens=ids.repeat(b, 1))
+                    acts = m.sample_actions_fused(images=images * b, lang_tokens=ids.repeat(b, 1),
+                                                  lang_masks=mask.repeat(b, 1))
                 dt = (time.perf_counter() - t0) * 1000.0
                 if tuple(acts.shape) != (b, ACTION_HORIZON, ACTION_DIM) or not torch.isfinite(acts).all():
                     raise RuntimeError(f"warm-up of group {gi} at batch {b} produced {tuple(acts.shape)}")
@@ -685,6 +700,13 @@ async def lifespan(_app: FastAPI):
     STATE["fused"] = fused_cfg.describe()
     if cfg.layout == "dp" and mesh == (1, 1):
         raise RuntimeError("PI05_LAYOUT=dp needs a multi-chip mesh (TT_MESH_SHAPE)")
+    if fused_cfg.megakernel != "off" and not fused_cfg.megakernel_explicit and mesh != (1, 1):
+        # the UNSET default on a multi-chip mesh is the stock-op path (FusedConfig.resolved does the same in the model)
+        from dataclasses import replace as _replace
+
+        LOG.info("PI05_MEGAKERNEL unset on a %sx%s mesh: the single-chip megakernel does not apply -> off", *mesh)
+        fused_cfg = _replace(fused_cfg, megakernel="off")
+        STATE["fused"] = fused_cfg.describe()
     if fused_cfg.megakernel != "off":
         # docs/megakernel/DESIGN.md §4.12 refusals: the megakernel is single-chip, batch 1, one prepared shape
         from models.experimental.pi0_5.tt.megakernel.geometry import megakernel_refusal
@@ -770,7 +792,8 @@ async def lifespan(_app: FastAPI):
                     for i in range(cfg.warmup_runs):
                         t0 = time.perf_counter()
                         with LOCK, torch.inference_mode():
-                            acts = model.sample_actions_fused(images=images * b, lang_tokens=ids.repeat(b, 1))
+                            acts = model.sample_actions_fused(images=images * b, lang_tokens=ids.repeat(b, 1),
+                                                              lang_masks=mask.repeat(b, 1))
                         if tuple(acts.shape) != (b, ACTION_HORIZON, ACTION_DIM) or not torch.isfinite(acts).all():
                             raise RuntimeError(f"warm-up at batch {b} produced {tuple(acts.shape)}")
                         LOG.info("Warmup batch %d %d/%d: %.1f ms", b, i + 1, cfg.warmup_runs, (time.perf_counter() - t0) * 1000)
@@ -1099,7 +1122,7 @@ def predict(req: PredictRequest) -> dict:
     try:
         batcher = STATE.get("batcher")
         if batcher is not None:
-            actions, batched_as = batcher.submit(images, ids, noise).result(timeout=120.0)
+            actions, batched_as = batcher.submit(images, ids, mask, noise).result(timeout=120.0)
         else:
             with LOCK, torch.inference_mode():
                 actions = run_inference(images, ids, mask, state_t, noise)
