@@ -13,7 +13,7 @@ is one contiguous tile stream):
   per-step stream ``4 x (W_in page, b_in page), Wout'[s] (4 pages), c_out (1 page), 3 pad pages``.
 
 The byte offsets come from ``geometry.plan_banks`` and are identical in every step tensor (a runtime-arg table per
-core, not per step). Tile orders are pinned against the TRISC loops by ``tests/megakernel/test_cpu_mk_arena.py``.
+core, not per step). Tile orders are pinned against the TRISC loops by ``tests/megakernel/test_cpu_mk.py (test_cpu_share_orders_match_trisc_loops)``.
 """
 from __future__ import annotations
 

@@ -121,3 +121,125 @@ def test_cpu_one_producer_per_cb_on_h0():
     assert "read_tiles_into(CB_SCR16" not in brisc  # noise goes through CB_Q
     assert not re.search(r"pack_to\([^;]*CB_IN0", trisc)  # the TRISC never produces CB_IN0
     assert "cb_push_back(CB_RTOK" not in trisc
+
+
+# ------------------------------------------------------------------ refusals of configurations the kernels do not compile
+def test_cpu_refuses_bf16_kv_and_other_step_counts():
+    """PI05_KV_DTYPE=bf16 (bf16 caches landed at the bfp8 page stride would overrun CB_KV) and a step count other than
+    the compiled N_STEPS (20 steps silently returned x at t = 0.5; < 10 raised an unnamed IndexError) must refuse by
+    name, at every entry: the pure check, the model constructor, the program's cache dtype check and the step check."""
+    import types
+
+    import ttnn
+
+    from models.experimental.pi0_5.tt.megakernel import program as P
+    from models.experimental.pi0_5.tt.megakernel.host_model import ExpertParams
+    from models.experimental.pi0_5.tt.ttnn_pi0_model import PI0ModelTTNN
+
+    assert G.N_STEPS == 10
+    assert G.megakernel_refusal("bf8", 10) is None
+    assert "PI05_KV_DTYPE=bf16" in G.megakernel_refusal("bf16", 10)
+    for n in (1, 5, 9, 11, 16, 20):
+        assert "PI05_NUM_STEPS" in G.megakernel_refusal("bf8", n), n
+        # the old guard (one distinct fp32 dt) passes for these schedules: it cannot be the refusal
+        dts = [(1.0 - (i + 1) / n) - (1.0 - i / n) for i in range(n)]
+        assert len({G.f32_bits(d) for d in dts}) == 1 or n in (9, 11), n
+
+    # model constructor: refused before any parameter build or device use (device=None would fail later)
+    for kv_dtype, steps, what in (("bf16", 10, "PI05_KV_DTYPE"), ("bf8", 20, "PI05_NUM_STEPS"), ("bf8", 5, "PI05_NUM_STEPS")):
+        stub = types.SimpleNamespace(fused_cfg=FusedConfig.from_env({"PI05_MEGAKERNEL": "expert", "PI05_KV_DTYPE": kv_dtype}),
+                                     denoise_config=types.SimpleNamespace(num_steps=steps), device=None)
+        with pytest.raises(RuntimeError, match=what):
+            PI0ModelTTNN._init_megakernel(stub)
+    ok = types.SimpleNamespace(fused_cfg=FusedConfig.from_env({}), denoise_config=types.SimpleNamespace(num_steps=20),
+                               device=None)
+    PI0ModelTTNN._init_megakernel(ok)  # PI05_MEGAKERNEL=off: any step count / dtype is the shipped path's business
+    assert ok.megakernel_backend == "off"
+
+    # ExpertMegakernel: the step count is checked before any upload
+    z = torch.zeros(1)
+    for n in (5, 20):
+        params = ExpertParams(wqkv=[], wo=[], wug=[], wd=[], mods=[], final=[], w_in=z, b_in=z, w_out=z, b_out=z,
+                              dts=tuple([-1.0 / n] * n))
+        with pytest.raises(RuntimeError, match="PI05_NUM_STEPS"):
+            P.ExpertMegakernel(None, params, G.SHAPES["base"])
+
+    # program(): every K / V cache must be bfp8 (18 layers)
+    mk = object.__new__(P.ExpertMegakernel)
+    mk.shape = G.SHAPES["base"]
+    t = lambda d: types.SimpleNamespace(dtype=d)
+    bf16 = [(t(ttnn.bfloat16), t(ttnn.bfloat16)) for _ in range(G.N_LAYERS)]
+    with pytest.raises(RuntimeError, match="PI05_KV_DTYPE"):
+        mk.program(bf16, None, None, None, None)
+    mixed = [(t(ttnn.bfloat8_b), t(ttnn.bfloat8_b)) for _ in range(G.N_LAYERS - 1)] + [(t(ttnn.bfloat8_b), t(ttnn.bfloat16))]
+    with pytest.raises(RuntimeError, match="PI05_KV_DTYPE"):
+        mk.program(mixed, None, None, None, None)
+    with pytest.raises(RuntimeError, match="18 bfp8"):
+        mk.program(mixed[:-1], None, None, None, None)
+
+
+def test_cpu_merge_dst_budget_and_host_invariants():
+    """Shape.check allows NCH <= 6 (merge(): M / L in DST 0, weights in DST 1..NCH, temporary in DST 7); the kernel's
+    multicast destination counts equal the rectangle-derived counts; mergers and units with y < 8 are MLP cores (the
+    K / V prefetch path). Positive controls: a doctored kernel count and NCH = 7 are rejected."""
+    for s in G.SHAPES.values():
+        assert s.nch <= 6
+        G.check_roles(s)
+    with pytest.raises(ValueError, match="NCH <= 6"):
+        G.Shape("nch7", prefix_len=32 * 7 * 3 - 32, suffix_rows=32, horizon=10, chunk_tiles=3).check()
+    brisc = open(os.path.join(G.KDIR, "mk_brisc.cpp")).read()
+    for name, lit in (("rm", "64"), ("ro", "32"), ("row", "7")):
+        pat = re.compile(r"(me\." + name + r" = \{[^;]*?,\s*)" + lit + r"\};")
+        assert pat.search(brisc), name
+        bad = pat.sub(lambda m: m.group(1) + str(int(lit) + 1) + "};", brisc, count=1)
+        c = G.kernel_mcast_counts(G.SHAPES["base"], bad)
+        lo, hi, snd = G.mcast_rects(G.SHAPES["base"])[name]
+        assert c[name] != G.mcast_dest_count(lo, hi, snd[0])
+
+
+def _synthetic_params(seed: int = 0):
+    from models.experimental.pi0_5.tt.megakernel import host_model as hm
+
+    g = torch.Generator().manual_seed(seed)
+    r = lambda *s, sc=1.0: torch.randn(*s, generator=g) * sc
+    W, D, NH, M, L = hm.WIDTH, hm.DH, hm.NH, hm.MLP, hm.N_LAYERS
+    mods = [[(r(W, sc=0.1), r(W, sc=0.1), r(W, sc=0.3), r(W, sc=0.1), r(W, sc=0.1), r(W, sc=0.3)) for _ in range(L)]
+            for _ in range(hm.N_STEPS)]
+    return hm.ExpertParams(
+        wqkv=[r(W, (NH + 2) * D, sc=W ** -0.5) for _ in range(L)], wo=[r(NH * D, W, sc=(NH * D) ** -0.5) for _ in range(L)],
+        wug=[r(W, 2 * M, sc=W ** -0.5) for _ in range(L)], wd=[r(M, W, sc=M ** -0.5) for _ in range(L)], mods=mods,
+        final=[(r(W, sc=0.1), r(W, sc=0.1)) for _ in range(hm.N_STEPS)], w_in=r(32, W, sc=32 ** -0.5), b_in=r(W, sc=0.1),
+        w_out=r(W, 32, sc=W ** -0.5), b_out=r(32, sc=0.1), eps=1e-6, dts=tuple([-0.1] * hm.N_STEPS))
+
+
+@pytest.mark.parametrize("name", ["base", "libero"])
+def test_cpu_decomposition_equals_reference_loop(name):
+    """host_model.loop_decomposed (the kernel's folds, chunked flash parts + diag merge, 2-D MLP, K-split reduce)
+    equals loop_reference (plain fp32 formulas) over the whole 10 x 18 loop at the shape's chunking, with a padded
+    prompt (masked prefix keys). Positive control: dropping one prefix chunk's keys from the decomposed arm only
+    (mask -> -inf) must move the output well past the tolerance."""
+    from models.experimental.pi0_5.tt.megakernel import host_model as hm
+
+    sh = G.SHAPES[name]
+    p = _synthetic_params()
+    g = torch.Generator().manual_seed(1)
+    P, S, H = sh.prefix_len, sh.suffix_rows, sh.horizon
+    kv = [(torch.randn(P, hm.DH, generator=g) * 2, torch.randn(P, hm.DH, generator=g)) for _ in range(hm.N_LAYERS)]
+    mask = torch.zeros(P + S)
+    mask[P - 100:P] = -1e9  # padded prompt: 100 masked prefix keys inside the last prefix tiles
+    mask[P + H:] = -1e9  # tile-pad action rows as keys
+    ang = torch.arange(S).float()[:, None] * (1.0 / 10000 ** (torch.arange(0, hm.DH, 2).float() / hm.DH))[None]
+    cos = torch.cat([ang.cos(), ang.cos()], -1)
+    sin = torch.cat([-ang.sin(), ang.sin()], -1)
+    a = hm.AttnInputs(mask=mask, cosq=cos / 16, sinq=sin / 16, cosk=cos, sink=sin)
+    noise = torch.zeros(S, 32)
+    noise[:H] = torch.randn(H, 32, generator=g)
+    ref = hm.loop_reference(p, kv, a, noise)[:H]
+    dec = hm.loop_decomposed(p, kv, a, noise, sh.chunk_tiles)[:H]
+    assert torch.isfinite(ref).all() and ref.abs().max() > 0.1
+    err = float((ref - dec).abs().max() / ref.abs().max())
+    assert hm.pcc(ref, dec) > 0.999999 and err < 1e-4, (hm.pcc(ref, dec), err)
+    m2 = mask.clone()
+    m2[:sh.chunk_tiles * 32] = -1e9  # chunk 0's keys removed in the decomposed arm only
+    bad = hm.loop_decomposed(p, kv, hm.AttnInputs(m2, a.cosq, a.sinq, a.cosk, a.sink), noise, sh.chunk_tiles)[:H]
+    assert float((ref - bad).abs().max() / ref.abs().max()) > 100 * max(err, 1e-6)

@@ -146,6 +146,11 @@ class PI0ModelTTNN:
             return
         if self.megakernel_backend == "whole":
             raise RuntimeError("PI05_MEGAKERNEL=whole (phase 2: the whole sample_actions as one program) is not built yet")
+        from .megakernel.geometry import megakernel_refusal
+
+        why = megakernel_refusal(self.fused_cfg.kv_dtype, self.denoise_config.num_steps)
+        if why is not None:
+            raise RuntimeError(f"PI05_MEGAKERNEL=expert refused: {why}")
         if _is_mesh(self.device):
             raise RuntimeError("PI05_MEGAKERNEL=expert is single-chip: TT_MESH_SHAPE must be 1x1")
         from .megakernel.host_model import expert_params

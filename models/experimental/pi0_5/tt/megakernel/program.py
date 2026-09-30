@@ -52,6 +52,9 @@ class ExpertMegakernel:
         from .arena import ArenaBuilder, upload
 
         G.check_roles(shape)
+        if len(params.dts) != G.N_STEPS:
+            raise RuntimeError(f"PI05_MEGAKERNEL=expert refused: the schedule has {len(params.dts)} denoising steps, the "
+                               f"kernels compile exactly {G.N_STEPS} (PI05_NUM_STEPS)")
         dts = {G.f32_bits(d) for d in params.dts}
         if len(dts) != 1:
             raise RuntimeError(f"the megakernel compiles one Euler dt; the schedule has {len(dts)} distinct fp32 values")
@@ -149,6 +152,11 @@ class ExpertMegakernel:
         import ttnn
 
         sh = self.shape
+        bad = [(l, i, str(t.dtype)) for l, pair in enumerate(kv) for i, t in enumerate(pair) if t.dtype != ttnn.bfloat8_b]
+        if len(kv) != G.N_LAYERS or bad:
+            raise RuntimeError(f"PI05_MEGAKERNEL=expert refused: the kernels read {G.N_LAYERS} bfp8 (K, V) caches at the "
+                               f"bfp8 page stride; got {len(kv)} layers, non-bfp8 (layer, K0/V1, dtype): {bad[:4]} "
+                               "(PI05_KV_DTYPE must be bf8)")
         cores = ttnn.CoreRangeSet([ttnn.CoreRange(ttnn.CoreCoord(0, 0), ttnn.CoreCoord(G.GRID[0] - 1, G.GRID[1] - 1))])
         fmt = {"bf16": ttnn.bfloat16, "bfp8": ttnn.bfloat8_b, "fp32": ttnn.float32, "raw": ttnn.bfloat16}
         cbs = []

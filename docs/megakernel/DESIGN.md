@@ -740,8 +740,8 @@ footprint of the largest kernel group incl. runtime args and CB-id config.
   only the host->device input copies of §4.12 happen around `execute_trace`. In both, the constructed model's stamp
   (§4.12) equals the selected backend, asserted in `tests/pcc/test_pcc_pi05_fused.py`.
 - **Correctness** (with the megakernel selected): PCC7 vs the openpi golden (`libero_eval/pi05/openloop_golden.pt`, 8 obs)
-  **mean >= 0.9995, min >= 0.999**; base-shape padded-prompt PCC vs the fixed torch reference **no worse than the current
-  path on the same seeds (per seed within 0.005)**; **ten replays bit-identical**; the **alternating-prompt / shape-switch
+  **mean >= 0.9995, min >= 0.999**; base-shape padded-prompt accuracy: **~~no worse than the current path vs the fixed torch reference on the same
+  seeds (per seed within 0.005)~~ -- REPLACED 2026-09-30 by the user, see the amendment below**; **ten replays bit-identical**; the **alternating-prompt / shape-switch
   test** (`verify_alternating.py`) passes vs fresh-model references; **no hang in 20 consecutive runs** (a hang or timeout
   counts as a failure; one run = one process doing warm-up + capture + 30 calls, timeout 600 s). Prompt-length edge cases
   vs the torch reference, each no worse than the current path: base n_lang = 1, 224 (no pad key), 128 (n_valid 640 = the
@@ -749,6 +749,15 @@ footprint of the largest kernel group incl. runtime args and CB-id config.
   key tile of chunk 4); LIBERO n_lang = 32 (no pad) and 1. The existing suites stay green with the megakernel selected:
   `tests/pcc/test_pcc_pi05_fused.py`, `tests/pcc/test_reference_vs_openpi.py`, `tests/test_fused_host.py`, and the
   megakernel CPU tests.
+- **Gate amendment (user decision 2026-09-30, binding).** The base-shape gate "per seed within 0.005 of the current path
+  vs the fp32 torch reference" is REPLACED by: *phase 1*: **per seed, the megakernel expert is at least as close as the
+  shipped path to the fp32 expert-loop oracle fed the device's own prefix K/V (the O1.json method), over >= 18 seeds**;
+  *phase 2*: **per seed, at least as close as the shipped path to the fp32 torch reference of the WHOLE model on the
+  same inputs**. Reason: the old gate measured prefix noise (SigLIP / VLM / bf8 K/V cache) that no expert change can
+  remove -- the fp32 expert oracle itself fails it on seed 2 (0.97553 vs the 0.98397 - 0.005 bar; impl/results/O1.json).
+  Phase 1 was accepted on this amended gate (option (a)): megakernel closer to the oracle on 20/20 seeds, mean 0.99980 /
+  min 0.99942 vs shipped 0.99649 / 0.98784 (verify_p1_r0/results/O_verifier.json). Every other gate in this section
+  stands unchanged.
 - **Speed**: *phase 1* expert-loop device time **< 31.26 ms base and < 27.85 ms LIBERO**, whole-call latency **< 84.2 ms
   base and < 76.77 ms LIBERO**; *phase 2* whole-call latency **< phase 1's at base and at LIBERO** (same shape, arms
   alternated across processes in one session, 30 calls each, difference larger than 2 x the MAD-based standard error of

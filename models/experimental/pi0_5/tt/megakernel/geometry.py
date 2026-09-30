@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """Geometry of the pi0.5 expert megakernel (phase 1): shapes, the core map, CB table, stream plans, host checks.
 
-Pure Python (no ttnn): everything here is testable on the CPU (``tests/megakernel/test_cpu_mk_geometry.py``).
+Pure Python (no ttnn): everything here is testable on the CPU (``tests/megakernel/test_cpu_mk.py``).
 Constants shared with the kernels are parsed from ``kernels/mk_defs.hpp`` (single source of truth).
 
 Core map (logical coordinates, grid 11 x 10; see docs/megakernel/JOURNAL.md "implementation v1" for the deviations
@@ -98,8 +98,9 @@ class Shape:
             raise ValueError(f"{self.name}: {self.nu} units per head column exceed the {GRID[1]} grid rows")
         if self.chunk_tiles > 7:
             raise ValueError("a chunk's scores + one temporary must fit the 8 fp32 DST tiles")
-        if self.nch > 7:
-            raise ValueError("the merge keeps NCH weights + 2 temporaries in the 8 DST tiles")
+        if self.nch > 6:
+            # merge() (mk_trisc.cpp) holds M / L in DST 0, the NCH weights in DST 1..NCH and a temporary in DST 7
+            raise ValueError("the merge keeps NCH weights in DST 1..NCH + temporaries in DST 0 and 7: NCH <= 6")
         if self.rt not in (1, 2):
             raise ValueError("RT must be 1 or 2 (DST budget of the MLP epilogue)")
         # the last chunk must contain every suffix key tile (the KL round feeds only the last-chunk units)
@@ -345,6 +346,62 @@ def l1_budget(shape: Shape) -> Dict[str, int]:
     return {"cb_union": union, "cbs": {c.name: c.total_bytes for c in cb_table(shape)}}
 
 
+def megakernel_refusal(kv_dtype: str, num_steps: int) -> Optional[str]:
+    """Why ``PI05_MEGAKERNEL=expert`` cannot serve this configuration (None = it can). The kernels hard-code
+    ``N_STEPS`` denoising steps (mk_defs.hpp; the NCRISC / BRISC / TRISC loops and the per-step arenas) and land every
+    K / V cache page at the bfp8 tile stride into the bfp8 ``CB_KV`` (mk_brisc.cpp), so a bf16 cache
+    (PI05_KV_DTYPE=bf16) or another step count would give silent wrong actions, never an error."""
+    if kv_dtype != "bf8":
+        return (f"PI05_KV_DTYPE={kv_dtype} (the megakernel reads bfp8 K / V caches at the {TILE_BYTES['bfp8']} B bfp8 "
+                "page stride; use PI05_KV_DTYPE=bf8)")
+    if int(num_steps) != N_STEPS:
+        return (f"PI05_NUM_STEPS / num_denoising_steps={num_steps} (the megakernel compiles exactly {N_STEPS} "
+                f"denoising steps; use {N_STEPS})")
+    return None
+
+
+# multicast rectangles (logical corners as ExpertMegakernel.common_args / core_args build them), the sender, and the
+# destination count the kernels hard-code (mk_brisc.cpp setup: literal or common arg). count = cores in the rectangle
+# minus the sender when the sender lies inside it (the multicasts are issued without loopback).
+def mcast_rects(shape: Shape) -> Dict[str, Tuple[Tuple[int, int], Tuple[int, int], List[Tuple[int, int]]]]:
+    rt = shape.rt
+    return {
+        "rx": ((0, 0), (9, 7), [H0]),
+        "rm": ((0, 0), (7, 7), [H0]),
+        "ro": ((0, 4), (7, 7), [H1]),
+        "rk": ((0, (shape.nch - 1) * rt), (7, shape.nch * rt - 1), [KL]),
+        "row": ((0, 0), (7, 0), [(0, 0)]),  # row kg = 0 (every row kg has the same form, sender = row leader (0, kg))
+        "ra": ((0, 0), (GRID[0] - 1, GRID[1] - 1), [H0]),
+        "col": ((0, 0), (0, shape.nu - 1), [(0, 0)]),  # head 0's column (every head h: (h, 0)..(h, NU-1), sender (h, 0))
+    }
+
+
+def mcast_dest_count(lo, hi, sender) -> int:
+    n = (hi[0] - lo[0] + 1) * (hi[1] - lo[1] + 1)
+    return n - (1 if lo[0] <= sender[0] <= hi[0] and lo[1] <= sender[1] <= hi[1] else 0)
+
+
+def kernel_mcast_counts(shape: Shape, brisc_src: Optional[str] = None) -> Dict[str, int]:
+    """The destination counts mk_brisc.cpp's setup assigns to each rectangle (parsed from the source)."""
+    if brisc_src is None:
+        with open(os.path.join(KDIR, "mk_brisc.cpp")) as f:
+            brisc_src = f.read()
+    n_rx, _ = x_round_receivers(shape)
+    env = {"RT": shape.rt, "NU": shape.nu, "me.n_cores": GRID[0] * GRID[1], "ct_arg(C_N_RX)": n_rx}
+    out = {}
+    for name in ("rx", "rm", "ro", "rk", "row", "ra", "col"):
+        m = re.search(r"me\." + name + r" = \{[^;]*?,\s*([^,;{}]+)\};", brisc_src)
+        if m is None:
+            raise AssertionError(f"mk_brisc.cpp: no 'me.{name} = {{...}}' setup line")
+        expr = m.group(1).strip()
+        for k, v in env.items():
+            expr = expr.replace(k, str(v))
+        if not re.fullmatch(r"[0-9 *+\-]+", expr):
+            raise AssertionError(f"mk_brisc.cpp: me.{name} count {m.group(1)!r} is not a known expression")
+        out[name] = int(eval(expr))  # digits and + - * only (checked above)
+    return out
+
+
 def check_roles(shape: Shape) -> None:
     """Host invariants of the role tables (fail loudly before any device time)."""
     roles = build_roles(shape)
@@ -377,6 +434,26 @@ def check_roles(shape: Shape) -> None:
             assert r.has(R_MLP) and r.xy[1] >= 4, xy
         if r.has(R_MERGER):
             assert r.unit_kc == 0 and r.xy == (r.head, r.unit_r)
+            # a merger prefetches the next generation's K / V on the MLP path (mk_brisc.cpp step 9); off it, the
+            # prefetch never runs and its TRISC waits on CB_KV forever at generation 1
+            assert r.has(R_MLP), xy
+        if r.has(R_UNIT) and xy[1] < 8:
+            assert r.has(R_MLP), xy  # same prefetch rule: only units at y >= 8 take the non-MLP (step 5) path
+    # multicast destination counts: kernel literals == counts derived from the rectangles and the sender
+    kc = kernel_mcast_counts(shape)
+    for name, (lo, hi, senders) in mcast_rects(shape).items():
+        for snd in senders:
+            assert kc[name] == mcast_dest_count(lo, hi, snd), (name, kc[name], lo, hi, snd)
+    for kg in range(8):  # every row-leader rectangle has the same count as row 0
+        assert mcast_dest_count((0, kg), (7, kg), (0, kg)) == kc["row"]
+    for h in range(NH):  # and every Q-leader column the same as head 0's
+        assert mcast_dest_count((h, 0), (h, shape.nu - 1), (h, 0)) == kc["col"]
+    lo, hi, _ = mcast_rects(shape)["rx"]
+    inside = [roles[(x, y)] for x in range(lo[0], hi[0] + 1) for y in range(lo[1], hi[1] + 1)]
+    n_rx, n_xrdy = x_round_receivers(shape)
+    assert n_rx == len(inside)
+    assert n_xrdy == sum(1 for r in inside if r.has(R_PAIR) or r.has(R_OWNER))
+    assert all(r.xy in {c.xy for c in inside} for r in roles.values() if r.has(R_PAIR) or r.has(R_OWNER))
     # multicast rectangles: every receiver of each rectangle is a consumer or explicitly idle
     assert all(roles[(x, y)].has(R_MLP) for x in range(8) for y in range(8))
     # sync-word slots are distinct lines

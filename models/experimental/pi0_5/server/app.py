@@ -687,12 +687,14 @@ async def lifespan(_app: FastAPI):
         raise RuntimeError("PI05_LAYOUT=dp needs a multi-chip mesh (TT_MESH_SHAPE)")
     if fused_cfg.megakernel != "off":
         # docs/megakernel/DESIGN.md §4.12 refusals: the megakernel is single-chip, batch 1, one prepared shape
-        why = None
-        if mesh != (1, 1):
+        from models.experimental.pi0_5.tt.megakernel.geometry import megakernel_refusal
+
+        why = megakernel_refusal(fused_cfg.kv_dtype, cfg.num_steps)  # kv dtype and step count the kernels compile
+        if why is None and mesh != (1, 1):
             why = f"TT_MESH_SHAPE={mesh[0]}x{mesh[1]} (the megakernel is single-chip: use 1x1)"
-        elif cfg.layout != "mesh":
+        elif why is None and cfg.layout != "mesh":
             why = f"PI05_LAYOUT={cfg.layout} (single-chip megakernel: use mesh on a 1x1 device)"
-        elif cfg.batch_sizes != (1,):
+        elif why is None and cfg.batch_sizes != (1,):
             why = f"PI05_BATCH_SIZES={','.join(map(str, cfg.batch_sizes))} (the megakernel serves batch 1 only)"
         if why is not None:
             LOG.error("PI05_MEGAKERNEL=%s refused at startup: %s", fused_cfg.megakernel, why)
