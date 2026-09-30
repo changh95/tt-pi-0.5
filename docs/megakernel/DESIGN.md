@@ -887,11 +887,36 @@ run the prefix engine and then call the phase-1 expert kernel (`../kernels/mk_*.
   with variable page counts is re-pointed to full-capacity cycles (P_SS per attention chunk).
 - The NCRISC computes each op's geometry and hands the TRISCs one descriptor page per op (P_OPD, read_tile_value /
   mailbox): no geometry code in the TRISC binaries, and a TRISC can never start an op before its barrier.
-### 11.2 Numerics (as §5.7, with these differences)
-fp32 residual streams (SigLIP and VLM) instead of bf16 / bf8; LN / RMS statistics in exact fp32 on the SFPU; bf16 q and
-normalised activations; K / V bfp8 into the expert caches (as today); h of the VLM MLP bfp8 (as today); VLM matmuls
-LoFi with fp32 accumulation (today: LoFi, bf16 accumulation), SigLIP HiFi2; q scale folded into the RoPE tables (VLM,
-exact 1/16) and into Wq / bq (SigLIP, before the bfp8 rounding).
+### 11.2 Numerics (as §5.7, with these differences; revised 2026-09-30 evening, see §11.4)
+fp32 residual streams (SigLIP and VLM) instead of bf16 / bf8; ~~LN / RMS statistics in exact fp32 on the SFPU~~ (now
+§11.4: FPU statistics, fp32 partials exchanged); bf16 q and normalised activations; K / V bfp8 into the expert caches
+(as today); h of the VLM MLP bfp8 (as today); ~~VLM matmuls LoFi~~ VLM matmuls HiFi2 with fp32 accumulation (LoFi
+failed 4 of 22 seeds of the amended gate), SigLIP HiFi2; q scale folded into the RoPE tables (VLM, exact 1/16) and into
+Wq / bq (SigLIP, before the bfp8 rounding).
 ### 11.3 Gates
 Unchanged (§7 with the 2026-09-30 amendment). WP-P2-1's comparison "vs the ttnn layer (same run)" is run on real
 activations; per-op checks against the host decomposition on the device's own inputs are recorded in addition.
+
+### 11.4 Revisions after the first end-to-end build (2026-09-30 21:30 - 23:40; JOURNAL.md has every number)
+- Norms: items are (row tile, column group) (SigLIP 16 x 6, VLM mt x 4, one item per core). Every item core computes
+  partial (sum x^2, row sum x) over its group on the FPU (accumulating ELWMUL, HiFi4 matmul with ONES), writes the fp32
+  pair into slot g of P_R on the row's item cores (noc_async_write, write barrier, PS_NR increments) and reduces the
+  ncg partials itself: var = E[x^2] - mu^2. The affine parts are FOLDED on the host into the consuming matmul
+  (pe_host.fold_norms: diag(g) W, b + beta W; SigLIP LN1 -> qkv, LN2 -> fc1, post-LN -> projector, VLM (1 + w) ->
+  qkv and gate|up), so the norm applies (x - mu) rstd / x r only.
+- in0 of mode R: distributed. The band's compute core in column q reads K piece q (all rp rows) from DRAM and
+  multicasts it along its row, flag PS_IV0 + q ((op << 16) | 1); the multicast of piece q waits for piece q - 1 (the
+  reads do not). No credits (the arena is free after the op's go). The row-9 feeders only serve mode S (VLM down).
+  Reason: one reader per band capped the 8 bands at ~90 GB/s together (row-9 links).
+- SigLIP attention: one key chunk (8 tiles) per q row tile, 96 items = (image, head, row group {3, 3, 2}), one per
+  core; the 3 item cores of a head each read a third of its K / V and write it into the other two (PS_KVX).
+- VLM K / V for attention: 4 feeders (7..10, 9) read quarters of the L1 caches and multicast to every core.
+- GELU: relu(x) - t q(t), t = min(|x|, 4.25), degree-9 fit of the tanh form (max abs err 4e-5 in fp32); the library
+  gelu_tanh costs ~2,200 cycles per tile serial with the matmul (dst_full_sync). Softmax exp: the library fp32 exp
+  (faster SFPU exps: arm PE_EXP_FAST; they failed seed 707 of the base gate in three builds).
+- VLM qkv weights bf16 (own arena per layer, PA_WV16): bfp8 weights are the largest prefix K / V error term (CPU
+  emulation, p2/results/emu/); other VLM and all SigLIP weights stay bfp8.
+- The BRISC takes the op's (Op, Lay) from the NCRISC (P_SYNC words 48..63, PS_OPK) instead of computing them.
+- Timing / precision arms (PI05_PE_DEFINES): PE_DBG_TRACE=<k> (per-role wall-clock marks of the k-th op, read by
+  tests/megakernel/pe_trace.py), PE_DBG_NO_GELU, PE_DBG_GELU_EMPTY, PE_DBG_IN0_NOREAD / NOMCAST / BIGREAD / ONLY0,
+  PE_IN0_LAG, PE_IN0_READ_STAGGER, PE_MM_HIFI4, PE_GELU_STOCK, PE_EXP_FAST, PE_VLM_LOFI, plus the §11.1 ones.

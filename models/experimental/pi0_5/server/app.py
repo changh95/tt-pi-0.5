@@ -66,7 +66,9 @@ host->device copies, ``execute_trace`` and one readback. The device is opened wi
                            persistent generic_op (tt/megakernel/) at the end of the trace; the device is opened with
                            the 64 KiB worker-L1 cut (common/device_open.py). Single chip, batch 1, bf8 K/V, 10 steps:
                            any other configuration refuses at startup with a log line. ``off``: the previous path
-                           (stock ttnn expert ops), kept only as the comparator. On a multi-chip mesh the UNSET default
+                           (stock ttnn expert ops), kept only as the comparator. ``whole``: the ENTIRE sample_actions
+                           (SigLIP, projector, embedding, VLM prefill, expert loop) is ONE generic_op (phase 2,
+                           docs/megakernel/DESIGN.md §11), same refusals. On a multi-chip mesh the UNSET default
                            is ``off`` (the megakernel is a single-p150a program).
 ``TT_FUSED``               unset or ``1``; ``0`` / ``false`` / ``off`` fails startup (the unfused path was removed)
 ``PI05_TRACE``             ``0`` runs the fused graph eagerly (no trace; debug / A/B). Default ``1``.
@@ -967,6 +969,10 @@ def _graph_string(cfg: Optional[ServerConfig], traced: bool) -> str:
     if layout == "dp":
         return "fused whole-graph sample_actions_fused per group" + (", one Metal trace per group per batch size" if traced else ", eager")
     mk = (STATE.get("megakernel") or {}).get("backend", "off")
+    if mk == "whole":
+        return ("whole-model megakernel: the entire sample_actions (SigLIP x2, projector, language embedding, VLM "
+                "prefill -> K / V caches, the 10-step expert loop) as ONE persistent generic_op"
+                + (", one Metal trace" if traced else ", eager"))
     if mk == "expert":
         return ("fused whole-graph sample_actions_fused: traced stock-ttnn SigLIP / VLM prefix + the phase-1 expert "
                 "megakernel (ONE persistent generic_op for the whole 10-step action expert loop)"
