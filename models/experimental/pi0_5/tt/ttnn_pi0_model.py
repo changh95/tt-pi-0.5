@@ -93,6 +93,11 @@ class PI0ModelTTNN:
         self.fused_cfg = FusedConfig.from_env() if fused is None else fused
         # Multi-chip: PI05_TP=0 (auto) -> the mesh size; single chip -> 1 (see tt/ttnn_ccl.py)
         self.fused_cfg = self.fused_cfg.resolved(_mesh_num_devices(device))
+        if self.fused_cfg.megakernel == "expert" and not _is_mesh(device):
+            # fail fast (before ~30 s of weight conversion) on a device opened without the worker-L1 cut
+            why = self.megakernel_device_refusal(device)
+            if why is not None:
+                raise RuntimeError(f"PI05_MEGAKERNEL=expert refused: {why}")
         if not config.pi05:
             raise RuntimeError("the fused graph supports the pi0.5 (adaRMS) expert only")
         # Fused graph state (persistent device inputs, trace, output)
@@ -170,8 +175,9 @@ class PI0ModelTTNN:
     def megakernel_device_refusal(device) -> Optional[str]:
         """DESIGN.md §4.12 refusal (d): the megakernel program needs the 136,192 B kernel-config ring that only the
         64 KiB worker-L1 cut leaves (common/device_open.py). Without the cut, tt-metal fails at the first launch with
-        "Program size ... too large for kernel config buffer" by a margin of ~100 B (verify_p1_r1), so name it here,
-        before any weight upload. Worker L1 = the L1 + L1_SMALL allocator regions per bank."""
+        "Program size ... too large for kernel config buffer" by a margin of ~100 B (verify_p1_r1), so the model names it
+        at the start of __init__ (before any weight conversion) and again in _init_megakernel. Worker L1 = the L1 +
+        L1_SMALL allocator regions per bank (1,371,136 + 24,576 with the cut, 1,436,672 + 24,576 without: NOCUT.json)."""
         from models.experimental.pi0_5.common.device_open import MEGAKERNEL_WORKER_L1_SIZE
 
         worker = sum(int(ttnn.get_memory_view(device, bt).total_bytes_per_bank)

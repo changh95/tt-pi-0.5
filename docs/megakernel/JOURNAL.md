@@ -387,3 +387,22 @@ Findings (non-blocking):
   verify_p1_r0's hold1-3.log, are therefore not exit codes; every result above is confirmed from its output file instead. The soak
   used `rc=$?` on its own line, so its rc values are genuine.
 Verdict: phase 1 ACCEPTED on the amended gates (all re-run gates pass). Open for the user: the base pytest floor (see above).
+
+## 2026-09-30 15:24:09 KST -- integrate-p1: phase-1 expert megakernel becomes the DEFAULT path (session start)
+
+User request relayed with this task: "a. 일단 HF에 update. 이후 다음 phase 작업 진행" (update HF first, then the next phase).
+This session = integrate-p1 (default switch, docs, gate re-run, LIBERO closed loop); the HF push itself is the Ship phase.
+Code commit 488fe36 (kernels unchanged):
+- FusedConfig.megakernel default "expert" (env unset / empty / dataclass default). resolved(n>1) turns only the UNSET
+  default off on a multi-chip mesh (no megakernel exists there); an explicit PI05_MEGAKERNEL=expert still refuses on a
+  mesh. PI05_MEGAKERNEL=off = the previous shipped path, kept as the comparator knob.
+- DESIGN §4.12 refusal (d) implemented (verify_p1_r1 finding): PI0ModelTTNN.megakernel_device_refusal names a device
+  opened without the 64 KiB worker-L1 cut (L1 + L1_SMALL total per bank > 1,395,712) before any upload.
+- server: _Batcher / _DPRouter carry each request's own lang mask into sample_actions_fused (the batcher serves EVERY
+  request, batch 1 included, and used to drop it -> tokens != 0 fallback); the batch / DP warm-ups pass the mask too.
+- tests that opened the device directly (perf, rollout_libero, action_divergence) now use device_kwargs (the cut).
+- CPU: tests/test_server_masks.py (5), test_cpu_mk new default/resolution/refusal-(d) tests; 43 passed with
+  test_fused_host (fastapi from scratchpad/pylib).
+Device gate plan (scripts copied from verify_p1_r1 into scratchpad/ip1, arms "default" = PI05_MEGAKERNEL UNSET and
+"off" = PI05_MEGAKERNEL=off; the fp32 torch reference outputs ref_base.pt are reused from vp1r1: reference/ unchanged
+since aa7bf50).
