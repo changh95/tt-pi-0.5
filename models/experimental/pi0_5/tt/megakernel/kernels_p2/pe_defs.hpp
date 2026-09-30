@@ -223,7 +223,9 @@ constexpr uint32_t PS_N = 40;
 constexpr uint32_t PS_DIAG = 40;     // 40..43: diagnostics staging (8 words, written once at the end)
 constexpr uint32_t PS_TSTAMP = 44;   // 44..47: the hub's time-stamp record staging (16 B)
 constexpr uint32_t PS_SHARE = 48;    // 48..63: the NCRISC's (Op, Lay) of the current op, read by the BRISC (256 B)
-constexpr uint32_t PS_WORDS = 64;    // P_SYNC = PS_WORDS x PSTRIDE bytes
+constexpr uint32_t PS_IV0 = 64;      // 64..71: every compute core: mode-R in0 piece q landed ((op << 16) | 1)
+constexpr uint32_t PS_IV_N = 8;      // (at most 8 K pieces per mode-R op)
+constexpr uint32_t PS_WORDS = 72;    // P_SYNC = PS_WORDS x PSTRIDE bytes
 
 // ---------------------------------------------------------------- common runtime args (appended after phase 1's)
 // The TRISC reads only phase 1's and PA_OPFIRST..PA_REPS, so its list is cut at PA_TRISC_N (ring bytes). The VLM K / V

@@ -54,6 +54,16 @@ FORCE_INLINE void ps_dbg(uint32_t op, uint32_t phase, uint32_t a = 0, uint32_t b
     }
 }
 
+// timing arm PE_DBG_TRACE=<k>: wall-clock marks of the k-th executed op in diag words 8.. (BRISC 8 start / 9 end,
+// NCRISC 10 start / 11 end); the diag page is 64 B
+FORCE_INLINE void trace_mark(uint32_t k, uint32_t slot) {
+#ifdef PE_DBG_TRACE
+    if (k == PE_DBG_TRACE) {
+        ps_ptr(PS_DIAG)[slot] = reg_read(RISCV_DEBUG_REG_WALL_CLOCK_L);
+    }
+#endif
+}
+
 // per-receiver credits: wait until every receiver r < n has credited `base[r] + add` pages (the MINIMUM, not the sum)
 FORCE_INLINE void wait_credits(uint32_t word0, uint32_t n, const uint32_t* base, uint32_t add) {
     for (uint32_t r = 0; r < n; ++r) {

@@ -142,18 +142,21 @@ PE_OS void mm_receive(const Op& o, const Core& c, const Lay& L, uint32_t A, uint
 #endif
         {
         if (o.mode == MM_R) {
-            // the resident band: ONE credit (the whole band's room), then one push per K piece as its flag lands
-            if (ic == 0 && cb_free(icb) >= ipages * itiles) {
-                inc_word(c.ifx, c.ify, PS_I_RDY0 + c.x);
-                ic = ipages;
+            // the resident band, K piece q from the row's column q (in0_source; the arena is free after the op's go,
+            // so no credit): one push per piece as its flag lands, in order
+            if (ip < ipages && ps_read(PS_IV0 + ip) >= fl + 1) {
+                cb_push_back(icb, itiles);
+                ++ip;
             }
-        } else if (ic < ipages && cb_free(icb) >= (ic - ip + 1) * itiles) {
-            inc_word(c.ifx, c.ify, PS_I_RDY0 + c.x);
-            ++ic;
-        }
-        if (ip < ic && ps_read(PS_I_VAL) >= fl + ip + 1) {
-            cb_push_back(icb, itiles);
-            ++ip;
+        } else {
+            if (ic < ipages && cb_free(icb) >= (ic - ip + 1) * itiles) {
+                inc_word(c.ifx, c.ify, PS_I_RDY0 + c.x);
+                ++ic;
+            }
+            if (ip < ic && ps_read(PS_I_VAL) >= fl + ip + 1) {
+                cb_push_back(icb, itiles);
+                ++ip;
+            }
         }
         }
         if (wc < wpages && cb_free(wcb) >= (wc - wp + 1) * pt) {
@@ -478,6 +481,7 @@ PE_OS void run_ncrisc() {
         const Op o = describe(op);
         const Lay L = layout(o);
         share_oplay(o, L, k);
+        trace_mark(k, 10);
         push_opd(o, L, c, A);
         switch (o.kind) {
             case K_MM:
@@ -508,6 +512,7 @@ PE_OS void run_ncrisc() {
         }
         noc_async_write_barrier();
         noc_async_atomic_barrier();
+        trace_mark(k, 11);
         *ps_ptr(PS_NCDONE) = k + 1;
         ps_dbg(k, 9, 0, 0);
         PWAIT_GE(PS_GO, k + 1, "PNGO");

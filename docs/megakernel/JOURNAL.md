@@ -698,3 +698,22 @@ apply; attention 9.7 ms; feeders), then the full gate set.
   prefix 40.65 ms/rep (b32_prefix.json, K/V vs host fp32 min PCC 0.99497); whole call base 59.15 ms median of 20,
   replays identical, alternation identical (w32.json).
 - P2-2 still open: 421.9 > 394.7 us.
+
+### 2026-09-30 22:45:18 P2 SigLIP 421.9 -> 370.7 us: GELU / exp arithmetic, distributed staggered in0, per-role trace arm
+- Localisation (files p2/results/arms3_*.json, tr*.json; tests/megakernel/pe_trace.py = timing arm PE_DBG_TRACE: per
+  core BRISC / NCRISC wall-clock start and end of the k-th op):
+  * GELU: arm PE_DBG_NO_GELU FC1 92.6 -> 52.3 us: the stock fp32-accurate gelu_tanh costs 40 us (~2,200 cycles/tile,
+    serial with the matmul under dst_full_sync). x*sigmoid(2u) with exp_21f + approx recip: 84.0 us (b33).
+  * in0: one feeder per band on row 9 delivers 11 GB/s each with eight reading (FC2 in0 reads alone 49.8 us, with one
+    feeder alone 20.4 us = 27 GB/s, tr5); bigger transactions (one read per bank run, tr3) and bank-staggered issue order
+    (tr4) changed nothing. Distributed in0 (column q of the band reads K piece q and multicasts it along the row,
+    per-piece flags PS_IV0 + q, no credits in mode R) helped O / VO but made FC2 WORSE (89 -> 106 us, b34: all pieces
+    arrive together, piece 0 as late as the last); staggered (source q starts after piece q - 1 landed) fixed it.
+  * VLM matmuls: gate|up is compute + GEGLU bound (weights stream ~110 GB/s but are credit-gated).
+- Now (b35, p2/results/b35.json): GELU = relu(x) - t q(t), degree-9 fit on [0, 4.25] (max abs err 1.3e-5 fp64,
+  4.0e-5 fp32); softmax exp = exp_21f (bf16-accurate, P is bf16); in0 distributed + staggered.
+  SigLIP layer 370.7 us (LN 27.9, QKV 47.6, ATTN 82.5, O 34.0, LN2 27.9, FC1 77.9, FC2 73.0); VLM layer 1.606 ms
+  (RMS 39.9 x 2, QKV 94.9, ATTN 231.1, O 63.6, GU 671.5, DOWN 461.5). PCC unchanged: sig0 layer 0.9999719, fc1
+  0.9999684, attn 0.9999885, vlm0 attn 0.9997526, gu 0.9999045; K/V vs host fp32 min 0.995117 (b35_prefix.json).
+  Prefix 37.6 ms/rep; whole call base 55.99 ms (w35.json, 20 replays identical, alternation identical).
+- P2-2: 370.7 us is under the 394.7 stop line, above the 355 go line. Size base 129,332 B (mock29.json).

@@ -87,71 +87,60 @@ FORCE_INLINE uint32_t in0_arg(const Op& o) {
     }
 }
 
+// mode R in0, distributed: the band's compute core in column q reads K piece q (all rp rows) from DRAM into its own
+// resident band and multicasts it along its row, then flags PS_IV0 + q. One reader per row (b, 9) capped the 8 bands
+// at ~90 GB/s together (row-9 links; 27 GB/s for one feeder alone, 11 each for eight: FC2 in0 51 us of reads).
+PE_OS void in0_source(const Op& o, const Core& c, const Lay& L, uint32_t A, uint32_t k) {
+    const uint32_t rp = o.rpb, kt = o.kt, pc = o.piece, q = c.x, r0 = c.y * rp;
+    const auto src = bdram(in0_arg(o), T16);
+    const uint32_t dst = A + L.in0, y = c.nocy[c.y];
+    if (q > 0) {  // staggered: the row's pieces arrive in K order (all at once, piece 0 came as late as the last)
+        PWAIT_GE(PS_IV0 + q - 1, (k << 16) + 1, "PIVS");
+    }
+    for (uint32_t r = 0; r < rp; ++r) {
+        for (uint32_t kk = 0; kk < pc; ++kk) {
+            noc_async_read_page((r0 + r) * kt + q * pc + kk, src, dst + (r * kt + q * pc + kk) * T16);
+        }
+    }
+    noc_async_read_barrier();
+    for (uint32_t r = 0; r < rp; ++r) {
+        const uint32_t a = dst + (r * kt + q * pc) * T16;
+        noc_async_write_multicast(a, pmcast(c.rowx0, y, c.rowx1, y, a), pc * T16, NCOL - 1, false);
+    }
+    noc_async_write_barrier();  // landed on every core of the row before the flag
+    *ps_ptr(PS_IV0 + q) = (k << 16) + 1;
+    mcast_flag(c.rowx0, y, c.rowx1, y, NCOL - 1, 0, 0, 0, PS_SRC_I, PS_IV0 + q, (k << 16) + 1);
+}
+
 PE_OS void feed_in0(const Op& o, const Core& c, const Lay& L, uint32_t A, uint32_t k, BState& st) {
     const uint32_t rp = o.rpb, r0 = c.x * rp, kt = o.kt, nr = NCOL;
     const uint32_t s0 = A + L.stage, dst = A + L.in0;
     const uint32_t x0 = c.rowx0, x1 = c.rowx1, y = c.rowy;
-    if (o.mode == MM_R) {
-        // the resident band in K-piece order: piece q = rows r, tiles [q * pc, (q + 1) * pc), one flag per piece, so
-        // the receivers' first output pair starts on piece 0 while the rest of the band is still in flight
-        const auto src = bdram(in0_arg(o), T16);
-        const uint32_t pc = o.piece, nq = kt / pc, pb = rp * pc * T16;
-        auto read_piece = [&](uint32_t q) {
-            const uint32_t buf = s0 + (q & 1) * pb;
-            for (uint32_t r = 0; r < rp; ++r) {
-                for (uint32_t kk = 0; kk < pc; ++kk) {
-                    noc_async_read_page((r0 + r) * kt + q * pc + kk, src, buf + (r * pc + kk) * T16);
-                }
-            }
-        };
-        ps_dbg(o.op, 2, st.ibase[0] + 1);
-        WAYPOINT("PICR");
-        wait_credits(PS_I_RDY0, nr, st.ibase, 1);
-        read_piece(0);
-        noc_async_read_barrier();
-        for (uint32_t q = 0; q < nq; ++q) {
-            const uint32_t buf = s0 + (q & 1) * pb;
-            for (uint32_t r = 0; r < rp; ++r) {
-                noc_async_write_multicast(buf + r * pc * T16, pmcast(x0, y, x1, y, dst + (r * kt + q * pc) * T16),
-                                          pc * T16, nr, false);
-            }
-            if (q + 1 < nq) {
-                read_piece(q + 1);
-                noc_async_read_barrier();
-            }
-            noc_async_write_barrier();  // piece q landed everywhere before its flag
-            mcast_flag(x0, y, x1, y, nr, 0, 0, 0, PS_SRC_I, PS_I_VAL, (k << 16) + q + 1);
-        }
-        for (uint32_t r = 0; r < nr; ++r) {
-            st.ibase[r] += 1;
-        }
-    } else {
-        const auto src = bdram(in0_arg(o), T8);
-        const uint32_t pc = o.piece, nq = kt / pc, pt = rp * pc, pb = pt * T8;
-        auto read_page = [&](uint32_t j) {
-            const uint32_t buf = s0 + (j & 1) * pb;
-            for (uint32_t r = 0; r < rp; ++r) {
-                for (uint32_t kk = 0; kk < pc; ++kk) {
-                    noc_async_read_page((r0 + r) * kt + j * pc + kk, src, buf + (r * pc + kk) * T8);
-                }
-            }
-        };
-        read_page(0);
-        noc_async_read_barrier();
-        for (uint32_t j = 0; j < nq; ++j) {
-            ps_dbg(o.op, 3, j);
-            WAYPOINT("PISR");
-            wait_credits(PS_I_RDY0, nr, st.ibase, j + 1);
-            mcast_flag(x0, y, x1, y, nr, s0 + (j & 1) * pb, dst + (j % IN0_SLOTS) * pb, pb, PS_SRC_I, PS_I_VAL,
-                       (k << 16) + j + 1);
-            if (j + 1 < nq) {
-                read_page(j + 1);
-                noc_async_read_barrier();
+    const auto src = bdram(in0_arg(o), T8);
+    const uint32_t pc = o.piece, nq = kt / pc, pt = rp * pc, pb = pt * T8;
+    auto read_page = [&](uint32_t j) {
+        const uint32_t buf = s0 + (j & 1) * pb;
+        for (uint32_t r = 0; r < rp; ++r) {
+            for (uint32_t kk = 0; kk < pc; ++kk) {
+                noc_async_read_page((r0 + r) * kt + j * pc + kk, src, buf + (r * pc + kk) * T8);
             }
         }
-        for (uint32_t r = 0; r < nr; ++r) {
-            st.ibase[r] += nq;
+    };
+    read_page(0);
+    noc_async_read_barrier();
+    for (uint32_t j = 0; j < nq; ++j) {
+        ps_dbg(o.op, 3, j);
+        WAYPOINT("PISR");
+        wait_credits(PS_I_RDY0, nr, st.ibase, j + 1);
+        mcast_flag(x0, y, x1, y, nr, s0 + (j & 1) * pb, dst + (j % IN0_SLOTS) * pb, pb, PS_SRC_I, PS_I_VAL,
+                   (k << 16) + j + 1);
+        if (j + 1 < nq) {
+            read_page(j + 1);
+            noc_async_read_barrier();
         }
+    }
+    for (uint32_t r = 0; r < nr; ++r) {
+        st.ibase[r] += nq;
     }
 }
 
@@ -241,6 +230,9 @@ PE_OS void boot(const Core& c) {
     for (uint32_t w = 0; w < PS_N; ++w) {
         *ps_ptr(w) = 0;
     }
+    for (uint32_t w = PS_IV0; w < PS_IV0 + PS_IV_N; ++w) {
+        *ps_ptr(w) = 0;
+    }
     const uint32_t sem_arr = get_semaphore(2), sem_go = get_semaphore(3);
     noc_semaphore_inc(get_noc_addr(c.hubx, c.huby, sem_arr), 1);
     if (c.is_hub()) {
@@ -302,14 +294,18 @@ PE_OS void run_brisc() {
         Op o;
         Lay L;
         take_oplay(o, L, k);
+        trace_mark(k, 8);
         if (L.end > need) {
             need = L.end;
         }
         switch (o.kind) {
             case K_MM:
                 if (mm_compute(o, c)) {
+                    if (o.mode == MM_R && c.x < mm_nq(o)) {
+                        in0_source(o, c, L, A, k);
+                    }
                     mm_write(o, c, L, A);
-                } else if (mm_ifeeder(o, c)) {
+                } else if (mm_ifeeder(o, c) && o.mode == MM_S) {
 #ifdef PE_DBG_IN0_DIRECT
                     if (o.mode == MM_S) {
                         break;
@@ -335,6 +331,8 @@ PE_OS void run_brisc() {
                 break;
             default: break;
         }
+        noc_async_write_barrier();
+        trace_mark(k, 9);
         op_end(c, k, op);
     }
     // diagnostics (PA_DIAG page = this core): arena bounds as seen here, the largest op layout, ops executed
@@ -347,7 +345,7 @@ PE_OS void run_brisc() {
     dg[5] = k;
     dg[6] = first;
     dg[7] = stop;
-    noc_async_write_page(c.lin, bdram(PA_DIAG, 64), ps_addr(PS_DIAG), 32);
+    noc_async_write_page(c.lin, bdram(PA_DIAG, 64), ps_addr(PS_DIAG), 64);
     noc_async_write_barrier();
 }
 

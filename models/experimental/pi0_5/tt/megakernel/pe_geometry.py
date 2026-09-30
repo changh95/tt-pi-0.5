@@ -341,6 +341,7 @@ def check_ops(ps: PShape) -> None:
         if o.kind == K_MM:
             assert o.mt % o.nb == 0 and o.kt % o.piece == 0, o
             assert o.nb <= 8, o  # compute rows 0..7 (rows 8 / 9 are feeders)
+            assert o.mode != MM_R or o.kt // o.piece <= min(PS_IV_N, NCOL), o  # in0 piece q: source column q
             assert 2 * o.rpb <= 6 or o.epi in (E_NONE, E_GEGLU, E_POS), o  # epilogue temporaries in DST 6, 7
             assert max(mm_pairs(o, x) for x in range(NCOL)) <= 64
             if o.mode == MM_S:

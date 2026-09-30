@@ -10,7 +10,59 @@
 
 #include "pe_common.hpp"
 
+#ifdef TRISC_MATH
+namespace ckernel::sfpu {
+// GELU (tanh form) without the fp32-accurate tanh (the stock gelu_tanh costs ~2,200 cycles per tile here, 40 us of the
+// SigLIP fc1: arm PE_DBG_NO_GELU, 2026-09-30; x sigmoid(2u) by exp_21f + reciprocal still cost 32 us). Outputs bf16 /
+// bfp8.
+template <bool is_fp32_dest_acc_en, int ITERATIONS = 8>
+inline void pe_calculate_gelu_fast() {
+    // gelu(x) = relu(x) - h(|x|), h(t) = t q(t) on [0, 4.25] (degree-9 least-squares-minimax fit of the tanh form;
+    // max abs error 1.3e-5 in fp64, 4.0e-5 in fp32 Horner, 2026-09-30), h = 0 beyond (|x| clamped: q(4.25) ~ 0)
+#pragma GCC unroll 1
+    for (int d = 0; d < ITERATIONS; d++) {
+        sfpi::vFloat x = sfpi::dst_reg[0];
+        sfpi::vFloat a = sfpi::setsgn(x, 0);
+        sfpi::vFloat t = a;
+        v_if(t > 4.25f) { t = 4.25f; }
+        v_endif;
+        sfpi::vFloat q = t * -1.432145018e-05f + 3.306026920e-04f;
+        q = q * t + -3.156597493e-03f;
+        q = q * t + 1.561119035e-02f;
+        q = q * t + -3.921917826e-02f;
+        q = q * t + 3.103299625e-02f;
+        q = q * t + 4.830191657e-02f;
+        q = q * t + 5.249063484e-03f;
+        q = q * t + -3.992681503e-01f;
+        q = q * t + 4.999349117e-01f;
+        sfpi::dst_reg[0] = (x + a) * 0.5f - t * q;
+        sfpi::dst_reg++;
+    }
+}
+inline void pe_gelu_fast_init() {}
+// exp for the softmax: bf16-accurate exp_21f (P is packed to bf16) instead of the fp32-accurate exp
+template <bool is_fp32_dest_acc_en, int ITERATIONS = 8>
+inline void pe_calculate_exp21() {
+#pragma GCC unroll 1
+    for (int d = 0; d < ITERATIONS; d++) {
+        sfpi::dst_reg[0] = _sfpu_exp_21f_bf16_<true>(sfpi::dst_reg[0]);
+        sfpi::dst_reg++;
+    }
+}
+}  // namespace ckernel::sfpu
+#endif
+
 namespace pe {
+
+ALWI void pe_gelu_init() { MATH(llk_math_eltwise_unary_sfpu_init<SfpuType::gelu_tanh>(sfpu::pe_gelu_fast_init)); }
+ALWI void pe_exp_init() { MATH(llk_math_eltwise_unary_sfpu_init<SfpuType::exponential>(sfpu::pe_gelu_fast_init)); }
+ALWI void pe_exp(uint32_t idst) {
+    MATH(SFPU_UNARY_CALL(DST_SYNC_MODE, DST_ACCUM_MODE, pe_calculate_exp21, (DST_ACCUM_MODE), idst, VectorMode::RC));
+}
+ALWI void pe_gelu(uint32_t idst) {
+    MATH(SFPU_UNARY_CALL(DST_SYNC_MODE, DST_ACCUM_MODE, pe_calculate_gelu_fast, (DST_ACCUM_MODE), idst,
+                         VectorMode::RC));
+}
 
 // ---------------------------------------------------------------- the block-matmul K loop (every prefix matmul)
 // One output pair (rp x 2 tiles in DST 0 .. 2 rp - 1) accumulates nq weight pages of pc K tiles each; in0 tile of
@@ -73,10 +125,14 @@ PE_OS void epilogue(const TOp& o, uint32_t p) {
             fadd(2 * r, 6, 2 * r);
             fadd(2 * r + 1, 7, 2 * r + 1);
         }
+#ifndef PE_DBG_NO_GELU  // timing arm: the FC1 epilogue without its GELU
         if (o.epi == E_BIAS_GELU) {
-            gelu_tanh_tile_init();
+#else
+        if (false) {
+#endif
+            pe_gelu_init();
             for (uint32_t i = 0; i < 2 * rp; ++i) {
-                gelu_tanh_tile(i);
+                pe_gelu(i);
             }
         }
     } else if (o.epi == E_ROPE && p < 36) {
@@ -95,9 +151,9 @@ PE_OS void epilogue(const TOp& o, uint32_t p) {
             fadd(a, 6, a);              // out0
         }
     } else if (o.epi == E_GEGLU) {
-        gelu_tanh_tile_init();
+        pe_gelu_init();
         for (uint32_t r = 0; r < rp; ++r) {
-            gelu_tanh_tile(2 * r + 1);
+            pe_gelu(2 * r + 1);
         }
         for (uint32_t r = 0; r < rp; ++r) {
             fmul(2 * r, 2 * r + 1, 2 * r);
@@ -424,11 +480,11 @@ PE_OS void flash_part(uint32_t kv_cb, uint32_t q_off, uint32_t dh, uint32_t t0, 
     // P = exp(S - m), in place
     reconfig_data_format(P_SS, P_M);
     sub_bcast_cols_init(P_SS, P_M);
-    exp_tile_init<false>();
+    pe_exp_init();
     tile_regs_acquire();
     for (uint32_t i = 0; i < n; ++i) {
         sub_tiles_bcast_cols(P_SS, P_M, i, 0, i);
-        exp_tile<false>(i);
+        pe_exp(i);
     }
     tile_regs_commit();
     cb_pop_front(P_SS, n);
