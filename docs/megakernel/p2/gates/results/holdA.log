@@ -1,0 +1,16 @@
+2026-09-30_23:46:21 START arm whole base round 1
+2026-09-30_23:47:46 END arm whole base round 1 rc=0 "call_median": 56.11426697578281
+2026-09-30_23:47:46 START arm expert base round 1
+2026-09-30_23:49:17 END arm expert base round 1 rc=0 "call_median": 71.04898951365612
+2026-09-30_23:49:17 START arm whole libero round 1
+2026-09-30_23:50:26 END arm whole libero round 1 rc=0 "call_median": 53.04923703079112
+2026-09-30_23:50:26 START arm expert libero round 1
+2026-09-30_23:51:26 END arm expert libero round 1 rc=0 "call_median": 65.70829500560649
+2026-09-30_23:51:26 START arm whole base round 2
+2026-09-30_23:52:35 END arm whole base round 2 rc=0 "call_median": 56.05650998768397
+2026-09-30_23:52:35 START arm expert base round 2
+2026-09-30_23:53:33 END arm expert base round 2 rc=0 "call_median": 70.86285800323822
+2026-09-30_23:53:33 START arm whole libero round 2
+2026-09-30_23:54:38 END arm whole libero round 2 rc=0 "call_median": 52.99241252942011
+2026-09-30_23:54:38 START arm expert libero round 2
+2026-09-30_23:55:31 END arm expert libero round 2 rc=0 "call_median": 65.63165149418637

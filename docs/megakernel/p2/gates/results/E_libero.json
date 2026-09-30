@@ -1,0 +1,48 @@
+{
+ "rows": [
+  {
+   "seed": 11,
+   "n_lang": 32,
+   "arm_vs_ref": 0.999959,
+   "off_vs_ref": 0.999493,
+   "margin": 0.000466,
+   "pass": true
+  },
+  {
+   "seed": 12,
+   "n_lang": 1,
+   "arm_vs_ref": 0.999973,
+   "off_vs_ref": 0.999301,
+   "margin": 0.000672,
+   "pass": true
+  }
+ ],
+ "summary": {
+  "shape": "libero",
+  "n": 2,
+  "passes": 2,
+  "backends": [
+   "whole",
+   "off"
+  ]
+ },
+ "program": {
+  "kernel_digest": "4aa02cdf21ed0c94",
+  "sources": [
+   "kernels/mk_brisc.cpp",
+   "kernels/mk_defs.hpp",
+   "kernels/mk_dm.hpp",
+   "kernels/mk_ncrisc.cpp",
+   "kernels/mk_trisc.cpp",
+   "kernels_p2/pe_brisc.hpp",
+   "kernels_p2/pe_common.hpp",
+   "kernels_p2/pe_defs.hpp",
+   "kernels_p2/pe_dm.hpp",
+   "kernels_p2/pe_ncrisc.hpp",
+   "kernels_p2/pe_trisc.hpp",
+   "kernels_p2/whole_brisc.cpp",
+   "kernels_p2/whole_ncrisc.cpp",
+   "kernels_p2/whole_trisc.cpp"
+  ]
+ }
+}

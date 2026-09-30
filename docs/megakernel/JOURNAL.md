@@ -762,3 +762,25 @@ apply; attention 9.7 ms; feeders), then the full gate set.
 - b41 (p2/results/b41.json, b41_prefix.json, w41.json): SigLIP layer 353.6 us (LN 23.6, QKV 46.8, ATTN 80.5, O 33.9,
   LN2 23.4, FC1 76.6, FC2 69.0) -> P2-2 GO; VLM layer 1.612 ms; prefix 37.3 ms/rep; K/V vs host fp32 min 0.995379;
   whole call base 55.67 ms (20 replays identical, alternation identical). Size base 128,636 B (mock36.json).
+
+### 2026-10-01 00:46:30 PHASE-2 EXIT GATE TABLE (build 4ed4178 + 24b30ed scripts; kernel_digest 4aa02cdf21ed0c94; files docs/megakernel/p2/gates/results/, scripts ../scripts/)
+Holds A-G 23:46-00:45 (holds.log in the scratchpad; private TT_METAL_CACHE per arm; kernel md5s identical before/after the soak).
+| gate | result | evidence |
+|---|---|---|
+| Structural: the replay holds exactly ONE device op | PASS: 21 / 21 traced replay sessions per shape = 1 op each, GenericOp whole_{trisc,brisc,ncrisc}.cpp on 110 cores; device time median 53.96 ms base / 51.26 ms LIBERO | S_struct_whole.json, ops_whole_*.csv.gz, P_whole_*.json (20 profiled replays bit-identical) |
+| Stamp asserted in test_pcc_pi05_fused.py | PASS (backend "whole", digest 4aa02cdf21ed0c94) | g1_pcc_whole_*.json |
+| PCC7 vs openpi golden mean >= 0.9995, min >= 0.999 | PASS 0.999976 / 0.999955 (phase 1 0.999884 / 0.999778, same session) | g1_pcc_whole_libero.json, A_*_libero_r*.json, ALT_named_whole.log [D] |
+| Amended base gate: per seed at least as close as shipped to the fp32 whole-model reference, >= 18 seeds | PASS 22 / 22, mean 0.99838 vs shipped 0.96921, min margin +0.00121 (seed 707 +0.00347: fragile, see 23:40 entry) | seeds_final.json |
+| Ten replays bit-identical | PASS both shapes (10 calls after other prompts + 10 raw execute_trace; output-poisoning check: the trace writes the output) | A_whole_*_r*.json, g1_pcc_whole_*.json |
+| Alternating prompts / shape switch vs fresh-model refs | PASS 20 / 20 bit-identical (positive control: ref pairs max PCC 0.955); named verify_alternating.py OVERALL all_ok=True | ALT_whole.json, ALT_named_whole.log |
+| No hang in 20 consecutive runs | PASS 20 / 20 processes rc 0, 31 calls each all equal, one digest 886f7341c1085571, 48.8-66.9 s | soak_results.txt, soak_hold.log, sums_soak_*.txt |
+| Prompt-length edge cases no worse than shipped | PASS 6 / 6: base n 1 / 224 / 128 / 150: 0.99879 / 0.99989 / 0.99764 / 0.99981 vs 0.99604 / 0.96898 / 0.99289 / 0.99648; LIBERO n 32 / 1: 0.99996 / 0.99997 vs 0.99949 / 0.99930 | E_base.json, E_libero.json |
+| Existing suites green (megakernel selected) | PASS: pytest test_pcc_pi05_fused.py under whole 2 passed (the base floor 0.95 now passes: seed 3 0.98882); test_fused_host + test_cpu_mk + test_cpu_pe (incl. real-weight) + test_reference_vs_openpi 47 passed; test_server_masks 5 passed | pytest_pcc_whole_tail.log, cpu_suites.txt, cpu_server_masks.txt |
+| Speed: whole-call < phase 1, same session, alternated, > 2 x MAD se | PASS base 56.11 / 56.06 vs 71.05 / 70.86 ms (diff 14.9 / 14.8, 2 se 0.10 / 0.13); LIBERO 53.05 / 52.99 vs 65.71 / 65.63 (diff 12.7 / 12.6, 2 se 0.17 / 0.14); aiclk 1350 throughout | A_{whole,expert}_{base,libero}_r{1,2}.json |
+| P2-0 size / CB ids / L1 | PASS: 128,636 B base / 126,492 LIBERO <= 131,072 (profiler build 129,004); CB ids 32..62 (+ phase 1's 0..31) <= 64; arena 1,156,192 B + tail below the largest free block 1,253,888 B | p2/results/mock36.json, mock_prof, A_whole_*.json megakernel_l1 |
+| P2-1 VLM layer: PCC vs ttnn >= 0.9995, time <= 2.20 ms | PASS: PCC 0.99987; rel vs fp32 0.0056 vs ttnn's 0.0170; 1.612 ms | L_layer_vs_ttnn.json, p2/results/b41.json |
+| P2-2 SigLIP layer: PCC vs ttnn >= 0.9995, rel <= ttnn + 20 %, time <= 355 us | PASS: PCC 0.99992; rel 0.0067 vs ttnn's 0.0133; 353.6 us | L_layer_vs_ttnn.json, b41.json |
+| P2-3 stack time < 52.42 base / 48.72 LIBERO | PASS 37.3 / 35.7 ms | P23_*.json |
+| P2-3 per-layer K/V vs the ttnn caches PCC >= 0.999 | **FAIL**: min 0.9642 base / 0.9607 LIBERO. The ttnn caches themselves are 0.9656 / 0.9612 from the fp32 host decomposition; the engine is 0.9954 / 0.9945, closer on 36 / 36 (layer, K / V) at both shapes (PCC and rel-L2). The bar measures the shipped path's error: no more accurate prefix can meet it. Needs the user's ruling. | P23_base.json, P23_libero.json |
+| P2-5 server | PASS: served inference median 55.74 / 56.13 ms (whole) vs 70.86 / 70.76 (expert, P1-6 was 70.72); smoke PASS x4; /info backend whole + digest; mask probe pass; refusals at startup for PI05_KV_DTYPE=bf16, NUM_STEPS=20, BATCH_SIZES=1,2 (rc 3, no device open) | S_*.json, S_*.smoke.log, refuse_whole_*.log |
+Not done: PI05_MEGAKERNEL default is still expert (P2-5 calls whole "the new default"; left for the ship decision / the P2-3 ruling).

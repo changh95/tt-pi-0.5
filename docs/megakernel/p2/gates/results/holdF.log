@@ -1,0 +1,34 @@
+2026-10-01_00:38:56 SERVE whole (whole_003856)
+2026-10-01_00:39:56 health=1 info backend=whole pid=1196983
+smoke rc=0 PASS pi05 actions=(50,32) max|a|=0.262 std=0.071 repeat_maxdiff=0.0000 change_maxdiff=0.8423 inference_ms=61.35/56.03 tokens=143/224 truncated=False
+RESULT {"n": 30, "total_ms_median": 57.245, "inference_ms_median": 55.735, "client_wall_ms_median": 58.44287248328328, "megakernel": {"backend": "whole", "program": {"kernel_digest": "4aa02cdf21ed0c94", "sources": ["kernels/mk_brisc.cpp", "kernels/mk_defs.hpp", "kernels/mk_dm.hpp", "kernels/mk_ncrisc.cpp", "kernels/mk_trisc.cpp", "kernels_p2/pe_brisc.hpp", "kernels_p2/pe_common.hpp", "kernels_p2/pe_defs.hpp", "kernels_p2/pe_dm.hpp", "kernels_p2/pe_ncrisc.hpp", "kernels_p2/pe_trisc.hpp", "kernels_p2/whole_brisc.cpp", "kernels_p2/whole_ncrisc.cpp", "kernels_p2/whole_trisc.cpp"]}}, "hardware": "Tenstorrent Blackhole, single chip (mesh 1x1) via tt-nn; whole-model megakernel: the entire sample_actions (SigLIP x2, projector, language embedding, VLM prefill -> K / V caches, the 10-step expert loop) as ONE persistent generic_op, one Metal trace", "time": "2026-10-01 00:39:58"}
+RESULT {"time": "2026-10-01 00:39:58", "num_tokens": [2, 1], "X_repeat_identical": true, "X_vs_Y_identical": false, "X_vs_Y_maxabs": 0.8372039794921875, "batched_as": [1, 1], "pass": true}
+2026-10-01_00:40:00 server stopped, no uvicorn left
+2026-10-01_00:40:00 SERVE expert (expert_004000)
+2026-10-01_00:40:41 health=1 info backend=expert pid=1197640
+smoke rc=0 PASS pi05 actions=(50,32) max|a|=0.277 std=0.074 repeat_maxdiff=0.0000 change_maxdiff=0.8174 inference_ms=75.12/71.05 tokens=143/224 truncated=False
+RESULT {"n": 30, "total_ms_median": 72.15, "inference_ms_median": 70.86, "client_wall_ms_median": 73.32966401008889, "megakernel": {"backend": "expert", "program": {"kernel_digest": "328761c8a1ce3fd9", "sources": ["mk_brisc.cpp", "mk_defs.hpp", "mk_dm.hpp", "mk_ncrisc.cpp", "mk_trisc.cpp"]}}, "hardware": "Tenstorrent Blackhole, single chip (mesh 1x1) via tt-nn; fused whole-graph sample_actions_fused: traced stock-ttnn SigLIP / VLM prefix + the phase-1 expert megakernel (ONE persistent generic_op for the whole 10-step action expert loop), one Metal trace", "time": "2026-10-01 00:40:43"}
+RESULT {"time": "2026-10-01 00:40:43", "num_tokens": [2, 1], "X_repeat_identical": true, "X_vs_Y_identical": false, "X_vs_Y_maxabs": 0.852142333984375, "batched_as": [1, 1], "pass": true}
+2026-10-01_00:40:46 server stopped, no uvicorn left
+2026-10-01_00:40:46 SERVE whole (whole_004046)
+2026-10-01_00:41:41 health=1 info backend=whole pid=1198039
+smoke rc=0 PASS pi05 actions=(50,32) max|a|=0.262 std=0.071 repeat_maxdiff=0.0000 change_maxdiff=0.8423 inference_ms=60.95/55.92 tokens=143/224 truncated=False
+RESULT {"n": 30, "total_ms_median": 57.565, "inference_ms_median": 56.125, "client_wall_ms_median": 58.892008499242365, "megakernel": {"backend": "whole", "program": {"kernel_digest": "4aa02cdf21ed0c94", "sources": ["kernels/mk_brisc.cpp", "kernels/mk_defs.hpp", "kernels/mk_dm.hpp", "kernels/mk_ncrisc.cpp", "kernels/mk_trisc.cpp", "kernels_p2/pe_brisc.hpp", "kernels_p2/pe_common.hpp", "kernels_p2/pe_defs.hpp", "kernels_p2/pe_dm.hpp", "kernels_p2/pe_ncrisc.hpp", "kernels_p2/pe_trisc.hpp", "kernels_p2/whole_brisc.cpp", "kernels_p2/whole_ncrisc.cpp", "kernels_p2/whole_trisc.cpp"]}}, "hardware": "Tenstorrent Blackhole, single chip (mesh 1x1) via tt-nn; whole-model megakernel: the entire sample_actions (SigLIP x2, projector, language embedding, VLM prefill -> K / V caches, the 10-step expert loop) as ONE persistent generic_op, one Metal trace", "time": "2026-10-01 00:41:43"}
+RESULT {"time": "2026-10-01 00:41:43", "num_tokens": [2, 1], "X_repeat_identical": true, "X_vs_Y_identical": false, "X_vs_Y_maxabs": 0.8372039794921875, "batched_as": [1, 1], "pass": true}
+2026-10-01_00:41:45 server stopped, no uvicorn left
+2026-10-01_00:41:45 SERVE expert (expert_004145)
+2026-10-01_00:42:30 health=1 info backend=expert pid=1198496
+smoke rc=0 PASS pi05 actions=(50,32) max|a|=0.277 std=0.074 repeat_maxdiff=0.0000 change_maxdiff=0.8174 inference_ms=77.79/70.88 tokens=143/224 truncated=False
+RESULT {"n": 30, "total_ms_median": 72.08, "inference_ms_median": 70.755, "client_wall_ms_median": 73.26471252599731, "megakernel": {"backend": "expert", "program": {"kernel_digest": "328761c8a1ce3fd9", "sources": ["mk_brisc.cpp", "mk_defs.hpp", "mk_dm.hpp", "mk_ncrisc.cpp", "mk_trisc.cpp"]}}, "hardware": "Tenstorrent Blackhole, single chip (mesh 1x1) via tt-nn; fused whole-graph sample_actions_fused: traced stock-ttnn SigLIP / VLM prefix + the phase-1 expert megakernel (ONE persistent generic_op for the whole 10-step action expert loop), one Metal trace", "time": "2026-10-01 00:42:33"}
+RESULT {"time": "2026-10-01 00:42:33", "num_tokens": [2, 1], "X_repeat_identical": true, "X_vs_Y_identical": false, "X_vs_Y_maxabs": 0.852142333984375, "batched_as": [1, 1], "pass": true}
+2026-10-01_00:42:35 server stopped, no uvicorn left
+2026-10-01_00:42:35 REFUSE whole PI05_KV_DTYPE=bf16
+rc=3
+2026-10-01 00:42:40,755 ERROR pi05.server: PI05_MEGAKERNEL=whole refused at startup: PI05_KV_DTYPE=bf16 (the megakernel reads bfp8 K / V caches at the 1088 B bfp8 page stride; use PI05_KV_DTYPE=bf8)
+2026-10-01_00:42:41 REFUSE whole PI05_NUM_STEPS=20
+rc=3
+2026-10-01 00:42:46,594 ERROR pi05.server: PI05_MEGAKERNEL=whole refused at startup: PI05_NUM_STEPS / num_denoising_steps=20 (the megakernel compiles exactly 10 denoising steps; use 10)
+2026-10-01_00:42:47 REFUSE whole PI05_BATCH_SIZES=1,2
+rc=3
+2026-10-01 00:42:52,499 ERROR pi05.server: PI05_MEGAKERNEL=whole refused at startup: PI05_BATCH_SIZES=1,2 (the megakernel serves batch 1 only)
+2026-10-01_00:42:53 END

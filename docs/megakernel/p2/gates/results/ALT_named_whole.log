@@ -1,0 +1,97 @@
+2026-10-01 00:03:11.045 | DEBUG    | ttnn:<module>:45 - Initial ttnn.CONFIG:
+Config{cache_path=/home/deepgadget/.cache/ttnn,model_cache_path=/home/deepgadget/.cache/ttnn/models,tmp_dir=/tmp/ttnn,enable_model_cache=false,enable_fast_runtime_mode=true,validate_program_args=false,throw_exception_on_fallback=false,enable_logging=false,enable_graph_report=false,enable_graph_python_stack_traces=false,enable_detailed_buffer_report=false,enable_detailed_tensor_report=false,enable_comparison_mode=false,comparison_mode_should_raise_exception=false,comparison_mode_pcc=0.9999,root_report_path=generated/ttnn/reports,report_name=std::nullopt,std::nullopt}
+2026-10-01 00:03:11.091 | info     |          Device | Opening user mode device driver (tt_cluster.cpp:224)
+2026-10-01 00:03:11.091 | info     |             UMD | Cluster constructor started. (cluster.cpp:408)
+2026-10-01 00:03:11.091 | info     |             UMD | Creating TopologyDiscovery for architecture: blackhole (topology_discovery.cpp:96)
+2026-10-01 00:03:11.091 | info     |             UMD | Starting topology discovery. (topology_discovery.cpp:115)
+2026-10-01 00:03:11.093 | info     |             UMD | Established firmware bundle version: 19.12.0 (topology_discovery.cpp:576)
+2026-10-01 00:03:11.094 | info     |             UMD | Completed topology discovery. (topology_discovery.cpp:119)
+2026-10-01 00:03:11.597 | info     |             UMD | Opening local chip ids/PCIe ids: {0}/[0] and remote chip ids {} (cluster.cpp:175)
+2026-10-01 00:03:11.597 | info     |             UMD | IOMMU: disabled (cluster.cpp:149)
+2026-10-01 00:03:11.597 | info     |             UMD | KMD version: 2.11.0 (cluster.cpp:152)
+2026-10-01 00:03:11.597 | info     |             UMD | Cluster constructor completed. (cluster.cpp:683)
+2026-10-01 00:03:11.597 | info     |             UMD | Starting devices in cluster (cluster.cpp:1289)
+2026-10-01 00:03:11.683 | info     |             UMD | Starting devices in cluster completed. (cluster.cpp:1297)
+2026-10-01 00:03:12.029 | info     |     Distributed | Using auto discovery to generate mesh graph. (metal_env.cpp:422)
+2026-10-01 00:03:12.029 | info     |     Distributed | Constructing control plane using auto-discovery (no mesh graph descriptor). (metal_env.cpp:484)
+2026-10-01 00:03:12.029 | warning  |          Always | Unknown motherboard 'ProArt X870E-CREATOR WIFI' for chip_id=0 (bus_id=0x3) — falling back to bus_id as tray_id. Add this motherboard and its bus IDs to mobo_to_bus_ids in physical_system_discovery.cpp. (physical_system_discovery.cpp:119)
+2026-10-01 00:03:12.029 | info     |          Fabric | Logical multi-mesh adjacency: intermesh degree histogram {0:1}; intra-mesh degree histograms mesh0 {0:1} (topology_mapper_utils.cpp:3190)
+2026-10-01 00:03:12.029 | info     |          Fabric | Physical multi-mesh adjacency: intermesh degree histogram {0:1}; intra-mesh degree histograms mesh0 {0:1} (topology_mapper_utils.cpp:3198)
+2026-10-01 00:03:12.138 | info     |           Metal | Enabling program cache on MeshDevice 1 (mesh_device.cpp:1176)
+
+[A] alternating_base: capturing fresh-model references ...
+[pi0.5] expert adaRMS norms folded into per-step weights in 4.9s
+[pi0.5] expert adaRMS norms folded into per-step weights in 2.2s
+  positive control pcc(ref_a, ref_b) = 0.043479  (must be << 1)
+[A] building alternating model ...
+[pi0.5] expert adaRMS norms folded into per-step weights in 2.2s
+  [PASS] call1 n_real=12 vs fresh-ref: BIT_IDENTICAL
+  [PASS] call2 n_real=150 vs fresh-ref: BIT_IDENTICAL
+  [PASS] call3 n_real=12 vs fresh-ref: BIT_IDENTICAL
+  [PASS] call3 n_real=12 vs first-in-alt: BIT_IDENTICAL
+  [PASS] call4 n_real=150 vs fresh-ref: BIT_IDENTICAL
+  [PASS] call4 n_real=150 vs first-in-alt: BIT_IDENTICAL
+  [PASS] call5 n_real=12 vs fresh-ref: BIT_IDENTICAL
+  [PASS] call5 n_real=12 vs first-in-alt: BIT_IDENTICAL
+  [PASS] call6 n_real=150 vs fresh-ref: BIT_IDENTICAL
+  [PASS] call6 n_real=150 vs first-in-alt: BIT_IDENTICAL
+[A] alternating_base all_ok=True  positive_control_ok=True
+
+[B] alternating_libero: selecting records ...
+  record A tag=libero_spatial/t3/i1/call0/step10 n_lang=17
+  record B tag=libero_spatial/t0/i0/call0/step10 n_lang=20
+[B] capturing fresh-model references ...
+[pi0.5] expert adaRMS norms folded into per-step weights in 2.3s
+[pi0.5] expert adaRMS norms folded into per-step weights in 2.2s
+  fresh A PCC7 vs openpi 0.999978  B 0.999974
+  positive control pcc(ref_a, ref_b) = 0.955229  (must be << 1)
+[B] building alternating model ...
+[pi0.5] expert adaRMS norms folded into per-step weights in 2.3s
+  [PASS] call1 rec_A n_lang=17 vs fresh-ref: BIT_IDENTICAL
+  [PASS] call2 rec_B n_lang=20 vs fresh-ref: BIT_IDENTICAL
+  [PASS] call3 rec_A n_lang=17 vs fresh-ref: BIT_IDENTICAL
+  [PASS] call3 rec_A vs first-in-alt: BIT_IDENTICAL
+  [PASS] call4 rec_B n_lang=20 vs fresh-ref: BIT_IDENTICAL
+  [PASS] call4 rec_B vs first-in-alt: BIT_IDENTICAL
+  [PASS] call5 rec_A n_lang=17 vs fresh-ref: BIT_IDENTICAL
+  [PASS] call5 rec_A vs first-in-alt: BIT_IDENTICAL
+  [PASS] call6 rec_B n_lang=20 vs fresh-ref: BIT_IDENTICAL
+  [PASS] call6 rec_B vs first-in-alt: BIT_IDENTICAL
+[B] alternating_libero all_ok=True
+
+[C] shape_switch: building base model ...
+[pi0.5] expert adaRMS norms folded into per-step weights in 2.2s
+  [PASS] base n_real=12 replay1: BIT_IDENTICAL
+  [PASS] base n_real=150 replay1: BIT_IDENTICAL
+[C] base released; building LIBERO model ...
+[pi0.5] expert adaRMS norms folded into per-step weights in 4.8s
+  [PASS] libero n_lang=20 replay1: BIT_IDENTICAL
+  [PASS] libero n_lang=20 replay2: BIT_IDENTICAL
+[C] shape_switch all_ok=True  libero_pcc7_vs_openpi=0.999974
+
+[D] golden_libero: building model ...
+[pi0.5] expert adaRMS norms folded into per-step weights in 2.2s
+  libero_spatial/t0/i0/call0/step10 n_lang=20 pcc7=0.999974
+  libero_spatial/t0/i0/call12/step70 n_lang=20 pcc7=0.999983
+  libero_spatial/t3/i1/call0/step10 n_lang=17 pcc7=0.999978
+  libero_spatial/t3/i1/call12/step70 n_lang=17 pcc7=0.999994
+  libero_spatial/t6/i2/call0/step10 n_lang=18 pcc7=0.999971
+  libero_spatial/t6/i2/call12/step70 n_lang=18 pcc7=0.999980
+  libero_spatial/t9/i3/call0/step10 n_lang=17 pcc7=0.999972
+  libero_spatial/t9/i3/call12/step70 n_lang=17 pcc7=0.999955
+[D] golden_libero pcc7_mean=0.999976 pcc7_min=0.999955 ok=True
+
+=== SUMMARY ===
+  A_alternating_base: ok=True
+  B_alternating_libero: ok=True
+  C_shape_switch: ok=True
+  D_golden_libero: ok=True
+OVERALL all_ok=True
+Results written to out/ALT_named_whole.json
+2026-10-01 00:09:34.013 | info     |    BuildKernels | JIT cache stats: 155/155 hits (100.0%) [155 cached, 24 build-once dedup, 0 merged artifacts, 0 merged genfiles] (build_cache_telemetry.cpp:268)
+2026-10-01 00:09:34.013 | info     |    BuildKernels | JIT telemetry: 33 registered TelemetryTokens (build_cache_telemetry.cpp:325)
+2026-10-01 00:09:34.234 | info     |          Device | Closing user mode device drivers (tt_cluster.cpp:550)
+2026-10-01 00:09:34.234 | info     |             UMD | Closing devices in cluster (cluster.cpp:1302)
+2026-10-01 00:09:34.377 | info     |             UMD | Closing devices in cluster completed. (cluster.cpp:1311)
+2026-10-01 00:09:34.377 | info     |             UMD | Cluster destructor started. (cluster.cpp:1017)
+2026-10-01 00:09:34.377 | info     |             UMD | Cluster destructor completed. (cluster.cpp:1020)

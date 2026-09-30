@@ -1,0 +1,3 @@
+RuntimeError: PI05_MEGAKERNEL=whole refused: PI05_NUM_STEPS / num_denoising_steps=20 (the megakernel compiles exactly 10 denoising steps; use 10)
+
+ERROR:    Application startup failed. Exiting.
