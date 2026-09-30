@@ -861,3 +861,37 @@ RoPE priced +1.75, reduce compute +0.5) are offset by the flat dh-split merge (9
 the 16.5 us a merger-only tree costs when priced per O tile the same way). The base expert-loop prediction (13.91 / 18.92
 / 23.37 ms) and the whole-call prediction (66.7 / 71.7 / 76.2 ms) are therefore within 0.1 ms of v1. LIBERO moves from
 10.05 / 13.66 ms to 11.08 / 15.07 ms, still under today's 27.85 ms with 2.52x of margin.
+
+## 11. Phase-2 implementation design v3 (2026-09-30, session mk2-r0-s0) -- what was built, and the deviations from §5
+
+The whole `sample_actions` is ONE generic_op whose three kernels (`tt/megakernel/kernels_p2/whole_{brisc,ncrisc,trisc}.cpp`)
+run the prefix engine and then call the phase-1 expert kernel (`../kernels/mk_*.cpp`, included byte-identical and renamed
+`mk_expert_kernel_main`). `PE_WHOLE=0` builds the prefix-only program used for bring-up.
+
+### 11.1 Execution model (deviation from §5.3: DRAM-staged ops instead of L1-resident bands)
+- A fixed sequence of 314 ops (`kernels_p2/pe_defs.hpp`, `pe_common.hpp describe`): patch; 27 x [LN1, qkv, attn, o, LN2,
+  fc1, fc2]; post-LN; projector; embedding; 17 x [RMS1, qkv, attn, o, RMS2, gate|up, down]; RMS1 + qkv of layer 17.
+- Every activation lives in DRAM scratch between ops; consecutive ops are separated by ONE global barrier (every core
+  arrives after its writes are acknowledged and its NCRISC is done; the hub (10, 9) multicasts go). Reason: one
+  synchronisation mechanism orders every buffer reuse, and each op can be run and checked alone (bring-up by op range).
+  Cost: 314 barriers (~3 us each) and the DRAM round trips of the activations (priced in §11.4).
+- Matmuls: 8 bands (grid rows 0..7) x 11 columns. Weights are read ONCE per column from a bank-striped arena by a
+  feeder core (x, 8) and multicast down the column; in0 bands are read by a feeder (b, 9) and multicast along row b.
+  Mode R (every op but the VLM down): in0 band resident, N-outer, the whole K accumulated in DST. Mode S (VLM down,
+  K = 512 tiles): in0 streamed in K blocks, K-outer, fp32 partials reloaded (UnpackToDestFp32).
+- Rings: per-page flag = (op << 16 | page + 1); credits are one word PER RECEIVER and the feeder waits on the minimum
+  (a summed credit is wrong for ring depth > 1: device-reproduced on the down op). Data multicast flushed before the
+  flag multicast (Blackhole command-buffer ordering).
+- CB ids 32..62 are declared tiny on the host and re-pointed per op by every RISC into the arena = phase-1 CB region +
+  a tail CB (host descriptor order fixes contiguity; the kernel reports lo / hi in a diagnostics tensor). A CB used
+  with variable page counts is re-pointed to full-capacity cycles (P_SS per attention chunk).
+- The NCRISC computes each op's geometry and hands the TRISCs one descriptor page per op (P_OPD, read_tile_value /
+  mailbox): no geometry code in the TRISC binaries, and a TRISC can never start an op before its barrier.
+### 11.2 Numerics (as §5.7, with these differences)
+fp32 residual streams (SigLIP and VLM) instead of bf16 / bf8; LN / RMS statistics in exact fp32 on the SFPU; bf16 q and
+normalised activations; K / V bfp8 into the expert caches (as today); h of the VLM MLP bfp8 (as today); VLM matmuls
+LoFi with fp32 accumulation (today: LoFi, bf16 accumulation), SigLIP HiFi2; q scale folded into the RoPE tables (VLM,
+exact 1/16) and into Wq / bq (SigLIP, before the bfp8 rounding).
+### 11.3 Gates
+Unchanged (§7 with the 2026-09-30 amendment). WP-P2-1's comparison "vs the ttnn layer (same run)" is run on real
+activations; per-op checks against the host decomposition on the device's own inputs are recorded in addition.
