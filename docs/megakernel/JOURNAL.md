@@ -498,3 +498,11 @@ Ship-phase handoff (NOT done here: the staging package is outside the pi0.5 repo
 Open (unchanged): base pytest 0.95 floor fails in both arms on seed 3 (user's call); mk_brisc.cpp:8 stale test path
 comment (deferred to the next kernel change); the non-blocking items listed by fix-p1-r0.
 Next: Ship (HF update), then phase 2 (WP P2-0).
+
+## 2026-09-30 17:16:31 KST -- publish-p1: Ship phase 1 (session start)
+
+Branch HEAD 8812ec8 (integrate-p1 end; descends from e8cbc78). Plan: push branch, PR to main, merge commit (trailer in the
+merge body); then set PI05_SOURCE_COMMIT = merge sha in the staging package, add PI05_MEGAKERNEL=expert to serve.env and a
+megakernel include check to verify:, package ONCE on publish/tt-metal-668c2907575, boot + smoke + 100-request bench via
+with-device.sh, ONE HF create_commit (parent pinned), then verify (sha256, code/ vs GitHub main, image pull-back, video).
+Prior publish scripts: scratchpad/pub/ (copied to scratchpad/pub1/ for this round).
