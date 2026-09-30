@@ -1,0 +1,184 @@
+2026-09-30 16:41:31.906 | DEBUG    | ttnn:<module>:45 - Initial ttnn.CONFIG:
+Config{cache_path=/home/deepgadget/.cache/ttnn,model_cache_path=/home/deepgadget/.cache/ttnn/models,tmp_dir=/tmp/ttnn,enable_model_cache=false,enable_fast_runtime_mode=true,validate_program_args=false,throw_exception_on_fallback=false,enable_logging=false,enable_graph_report=false,enable_graph_python_stack_traces=false,enable_detailed_buffer_report=false,enable_detailed_tensor_report=false,enable_comparison_mode=false,comparison_mode_should_raise_exception=false,comparison_mode_pcc=0.9999,root_report_path=generated/ttnn/reports,report_name=std::nullopt,std::nullopt}
+2026-09-30 16:41:31.964 | info     |          Device | Opening user mode device driver (tt_cluster.cpp:224)
+2026-09-30 16:41:31.964 | info     |             UMD | Cluster constructor started. (cluster.cpp:408)
+2026-09-30 16:41:31.964 | info     |             UMD | Creating TopologyDiscovery for architecture: blackhole (topology_discovery.cpp:96)
+2026-09-30 16:41:31.964 | info     |             UMD | Starting topology discovery. (topology_discovery.cpp:115)
+2026-09-30 16:41:31.968 | info     |             UMD | Established firmware bundle version: 19.12.0 (topology_discovery.cpp:576)
+2026-09-30 16:41:31.968 | info     |             UMD | Completed topology discovery. (topology_discovery.cpp:119)
+2026-09-30 16:41:32.226 | info     |             UMD | Opening local chip ids/PCIe ids: {0}/[0] and remote chip ids {} (cluster.cpp:175)
+2026-09-30 16:41:32.226 | info     |             UMD | IOMMU: disabled (cluster.cpp:149)
+2026-09-30 16:41:32.226 | info     |             UMD | KMD version: 2.11.0 (cluster.cpp:152)
+2026-09-30 16:41:32.226 | info     |             UMD | Cluster constructor completed. (cluster.cpp:683)
+2026-09-30 16:41:32.226 | info     |             UMD | Starting devices in cluster (cluster.cpp:1289)
+2026-09-30 16:41:32.316 | info     |             UMD | Starting devices in cluster completed. (cluster.cpp:1297)
+2026-09-30 16:41:32.662 | info     |     Distributed | Using auto discovery to generate mesh graph. (metal_env.cpp:422)
+2026-09-30 16:41:32.662 | info     |     Distributed | Constructing control plane using auto-discovery (no mesh graph descriptor). (metal_env.cpp:484)
+2026-09-30 16:41:32.662 | warning  |          Always | Unknown motherboard 'ProArt X870E-CREATOR WIFI' for chip_id=0 (bus_id=0x3) — falling back to bus_id as tray_id. Add this motherboard and its bus IDs to mobo_to_bus_ids in physical_system_discovery.cpp. (physical_system_discovery.cpp:119)
+2026-09-30 16:41:32.662 | info     |          Fabric | Logical multi-mesh adjacency: intermesh degree histogram {0:1}; intra-mesh degree histograms mesh0 {0:1} (topology_mapper_utils.cpp:3190)
+2026-09-30 16:41:32.662 | info     |          Fabric | Physical multi-mesh adjacency: intermesh degree histogram {0:1}; intra-mesh degree histograms mesh0 {0:1} (topology_mapper_utils.cpp:3198)
+2026-09-30 16:41:32.769 | info     |           Metal | Enabling program cache on MeshDevice 1 (mesh_device.cpp:1176)
+[pi0.5] expert adaRMS norms folded into per-step weights in 3.0s
+{"tag": "libero_spatial/t0/i0/call0/step10", "n_lang": 20, "pcc7": 0.9999007120343301, "pcc32": 0.9998830501929852, "maxabs7": 0.03245469927787781}
+{"tag": "libero_spatial/t0/i0/call12/step70", "n_lang": 20, "pcc7": 0.9998470948335605, "pcc32": 0.9998732574377942, "maxabs7": 0.027761250734329224}
+{"tag": "libero_spatial/t3/i1/call0/step10", "n_lang": 17, "pcc7": 0.9999283839042867, "pcc32": 0.9999260079153294, "maxabs7": 0.02524217963218689}
+{"tag": "libero_spatial/t3/i1/call12/step70", "n_lang": 17, "pcc7": 0.9999732463147307, "pcc32": 0.9999708486184035, "maxabs7": 0.014580488204956055}
+{"tag": "libero_spatial/t6/i2/call0/step10", "n_lang": 18, "pcc7": 0.9997776780152333, "pcc32": 0.9997864261239598, "maxabs7": 0.05097472667694092}
+{"tag": "libero_spatial/t6/i2/call12/step70", "n_lang": 18, "pcc7": 0.9998435863173202, "pcc32": 0.999838643295745, "maxabs7": 0.046645134687423706}
+{"tag": "libero_spatial/t9/i3/call0/step10", "n_lang": 17, "pcc7": 0.9999329448662363, "pcc32": 0.9999258113113505, "maxabs7": 0.02204713225364685}
+{"tag": "libero_spatial/t9/i3/call12/step70", "n_lang": 17, "pcc7": 0.999871482418114, "pcc32": 0.9998768499408722, "maxabs7": 0.030994266271591187}
+{
+ "shape": "libero 2x224^2, lang_len 32, H 10",
+ "traced": true,
+ "fused_cfg": {
+  "trace": "True",
+  "trace_region_size": "160000000",
+  "residual": "bf16",
+  "mlp_chunk": "256",
+  "vlm_down_pc": "mcast2d",
+  "vlm_gateup_pc": "mcast2d",
+  "vlm_attn_pc": "mcast2d",
+  "siglip_pc": "mcast2d",
+  "siglip_batched": "True",
+  "skip_vlm_tail": "True",
+  "sdpa_vlm": "None",
+  "sdpa_expert": "None",
+  "sdpa_siglip": "None",
+  "dit_blocks": "(1, 8, 4, 1, 4, 0, 2)",
+  "euler_dit_blocks": "(1, 8, 1, 1, 1, 0, 2)",
+  "expert_mm": "mcast1d_fp32",
+  "expert_mm_blocks": "(1, 8, 4, 1, 4, 0, 2)",
+  "tp": "1",
+  "ccl_topology": "ring",
+  "env_keys": "()",
+  "kv_dtype": "bf8",
+  "expert_geglu": "True",
+  "expert_attn": "fused",
+  "expert_norm_fold": "True",
+  "megakernel": "expert"
+ },
+ "stamp": {
+  "megakernel_backend": "expert",
+  "megakernel_program": {
+   "kernel_digest": "328761c8a1ce3fd9",
+   "sources": [
+    "mk_brisc.cpp",
+    "mk_defs.hpp",
+    "mk_dm.hpp",
+    "mk_ncrisc.cpp",
+    "mk_trisc.cpp"
+   ]
+  }
+ },
+ "pcc7_mean": 0.9998843910879764,
+ "pcc7_min": 0.9997776780152333,
+ "ten_replays_bit_identical": true,
+ "latency": {
+  "runs": 60,
+  "call_ms_median": 65.51371149544138,
+  "call_ms_min": 65.24633499793708,
+  "replay_ms_median": 64.37926250509918,
+  "replay_ms_min": 64.27503100712784
+ }
+}
+.Fetching 7 files:   0%|          | 0/7 [00:00<?, ?it/s]Fetching 7 files: 100%|██████████| 7/7 [00:00<00:00, 26379.27it/s]
+[pi0.5] expert adaRMS norms folded into per-step weights in 5.1s
+{
+ "shape": "base 2x224^2, 224 tokens, H 50",
+ "n_real": [
+  40,
+  97,
+  12,
+  150,
+  201,
+  224
+ ],
+ "traced": true,
+ "stamp": {
+  "megakernel_backend": "expert",
+  "megakernel_program": {
+   "kernel_digest": "328761c8a1ce3fd9",
+   "sources": [
+    "mk_brisc.cpp",
+    "mk_defs.hpp",
+    "mk_dm.hpp",
+    "mk_ncrisc.cpp",
+    "mk_trisc.cpp"
+   ]
+  }
+ },
+ "fused_cfg": {
+  "trace": "True",
+  "trace_region_size": "160000000",
+  "residual": "bf16",
+  "mlp_chunk": "256",
+  "vlm_down_pc": "mcast2d",
+  "vlm_gateup_pc": "mcast2d",
+  "vlm_attn_pc": "mcast2d",
+  "siglip_pc": "mcast2d",
+  "siglip_batched": "True",
+  "skip_vlm_tail": "True",
+  "sdpa_vlm": "None",
+  "sdpa_expert": "None",
+  "sdpa_siglip": "None",
+  "dit_blocks": "(1, 8, 4, 1, 4, 0, 2)",
+  "euler_dit_blocks": "(1, 8, 1, 1, 1, 0, 2)",
+  "expert_mm": "mcast1d_fp32",
+  "expert_mm_blocks": "(1, 8, 4, 1, 4, 0, 2)",
+  "tp": "1",
+  "ccl_topology": "ring",
+  "env_keys": "()",
+  "kv_dtype": "bf8",
+  "expert_geglu": "True",
+  "expert_attn": "fused",
+  "expert_norm_fold": "True",
+  "megakernel": "expert"
+ },
+ "pcc_vs_reference": [
+  0.9991697287151383,
+  0.9719020755730118,
+  0.9483285379052653,
+  0.9985041475419293,
+  0.993562478193296,
+  0.9880997266098397
+ ],
+ "masked_vs_unmasked_pcc": -0.6754372145431576,
+ "masked_vs_unmasked_maxabs": 1.66015625,
+ "unmasked_pcc_vs_reference": -0.68697968251298,
+ "pad_ids_invisible_bit_identical": true,
+ "default_mask_bit_identical": true,
+ "ten_replays_bit_identical": true,
+ "latency": {
+  "runs": 60,
+  "call_ms_median": 70.84711850620806,
+  "call_ms_min": 70.49335399642587,
+  "replay_ms_median": 69.53608199546579,
+  "replay_ms_min": 69.48642400675453
+ }
+}
+F
+=================================== FAILURES ===================================
+________________________ test_base_padded_vs_reference _________________________
+
+device = MeshDevice(1x1 grid, 1 devices)
+
+    def test_base_padded_vs_reference(device):
+        res = run_base(device)
+        print(json.dumps(res, indent=1))
+        assert res["stamp"]["megakernel_backend"] == FusedConfig.from_env().megakernel
+        assert res["traced"] and res["ten_replays_bit_identical"]
+>       assert min(res["pcc_vs_reference"]) >= PCC_BASE_MIN
+E       assert 0.9483285379052653 >= 0.95
+E        +  where 0.9483285379052653 = min([0.9991697287151383, 0.9719020755730118, 0.9483285379052653, 0.9985041475419293, 0.993562478193296, 0.9880997266098397])
+
+models/experimental/pi0_5/tests/pcc/test_pcc_pi05_fused.py:204: AssertionError
+=========================== short test summary info ============================
+FAILED models/experimental/pi0_5/tests/pcc/test_pcc_pi05_fused.py::test_base_padded_vs_reference
+1 failed, 1 passed in 122.64s (0:02:02)
+2026-09-30 16:43:34.399 | info     |    BuildKernels | JIT cache stats: 362/362 hits (100.0%) [362 cached, 84 build-once dedup, 0 merged artifacts, 0 merged genfiles] (build_cache_telemetry.cpp:268)
+2026-09-30 16:43:34.399 | info     |    BuildKernels | JIT telemetry: 33 registered TelemetryTokens (build_cache_telemetry.cpp:325)
+2026-09-30 16:43:34.404 | info     |          Device | Closing user mode device drivers (tt_cluster.cpp:550)
+2026-09-30 16:43:34.404 | info     |             UMD | Closing devices in cluster (cluster.cpp:1302)
+2026-09-30 16:43:34.565 | info     |             UMD | Closing devices in cluster completed. (cluster.cpp:1311)
+2026-09-30 16:43:34.565 | info     |             UMD | Cluster destructor started. (cluster.cpp:1017)
+2026-09-30 16:43:34.565 | info     |             UMD | Cluster destructor completed. (cluster.cpp:1020)

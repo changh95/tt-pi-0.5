@@ -1,0 +1,26 @@
+[2026-09-30 14:05:15] HEAD 6b8632c kernels md5 f251efa14d464d02
+[2026-09-30 14:05:15] soak_one expert start
+[2026-09-30 14:06:32] soak_one rc=0 RESULT {"backend": "expert", "digest_kernel": "328761c8a1ce3fd9", "calls": 31, "all_equal": true, "digest": "c9a66e4da14f7563", "wall_s": 74.4, "time": "2026-09-30 14:06:31"}
+[2026-09-30 14:06:32] E2 libero n_lang 32,1 start
+[2026-09-30 14:08:02] E2 rc=0
+[2026-09-30 14:08:02] L1 guard start
+[2026-09-30 14:09:14] L1 guard rc=0
+[2026-09-30 14:09:14] SERVE expert
+smoke rc=0 PASS pi05 actions=(50,32) max|a|=0.277 std=0.074 repeat_maxdiff=0.0000 change_maxdiff=0.8174 inference_ms=75.18/71.53 tokens=143/224 truncated=False
+RESULT {"n": 30, "total_ms_median": 72.28999999999999, "inference_ms_median": 70.93, "client_wall_ms_median": 73.75821248569991, "megakernel": {"backend": "expert", "program": {"kernel_digest": "328761c8a1ce3fd9", "sources": ["mk_brisc.cpp", "mk_defs.hpp", "mk_dm.hpp", "mk_ncrisc.cpp", "mk_trisc.cpp"]}}, "hardware": "Tenstorrent Blackhole, single chip (mesh 1x1) via tt-nn; fused whole-graph sample_actions_fused: ttnn SigLIP / VLM prefix + ONE megakernel generic_op for the whole 10-step action expert loop, one Metal trace", "time": "2026-09-30 14:10:02"}
+info megakernel {'backend': 'expert', 'program': {'kernel_digest': '328761c8a1ce3fd9', 'sources': ['mk_brisc.cpp', 'mk_defs.hpp', 'mk_dm.hpp', 'mk_ncrisc.cpp', 'mk_trisc.cpp']}}
+[2026-09-30 14:10:03] SERVE off
+smoke rc=0 PASS pi05 actions=(50,32) max|a|=0.268 std=0.074 repeat_maxdiff=0.0000 change_maxdiff=0.8242 inference_ms=88.31/84.98 tokens=143/224 truncated=False
+RESULT {"n": 30, "total_ms_median": 85.325, "inference_ms_median": 83.94, "client_wall_ms_median": 86.49054050329141, "megakernel": {"backend": "off", "program": null}, "hardware": "Tenstorrent Blackhole, single chip (mesh 1x1) via tt-nn; fused whole-graph sample_actions_fused, one Metal trace per batch size", "time": "2026-09-30 14:10:41"}
+info megakernel {'backend': 'off', 'program': None}
+[2026-09-30 14:10:42] SERVE expert
+smoke rc=0 PASS pi05 actions=(50,32) max|a|=0.277 std=0.074 repeat_maxdiff=0.0000 change_maxdiff=0.8174 inference_ms=75.82/71.27 tokens=143/224 truncated=False
+RESULT {"n": 30, "total_ms_median": 72.19, "inference_ms_median": 70.78, "client_wall_ms_median": 73.32793751265854, "megakernel": {"backend": "expert", "program": {"kernel_digest": "328761c8a1ce3fd9", "sources": ["mk_brisc.cpp", "mk_defs.hpp", "mk_dm.hpp", "mk_ncrisc.cpp", "mk_trisc.cpp"]}}, "hardware": "Tenstorrent Blackhole, single chip (mesh 1x1) via tt-nn; fused whole-graph sample_actions_fused: ttnn SigLIP / VLM prefix + ONE megakernel generic_op for the whole 10-step action expert loop, one Metal trace", "time": "2026-09-30 14:11:29"}
+info megakernel {'backend': 'expert', 'program': {'kernel_digest': '328761c8a1ce3fd9', 'sources': ['mk_brisc.cpp', 'mk_defs.hpp', 'mk_dm.hpp', 'mk_ncrisc.cpp', 'mk_trisc.cpp']}}
+[2026-09-30 14:11:31] SERVE off
+smoke rc=0 PASS pi05 actions=(50,32) max|a|=0.268 std=0.074 repeat_maxdiff=0.0000 change_maxdiff=0.8242 inference_ms=88.26/85.14 tokens=143/224 truncated=False
+RESULT {"n": 30, "total_ms_median": 85.545, "inference_ms_median": 84.1, "client_wall_ms_median": 86.83482599735726, "megakernel": {"backend": "off", "program": null}, "hardware": "Tenstorrent Blackhole, single chip (mesh 1x1) via tt-nn; fused whole-graph sample_actions_fused, one Metal trace per batch size", "time": "2026-09-30 14:12:04"}
+info megakernel {'backend': 'off', 'program': None}
+[2026-09-30 14:12:05] END
+2026-09-30_14:12:05 [device-guard pid=752538] RESET AFTER JOB (WITH_DEVICE_RESET_AFTER=1, rc=0): /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/fixp1/hold.sh
+2026-09-30_14:12:05 [device-guard pid=752538] RESET: tt-smi -r 0 (probe hung/failed with no other device users)

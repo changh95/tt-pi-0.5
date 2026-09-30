@@ -1,0 +1,55 @@
+expert layer bytes mix 24281088 allbfp8 18382848
+per step mix MB 437.1, per request GB 4.371
+stream per layer us: bfp8 part 28.3 bf16 part 27.1 total 55.4 ; allbfp8 44.4
+qkv share/core (80 cores, 32 K tiles bfp8) B 34816
+o share/core (32 cores, 64 tiles bf16) B 131072
+ug share/core (64 cores, 4N x 32K bfp8) B 139264
+down share/core (64 cores, 16K x 4N bf16) B 131072
+  c0 cb_in0 arena max(x bf16 64t, ctx bfp8 128t)     139264
+  c1 cb_w weight ring 16 x 16 KiB                    262144
+  c2 cb_acc fp32 8t                                   32768
+  c3 cb_out bf16 8t                                   16384
+  c4 cb_q landing 16t bf16                            32768
+  c5 cb_qr 8t bf16                                    16384
+  c6 cb_rtmp 8t bf16                                  16384
+  c7 cb_rope cos/sin 16t bf16                         32768
+  c8 cb_kv 2 x (5 key x 8 dh x 2) bfp8               174080
+  c9 cb_ksuf 32t bf16                                 65536
+  c10 cb_mask 5t bf16                                 10240
+  c11 cb_s 5t fp32                                    20480
+  c12 cb_oacc 8t fp32                                 32768
+  c13 cb_ml 4t fp32                                   16384
+  c14 cb_part 4 x (8t bf16 + 2t fp32)                 98304
+  c15 cb_ctx 8t bfp8                                   8704
+  c16 cb_r 2t bf16                                     4096
+  c17 cb_bias 6t bf16                                 12288
+  c18 cb_ug 4t fp32                                   16384
+  c19 cb_h 4t bf16                                     8192
+  c20 cb_hg 32t bf16                                  65536
+  c21 cb_dpart 8t fp32                                32768
+  c22 cb_red 7x2t fp32                                57344
+  c23 cb_x fp32 2t                                     8192
+  c24 cb_xs bf16 2t                                    4096
+  c25 cb_const 4t                                      8192
+  c26 cb_fence                                         4096
+  c27 cb_sync                                          2048
+heaviest core total 1198592 KiB 1170.5
+allocatable under 64 KiB cut 1362944
+co-tenant KV caches total 7833600 per core over 110 banks 71214
+headroom 93138
+base {'x_round': 6.5, 'qkv': 1.86, 'qkv_dist': 3.5, 'attn': 9.6, 'merge': 12.0, 'ctx_round': 6.5, 'o_proj': 4.21, 'xmid_round': 6.5, 'ug': 7.42, 'geglu': 6.0, 'h_exch': 4.0, 'down': 3.71, 'reduce': 5.0} chain 76.8
+  layer 76.8 us  step 1390.5 us  request 13.90 ms  x1.36 18.91  x1.68 23.36
+libero {'x_round': 4.5, 'qkv': 0.93, 'qkv_dist': 2.5, 'attn': 5.48, 'merge': 12.0, 'ctx_round': 4.5, 'o_proj': 2.36, 'xmid_round': 4.5, 'ug': 3.71, 'geglu': 3.0, 'h_exch': 3.0, 'down': 1.86, 'reduce': 4.0} chain 52.3
+  layer 55.4 us  step 1004.7 us  request 10.05 ms  x1.36 13.66  x1.68 16.88
+---- phase 2 ----
+{'qkv': 7.71751936, 'o': 6.174015488, 'gu': 98.784247808, 'dn': 49.392123904} layer GF 162.06790656
+VLM lower {'qkv': 32.9, 'o': 26.2, 'gu': 588.0, 'gelu': 68.3, 'mul': 11.8, 'dn': 200.0, 'attn': 159.6, 'norms': 30.6, 'exch': 84.7} sum us 1202
+VLM upper {'qkv': 58.0, 'o': 46.4, 'gu': 1050.9, 'gelu': 176.6, 'mul': 11.8, 'dn': 422.2, 'attn': 159.6, 'norms': 30.6, 'exch': 190.0} sum us 2146
+VLM point (lower x1.36) 1635 us ; stack 17 layers: lower 20.5 point 27.9 upper 36.6 ms
+LIBERO VLM (FLOP-scaled 0.739): lower 15.2 point 20.6 upper 27.1 ms
+{'qkv': 5.435817984, 'o': 1.811939328, 'fc1': 5.09607936, 'fc2': 5.09607936}
+SigLIP lower {'qkv': 39.5, 'o': 17.5, 'fc1': 36.2, 'gelu': 12.5, 'fc2': 52.5, 'attn': 30.1, 'ln': 30.6, 'exch': 14.6} layer 234 us tower lower 6.40 point 8.70 ms
+phase1 whole call base: bottom-up 66.7 point 71.7 first-build 76.1
+phase1 whole call libero: 58.8 62.4 65.6
+phase2 base: low 42.4 point 57.1 high 72.3
+phase2 libero: low 32.9 point 44.3 high 56.0

@@ -1,0 +1,12 @@
+{
+ "n": 30,
+ "total_ms_median": 85.245,
+ "inference_ms_median": 83.92,
+ "client_wall_ms_median": 86.50035999016836,
+ "megakernel": {
+  "backend": "off",
+  "program": null
+ },
+ "hardware": "Tenstorrent Blackhole, single chip (mesh 1x1) via tt-nn; fused whole-graph sample_actions_fused, one Metal trace per batch size",
+ "time": "2026-09-30 16:52:42"
+}

@@ -1,0 +1,25 @@
+2026-09-30_17:05:55 SERVE default (default_170555) want backend=expert
+2026-09-30_17:06:40 health=1 info backend=expert pid=903364
+smoke rc=0 PASS pi05 actions=(50,32) max|a|=0.277 std=0.074 repeat_maxdiff=0.0000 change_maxdiff=0.8174 inference_ms=75.52/71.25 tokens=143/224 truncated=False
+RESULT {"n": 30, "total_ms_median": 72.31, "inference_ms_median": 70.92500000000001, "client_wall_ms_median": 73.49556050030515, "megakernel": {"backend": "expert", "program": {"kernel_digest": "328761c8a1ce3fd9", "sources": ["mk_brisc.cpp", "mk_defs.hpp", "mk_dm.hpp", "mk_ncrisc.cpp", "mk_trisc.cpp"]}}, "hardware": "Tenstorrent Blackhole, single chip (mesh 1x1) via tt-nn; fused whole-graph sample_actions_fused: traced stock-ttnn SigLIP / VLM prefix + the phase-1 expert megakernel (ONE persistent generic_op for the whole 10-step action expert loop), one Metal trace", "time": "2026-09-30 17:06:43"}
+RESULT {"time": "2026-09-30 17:06:43", "num_tokens": [2, 1], "X_repeat_identical": true, "X_vs_Y_identical": false, "X_vs_Y_maxabs": 0.852142333984375, "batched_as": [1, 1], "pass": true}
+2026-09-30_17:06:45 server stopped, no uvicorn left
+2026-09-30_17:06:45 SERVE off (off_170645) want backend=off
+2026-09-30_17:07:15 health=1 info backend=off pid=904346
+smoke rc=0 PASS pi05 actions=(50,32) max|a|=0.268 std=0.074 repeat_maxdiff=0.0000 change_maxdiff=0.8242 inference_ms=88.53/84.26 tokens=143/224 truncated=False
+RESULT {"n": 30, "total_ms_median": 85.525, "inference_ms_median": 84.03999999999999, "client_wall_ms_median": 86.84632350923494, "megakernel": {"backend": "off", "program": null}, "hardware": "Tenstorrent Blackhole, single chip (mesh 1x1) via tt-nn; fused whole-graph sample_actions_fused, one Metal trace per batch size", "time": "2026-09-30 17:07:18"}
+RESULT {"time": "2026-09-30 17:07:19", "num_tokens": [2, 1], "X_repeat_identical": true, "X_vs_Y_identical": false, "X_vs_Y_maxabs": 0.84912109375, "batched_as": [1, 1], "pass": true}
+2026-09-30_17:07:21 server stopped, no uvicorn left
+2026-09-30_17:07:21 SERVE default (default_170721) want backend=expert
+2026-09-30_17:08:06 health=1 info backend=expert pid=904791
+smoke rc=0 PASS pi05 actions=(50,32) max|a|=0.277 std=0.074 repeat_maxdiff=0.0000 change_maxdiff=0.8174 inference_ms=75.22/70.94 tokens=143/224 truncated=False
+RESULT {"n": 30, "total_ms_median": 72.28, "inference_ms_median": 70.875, "client_wall_ms_median": 73.46903301368002, "megakernel": {"backend": "expert", "program": {"kernel_digest": "328761c8a1ce3fd9", "sources": ["mk_brisc.cpp", "mk_defs.hpp", "mk_dm.hpp", "mk_ncrisc.cpp", "mk_trisc.cpp"]}}, "hardware": "Tenstorrent Blackhole, single chip (mesh 1x1) via tt-nn; fused whole-graph sample_actions_fused: traced stock-ttnn SigLIP / VLM prefix + the phase-1 expert megakernel (ONE persistent generic_op for the whole 10-step action expert loop), one Metal trace", "time": "2026-09-30 17:08:09"}
+RESULT {"time": "2026-09-30 17:08:09", "num_tokens": [2, 1], "X_repeat_identical": true, "X_vs_Y_identical": false, "X_vs_Y_maxabs": 0.852142333984375, "batched_as": [1, 1], "pass": true}
+2026-09-30_17:08:11 server stopped, no uvicorn left
+2026-09-30_17:08:11 SERVE off (off_170811) want backend=off
+2026-09-30_17:08:41 health=1 info backend=off pid=905226
+smoke rc=0 PASS pi05 actions=(50,32) max|a|=0.268 std=0.074 repeat_maxdiff=0.0000 change_maxdiff=0.8242 inference_ms=88.31/84.36 tokens=143/224 truncated=False
+RESULT {"n": 30, "total_ms_median": 85.495, "inference_ms_median": 84.1, "client_wall_ms_median": 86.8385334906634, "megakernel": {"backend": "off", "program": null}, "hardware": "Tenstorrent Blackhole, single chip (mesh 1x1) via tt-nn; fused whole-graph sample_actions_fused, one Metal trace per batch size", "time": "2026-09-30 17:08:44"}
+RESULT {"time": "2026-09-30 17:08:45", "num_tokens": [2, 1], "X_repeat_identical": true, "X_vs_Y_identical": false, "X_vs_Y_maxabs": 0.84912109375, "batched_as": [1, 1], "pass": true}
+2026-09-30_17:08:47 server stopped, no uvicorn left
+2026-09-30_17:08:47 END

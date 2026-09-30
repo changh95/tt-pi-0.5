@@ -1,0 +1,11 @@
+2026-09-30_16:08:37 START prof default base
+2026-09-30_16:12:21 END prof default base rc=0
+2026-09-30_16:12:24 START prof off base
+2026-09-30_16:15:06 END prof off base rc=0
+2026-09-30_16:15:08 START prof default libero
+2026-09-30_16:18:44 END prof default libero rc=0
+2026-09-30_16:18:48 START prof off libero
+2026-09-30_16:20:51 END prof off libero rc=0
+2026-09-30_16:20:52 [device-guard pid=863764] RESET AFTER JOB (WITH_DEVICE_RESET_AFTER=1, rc=0): timeout 1800 /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/ip1/hold2.sh
+2026-09-30_16:20:52 [device-guard pid=863764] RESET: tt-smi -r 0 (probe hung/failed with no other device users)
+2026-09-30_16:21:34 [device-guard pid=863764] reset exit=0

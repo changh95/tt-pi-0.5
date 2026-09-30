@@ -1,0 +1,21 @@
+{
+ "n": 30,
+ "total_ms_median": 72.27,
+ "inference_ms_median": 70.97,
+ "client_wall_ms_median": 73.41836951673031,
+ "megakernel": {
+  "backend": "expert",
+  "program": {
+   "kernel_digest": "328761c8a1ce3fd9",
+   "sources": [
+    "mk_brisc.cpp",
+    "mk_defs.hpp",
+    "mk_dm.hpp",
+    "mk_ncrisc.cpp",
+    "mk_trisc.cpp"
+   ]
+  }
+ },
+ "hardware": "Tenstorrent Blackhole, single chip (mesh 1x1) via tt-nn; fused whole-graph sample_actions_fused: traced stock-ttnn SigLIP / VLM prefix + the phase-1 expert megakernel (ONE persistent generic_op for the whole 10-step action expert loop), one Metal trace",
+ "time": "2026-09-30 16:46:03"
+}

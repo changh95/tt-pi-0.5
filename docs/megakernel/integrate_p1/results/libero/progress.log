@@ -1,0 +1,15 @@
+[2026. 09. 30. (수) 16:41:55 KST] start open-loop PCC (default path, PI05_MEGAKERNEL unset)
+[2026. 09. 30. (수) 16:49:46 KST] open-loop rc=0 [2026-09-30 16:49:45] SUMMARY {"mean_pcc_7": 0.9998843910879766, "min_pcc_7": 0.9997776780152338, "min_pcc_all32": 0.9997864261239592, "max_maxabs_env": 0.018689990043640137, "all_deterministic": true, "host_preproc_ok": true, "steady_call_ms_median": 65.75}
+[2026. 09. 30. (수) 16:49:46 KST] launching server
+[2026. 09. 30. (수) 16:54:32 KST] client start
+[2026. 09. 30. (수) 17:00:50 KST] client rc=0
+[2026. 09. 30. (수) 17:05:52 KST] server rc=0
+[2026. 09. 30. (수) 17:05:52 KST] eval rc=0
+[2026. 09. 30. (수) 17:05:52 KST] summary rc=0 "successes": 99
+[2026. 09. 30. (수) 17:06:03 KST] record: launching server
+[2026. 09. 30. (수) 17:09:30 KST] record: client start 3:0,7:0,0:0,5:0
+[2026. 09. 30. (수) 17:10:09 KST] record: client rc=0
+[2026. 09. 30. (수) 17:11:41 KST] record: server rc=0
+[2026. 09. 30. (수) 17:11:51 KST] rendered captions + combined
+[2026. 09. 30. (수) 17:12:21 KST] rendered captions + combined
+[2026. 09. 30. (수) 17:12:51 KST] demo + manifest done

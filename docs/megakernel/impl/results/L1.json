@@ -1,0 +1,113 @@
+{
+ "shape": "libero 2x224^2, lang_len 32, H 10",
+ "traced": true,
+ "fused_cfg": {
+  "trace": "True",
+  "trace_region_size": "160000000",
+  "residual": "bf16",
+  "mlp_chunk": "256",
+  "vlm_down_pc": "mcast2d",
+  "vlm_gateup_pc": "mcast2d",
+  "vlm_attn_pc": "mcast2d",
+  "siglip_pc": "mcast2d",
+  "siglip_batched": "True",
+  "skip_vlm_tail": "True",
+  "sdpa_vlm": "None",
+  "sdpa_expert": "None",
+  "sdpa_siglip": "None",
+  "dit_blocks": "(1, 8, 4, 1, 4, 0, 2)",
+  "euler_dit_blocks": "(1, 8, 1, 1, 1, 0, 2)",
+  "expert_mm": "mcast1d_fp32",
+  "expert_mm_blocks": "(1, 8, 4, 1, 4, 0, 2)",
+  "tp": "1",
+  "ccl_topology": "ring",
+  "env_keys": "('PI05_MEGAKERNEL',)",
+  "kv_dtype": "bf8",
+  "expert_geglu": "True",
+  "expert_attn": "fused",
+  "expert_norm_fold": "True",
+  "megakernel": "expert"
+ },
+ "stamp": {
+  "megakernel_backend": "expert",
+  "megakernel_program": {
+   "kernel_digest": "a49dc25ead1de0e7",
+   "sources": [
+    "mk_brisc.cpp",
+    "mk_defs.hpp",
+    "mk_dm.hpp",
+    "mk_ncrisc.cpp",
+    "mk_trisc.cpp"
+   ]
+  }
+ },
+ "rows": [
+  {
+   "tag": "libero_spatial/t0/i0/call0/step10",
+   "n_lang": 20,
+   "pcc7": 0.9999039122627739,
+   "pcc32": 0.9998826869970211,
+   "maxabs7": 0.03245469927787781
+  },
+  {
+   "tag": "libero_spatial/t0/i0/call12/step70",
+   "n_lang": 20,
+   "pcc7": 0.9998407975564166,
+   "pcc32": 0.9998683637115771,
+   "maxabs7": 0.035573750734329224
+  },
+  {
+   "tag": "libero_spatial/t3/i1/call0/step10",
+   "n_lang": 17,
+   "pcc7": 0.9999282976287424,
+   "pcc32": 0.9999245504978276,
+   "maxabs7": 0.02328905463218689
+  },
+  {
+   "tag": "libero_spatial/t3/i1/call12/step70",
+   "n_lang": 17,
+   "pcc7": 0.9999685373084,
+   "pcc32": 0.9999638399877339,
+   "maxabs7": 0.014580488204956055
+  },
+  {
+   "tag": "libero_spatial/t6/i2/call0/step10",
+   "n_lang": 18,
+   "pcc7": 0.9997842343189124,
+   "pcc32": 0.9997904609071698,
+   "maxabs7": 0.05097472667694092
+  },
+  {
+   "tag": "libero_spatial/t6/i2/call12/step70",
+   "n_lang": 18,
+   "pcc7": 0.9998099509269427,
+   "pcc32": 0.9997984906664273,
+   "maxabs7": 0.062270134687423706
+  },
+  {
+   "tag": "libero_spatial/t9/i3/call0/step10",
+   "n_lang": 17,
+   "pcc7": 0.9999341624025951,
+   "pcc32": 0.9999270793294043,
+   "maxabs7": 0.020283222198486328
+  },
+  {
+   "tag": "libero_spatial/t9/i3/call12/step70",
+   "n_lang": 17,
+   "pcc7": 0.9998580311650295,
+   "pcc32": 0.999871387137988,
+   "maxabs7": 0.030994266271591187
+  }
+ ],
+ "pcc7_mean": 0.9998784904462266,
+ "pcc7_min": 0.9997842343189124,
+ "ten_replays_bit_identical": true,
+ "latency": {
+  "runs": 60,
+  "call_ms_median": 65.58583400328644,
+  "call_ms_min": 65.30091000604443,
+  "replay_ms_median": 64.35770100506488,
+  "replay_ms_min": 64.21653597499244
+ },
+ "time": "2026-09-30 02:30:07"
+}

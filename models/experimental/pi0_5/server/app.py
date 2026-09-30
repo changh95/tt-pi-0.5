@@ -17,8 +17,9 @@ has run (kernels compiled, trace captured).
 Recipe (the one the port validated -- ``tests/pcc/test_pcc_pi05_fused.py`` and the LIBERO
 closed-loop harness ``tests/pcc/test_rollout_libero.py``):
 
-* ``device = ttnn.open_device(device_id, l1_small_size=24576, trace_region_size=...)`` (single
-  chip) or a MeshDevice (``TT_MESH_SHAPE``); ``PI0ModelTTNN.sample_actions_fused``.
+* ``device = ttnn.open_device(**common.device_open.device_kwargs(...))`` (single chip: l1_small_size=24576,
+  trace_region_size=..., and the 64 KiB worker-L1 cut the default ``PI05_MEGAKERNEL=expert`` needs) or a
+  MeshDevice (``TT_MESH_SHAPE``); ``PI0ModelTTNN.sample_actions_fused``.
 * ``PI0ModelConfig(action_dim=32, action_horizon=50, state_dim=32, pi05=True)`` with the
   default ``SigLIPConfig`` (224 px, patch 14 -> 256 tokens per image).
 * weights: ``PI0WeightLoader(<HF snapshot dir>)`` -- resolved with ``hf_hub_download`` of
@@ -61,6 +62,12 @@ backbone-owned KV caches -> 10 fused expert steps) reads three persistent device
 into ONE Metal trace on the first warm-up call, i.e. before READY; every request then does 3 small
 host->device copies, ``execute_trace`` and one readback. The device is opened with ``trace_region_size``.
 
+``PI05_MEGAKERNEL``        ``expert`` (default): the 10-step action-expert loop + action in / out + Euler is ONE
+                           persistent generic_op (tt/megakernel/) at the end of the trace; the device is opened with
+                           the 64 KiB worker-L1 cut (common/device_open.py). Single chip, batch 1, bf8 K/V, 10 steps:
+                           any other configuration refuses at startup with a log line. ``off``: the previous path
+                           (stock ttnn expert ops), kept only as the comparator. On a multi-chip mesh the UNSET default
+                           is ``off`` (the megakernel is a single-p150a program).
 ``TT_FUSED``               unset or ``1``; ``0`` / ``false`` / ``off`` fails startup (the unfused path was removed)
 ``PI05_TRACE``             ``0`` runs the fused graph eagerly (no trace; debug / A/B). Default ``1``.
 ``PI05_TRACE_REGION_SIZE`` bytes for the trace region (default 160000000, an estimate).
@@ -474,9 +481,14 @@ class _Batcher:
         self._thread = threading.Thread(target=self._loop, name="pi05-batcher", daemon=True)
         self._thread.start()
 
-    def submit(self, images: List[torch.Tensor], ids: torch.Tensor, noise: Optional[torch.Tensor]) -> Future:
+    def submit(self, images: List[torch.Tensor], ids: torch.Tensor, mask: torch.Tensor,
+               noise: Optional[torch.Tensor]) -> Future:
+        """``mask``: the request's own ``(1, L)`` bool language mask (tokenizer attention mask, or the pre-tokenised
+        length). It is passed to the model as ``lang_masks``; the batcher never re-derives it from ``ids != 0``."""
+        if mask is None or tuple(mask.shape) != tuple(ids.shape):
+            raise ValueError(f"lang mask {None if mask is None else tuple(mask.shape)} != tokens {tuple(ids.shape)}")
         fut: Future = Future()
-        self.q.put((images, ids, noise, fut))
+        self.q.put((images, ids, mask, noise, fut))
         return fut
 
     def _pick_size(self, n: int) -> int:
@@ -504,23 +516,25 @@ class _Batcher:
             b = self._pick_size(n)
             try:
                 padded = group + [group[-1]] * (b - n)
-                images = [img for (imgs, _ids, _noise, _fut) in padded for img in imgs]
+                images = [img for (imgs, _ids, _mask, _noise, _fut) in padded for img in imgs]
                 ids = torch.cat([r[1] for r in padded], dim=0)
+                masks = torch.cat([r[2] for r in padded], dim=0).bool()
                 noise = None
-                if any(r[2] is not None for r in padded):
+                if any(r[3] is not None for r in padded):
                     default = self.model._default_noise_torch.reshape(1, ACTION_HORIZON, ACTION_DIM)
-                    noise = torch.cat([r[2] if r[2] is not None else default for r in padded], dim=0)
+                    noise = torch.cat([r[3] if r[3] is not None else default for r in padded], dim=0)
                 with torch.inference_mode():
-                    actions = self.model.sample_actions_fused(images=images, lang_tokens=ids, noise=noise)
+                    actions = self.model.sample_actions_fused(images=images, lang_tokens=ids, noise=noise,
+                                                              lang_masks=masks)
                 if tuple(actions.shape) != (b, ACTION_HORIZON, ACTION_DIM):
                     raise RuntimeError(f"unexpected action shape {tuple(actions.shape)} for batch {b}")
                 self.stats["forwards"] += 1
                 self.stats["requests"] += n
                 self.stats["by_batch"][str(b)] += 1
-                for i, (_imgs, _ids, _noise, fut) in enumerate(group):
+                for i, (_imgs, _ids, _mask, _noise, fut) in enumerate(group):
                     fut.set_result((actions[i : i + 1].clone(), b))
             except BaseException as e:  # noqa: BLE001
-                for _imgs, _ids, _noise, fut in group:
+                for _imgs, _ids, _mask, _noise, fut in group:
                     if not fut.done():
                         fut.set_exception(e)
 
@@ -538,12 +552,13 @@ class _DPRouter:
         self._lock = threading.Lock()
         self.stats = {"routed": [0] * len(batchers), "groups": [b.stats for b in batchers]}
 
-    def submit(self, images: List[torch.Tensor], ids: torch.Tensor, noise: Optional[torch.Tensor]) -> Future:
+    def submit(self, images: List[torch.Tensor], ids: torch.Tensor, mask: torch.Tensor,
+               noise: Optional[torch.Tensor]) -> Future:
         with self._lock:
             g = min(range(len(self.batchers)), key=lambda i: (self._inflight[i], i))
             self._inflight[g] += 1
             self.stats["routed"][g] += 1
-        fut = self.batchers[g].submit(images, ids, noise)
+        fut = self.batchers[g].submit(images, ids, mask, noise)
 
         def _done(_f, g=g):
             with self._lock:
@@ -621,14 +636,15 @@ def _start_dp(cfg: ServerConfig, config, loader, fused_cfg, device, tokenizer, n
             m.backbone.torch_weights = None
         _free_host_weights(models[0], loader)
 
-    images, ids, _mask, _state = _warmup_inputs(cfg, tokenizer)
+    images, ids, mask, _state = _warmup_inputs(cfg, tokenizer)
     latencies: List[float] = []
     for gi, m in enumerate(models):
         for b in cfg.batch_sizes:
             for i in range(cfg.warmup_runs):
                 t0 = time.perf_counter()
                 with torch.inference_mode():
-                    acts = m.sample_actions_fused(images=images * b, lang_tokens=ids.repeat(b, 1))
+                    acts = m.sample_actions_fused(images=images * b, lang_tokens=ids.repeat(b, 1),
+                                                  lang_masks=mask.repeat(b, 1))
                 dt = (time.perf_counter() - t0) * 1000.0
                 if tuple(acts.shape) != (b, ACTION_HORIZON, ACTION_DIM) or not torch.isfinite(acts).all():
                     raise RuntimeError(f"warm-up of group {gi} at batch {b} produced {tuple(acts.shape)}")
@@ -685,6 +701,27 @@ async def lifespan(_app: FastAPI):
     STATE["fused"] = fused_cfg.describe()
     if cfg.layout == "dp" and mesh == (1, 1):
         raise RuntimeError("PI05_LAYOUT=dp needs a multi-chip mesh (TT_MESH_SHAPE)")
+    if fused_cfg.megakernel != "off" and not fused_cfg.megakernel_explicit and mesh != (1, 1):
+        # the UNSET default on a multi-chip mesh is the stock-op path (FusedConfig.resolved does the same in the model)
+        from dataclasses import replace as _replace
+
+        LOG.info("PI05_MEGAKERNEL unset on a %sx%s mesh: the single-chip megakernel does not apply -> off", *mesh)
+        fused_cfg = _replace(fused_cfg, megakernel="off")
+        STATE["fused"] = fused_cfg.describe()
+    if fused_cfg.megakernel != "off":
+        # docs/megakernel/DESIGN.md §4.12 refusals: the megakernel is single-chip, batch 1, one prepared shape
+        from models.experimental.pi0_5.tt.megakernel.geometry import megakernel_refusal
+
+        why = megakernel_refusal(fused_cfg.kv_dtype, cfg.num_steps)  # kv dtype and step count the kernels compile
+        if why is None and mesh != (1, 1):
+            why = f"TT_MESH_SHAPE={mesh[0]}x{mesh[1]} (the megakernel is single-chip: use 1x1)"
+        elif why is None and cfg.layout != "mesh":
+            why = f"PI05_LAYOUT={cfg.layout} (single-chip megakernel: use mesh on a 1x1 device)"
+        elif why is None and cfg.batch_sizes != (1,):
+            why = f"PI05_BATCH_SIZES={','.join(map(str, cfg.batch_sizes))} (the megakernel serves batch 1 only)"
+        if why is not None:
+            LOG.error("PI05_MEGAKERNEL=%s refused at startup: %s", fused_cfg.megakernel, why)
+            raise RuntimeError(f"PI05_MEGAKERNEL={fused_cfg.megakernel} refused: {why}")
     if mesh != (1, 1):
         # Multi-chip (2x p300 = 1x4 Ethernet ring): fabric + MeshDevice; the SigLIP tower and the VLM
         # prefill are tensor-parallel over the chips, the expert replicated (tt/ttnn_ccl.py).
@@ -693,9 +730,10 @@ async def lifespan(_app: FastAPI):
         LOG.info("Opening mesh %sx%s (fabric %s) fused=%s", *mesh, fused_cfg.ccl_topology, fused_cfg.describe())
         device = ttnn_ccl.open_mesh(fused_cfg, mesh, l1_small_size=cfg.l1_small_size)
     else:
-        open_kwargs: Dict[str, Any] = {"device_id": cfg.device_id, "l1_small_size": cfg.l1_small_size}
-        if fused_cfg.trace:
-            open_kwargs["trace_region_size"] = fused_cfg.trace_region_size
+        from models.experimental.pi0_5.common.device_open import device_kwargs
+
+        # the one device-open helper: adds the megakernel's 64 KiB worker-L1 cut when PI05_MEGAKERNEL != off
+        open_kwargs: Dict[str, Any] = device_kwargs(fused_cfg, device_id=cfg.device_id, l1_small_size=cfg.l1_small_size)
         LOG.info("Opening device %s%s", open_kwargs, f" fused={fused_cfg.describe()}")
         device = ttnn.open_device(**open_kwargs)
     STATE["device"] = device
@@ -755,7 +793,8 @@ async def lifespan(_app: FastAPI):
                     for i in range(cfg.warmup_runs):
                         t0 = time.perf_counter()
                         with LOCK, torch.inference_mode():
-                            acts = model.sample_actions_fused(images=images * b, lang_tokens=ids.repeat(b, 1))
+                            acts = model.sample_actions_fused(images=images * b, lang_tokens=ids.repeat(b, 1),
+                                                              lang_masks=mask.repeat(b, 1))
                         if tuple(acts.shape) != (b, ACTION_HORIZON, ACTION_DIM) or not torch.isfinite(acts).all():
                             raise RuntimeError(f"warm-up at batch {b} produced {tuple(acts.shape)}")
                         LOG.info("Warmup batch %d %d/%d: %.1f ms", b, i + 1, cfg.warmup_runs, (time.perf_counter() - t0) * 1000)
@@ -773,6 +812,8 @@ async def lifespan(_app: FastAPI):
             if fused_cfg.trace and getattr(model, "_fused_trace_id", None) is None:
                 raise RuntimeError("PI05_TRACE=1 but no trace was captured during warm-up")
             STATE["traced"] = getattr(model, "_fused_trace_id", None) is not None
+            STATE["megakernel"] = {"backend": getattr(model, "megakernel_backend", "off"),
+                                   "program": getattr(model, "megakernel_program", None)}
             STATE["batcher"] = _Batcher(model, cfg.batch_sizes, cfg.batch_window_ms / 1000.0)
             STATE["ready"] = True
             LOG.info(
@@ -925,6 +966,11 @@ def _graph_string(cfg: Optional[ServerConfig], traced: bool) -> str:
         return "fused prefix and expert graphs" + (", one Metal trace per stage per batch size" if traced else ", eager")
     if layout == "dp":
         return "fused whole-graph sample_actions_fused per group" + (", one Metal trace per group per batch size" if traced else ", eager")
+    mk = (STATE.get("megakernel") or {}).get("backend", "off")
+    if mk == "expert":
+        return ("fused whole-graph sample_actions_fused: traced stock-ttnn SigLIP / VLM prefix + the phase-1 expert "
+                "megakernel (ONE persistent generic_op for the whole 10-step action expert loop)"
+                + (", one Metal trace" if traced else ", eager"))
     return "fused whole-graph sample_actions_fused" + (", one Metal trace per batch size" if traced else ", eager")
 
 
@@ -944,6 +990,7 @@ def info() -> dict:
         )
         + _graph_string(cfg, bool(STATE.get("traced"))),
         "fused": STATE.get("fused"),
+        "megakernel": STATE.get("megakernel"),
         "mesh_shape": STATE.get("mesh_shape"),
         "weights": STATE.get("weights")
         or {
@@ -1077,7 +1124,7 @@ def predict(req: PredictRequest) -> dict:
     try:
         batcher = STATE.get("batcher")
         if batcher is not None:
-            actions, batched_as = batcher.submit(images, ids, noise).result(timeout=120.0)
+            actions, batched_as = batcher.submit(images, ids, mask, noise).result(timeout=120.0)
         else:
             with LOCK, torch.inference_mode():
                 actions = run_inference(images, ids, mask, state_t, noise)

@@ -1,0 +1,45 @@
+{
+ "time": "2026-09-30 14:06:44",
+ "shape": "libero",
+ "obs": [
+  [
+   11,
+   32
+  ],
+  [
+   12,
+   1
+  ]
+ ],
+ "worker_l1_cut": true,
+ "latency_off": {
+  "runs": 30,
+  "call_ms_median": 76.90136099699885,
+  "call_ms_min": 76.54843700584024,
+  "replay_ms_median": 75.5895719921682,
+  "replay_ms_min": 75.55161998607218
+ },
+ "stamp_off": "off",
+ "latency_expert": {
+  "runs": 30,
+  "call_ms_median": 65.71378649096005,
+  "call_ms_min": 65.42771399836056,
+  "replay_ms_median": 64.39843098632991,
+  "replay_ms_min": 64.35029601561837
+ },
+ "stamp_expert": "expert",
+ "pcc_off_vs_ref": [
+  0.9994925956956348,
+  0.9993009724586022
+ ],
+ "pcc_mk_vs_ref": [
+  0.9996031616368981,
+  0.9994808985336021
+ ],
+ "pcc_mk_vs_off": [
+  0.9998912701644792,
+  0.9998819561769018
+ ],
+ "mean_off_vs_ref": 0.9993967840771185,
+ "mean_mk_vs_ref": 0.9995420300852501
+}

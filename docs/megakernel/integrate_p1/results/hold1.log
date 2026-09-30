@@ -1,0 +1,18 @@
+2026-09-30_15:40:14 START nocut probe
+2026-09-30_15:40:17 END nocut probe rc=0
+2026-09-30_15:40:17 START arm default base
+2026-09-30_15:41:12 END arm default base rc=0
+2026-09-30_15:41:12 START arm off base
+2026-09-30_15:42:00 END arm off base rc=0
+2026-09-30_15:42:00 START arm default libero
+2026-09-30_15:42:58 END arm default libero rc=0
+2026-09-30_15:42:58 START arm off libero
+2026-09-30_15:43:38 END arm off libero rc=0
+2026-09-30_15:43:38 START alt default
+2026-09-30_15:48:02 END alt default rc=0
+2026-09-30_15:48:02 START alt off
+2026-09-30_15:50:40 END alt off rc=0
+2026-09-30_15:50:41 [device-guard pid=839628] RESET AFTER JOB (WITH_DEVICE_RESET_AFTER=1, rc=0): timeout 1800 /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/ip1/hold1.sh
+2026-09-30_15:50:41 [device-guard pid=839628] RESET: tt-smi -r 0 (probe hung/failed with no other device users)
+2026-09-30_15:51:22 [device-guard pid=839628] reset exit=0
+hold1 exit 0

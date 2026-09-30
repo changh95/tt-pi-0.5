@@ -297,10 +297,9 @@ class TTNNBackend:
 
         self.ttnn = ttnn
         fused_cfg = FusedConfig.from_env()
-        kwargs = dict(device_id=0, l1_small_size=24576)
-        if fused_cfg.trace:
-            kwargs["trace_region_size"] = fused_cfg.trace_region_size
-        self.device = ttnn.open_device(**kwargs)
+        from models.experimental.pi0_5.common.device_open import device_kwargs  # adds the megakernel's worker-L1 cut
+
+        self.device = ttnn.open_device(**device_kwargs(fused_cfg, device_id=0))
         self.device.enable_program_cache()
         torch.manual_seed(BASE_SEED)
         self.model = PI0ModelTTNN(create_pi05_config(), weight_loader, self.device, fused=fused_cfg)

@@ -1,0 +1,227 @@
+{
+ "schema": "pi05-op-profile-clock/1",
+ "created": "2026-09-30T00:17:45+09:00",
+ "shape": "libero",
+ "argv": [
+  "clock",
+  "--shape",
+  "libero",
+  "--reps",
+  "30",
+  "--seconds",
+  "10",
+  "--out",
+  "/tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/mkprof/clock_libero.json"
+ ],
+ "smi_idle": {
+  "label": "idle_before_open",
+  "time": "2026-09-30T00:17:45",
+  "aiclk_mhz": " 800",
+  "power_w": " 22.0",
+  "asic_temp_c": "51.9"
+ },
+ "device": {
+  "compute_grid": [
+   11,
+   10
+  ],
+  "num_cores": 110
+ },
+ "meta": {
+  "weights": "/home/deepgadget/.cache/huggingface/hub/models--lerobot--pi05_libero/snapshots/a217bfd3b14673cf2ce597e69997ab21866438dd",
+  "token_len": 32,
+  "n_lang": 20,
+  "H": 10,
+  "record": "libero_spatial/t0/i0/call0/step10"
+ },
+ "per_call_ms": {
+  "n": 30,
+  "median": 76.76743248885032,
+  "min": 76.535361004062,
+  "max": 77.15285199810751,
+  "all": [
+   76.5354,
+   76.5489,
+   76.562,
+   76.6521,
+   76.6536,
+   76.6718,
+   76.6915,
+   76.7091,
+   76.7161,
+   76.7303,
+   76.7338,
+   76.7432,
+   76.7447,
+   76.765,
+   76.7669,
+   76.7679,
+   76.7696,
+   76.8332,
+   76.8387,
+   76.8606,
+   76.8642,
+   76.8982,
+   76.9608,
+   76.9756,
+   76.9996,
+   77.0067,
+   77.0787,
+   77.095,
+   77.1429,
+   77.1529
+  ]
+ },
+ "replay_ms": {
+  "n": 30,
+  "median": 75.63756400486454,
+  "min": 75.5903959798161,
+  "max": 75.67010499769822,
+  "all": [
+   75.5904,
+   75.6123,
+   75.6123,
+   75.6128,
+   75.6157,
+   75.6196,
+   75.6203,
+   75.6223,
+   75.6246,
+   75.6247,
+   75.625,
+   75.6299,
+   75.6313,
+   75.6346,
+   75.6368,
+   75.6383,
+   75.6394,
+   75.6395,
+   75.6401,
+   75.6409,
+   75.6431,
+   75.644,
+   75.6502,
+   75.6525,
+   75.6558,
+   75.6587,
+   75.6631,
+   75.6632,
+   75.6682,
+   75.6701
+  ]
+ },
+ "last_bit_identical": true,
+ "sustain_replay_ms": {
+  "n": 133,
+  "median": 75.6260329799261,
+  "min": 75.57306298986077,
+  "max": 75.87221500580199
+ },
+ "sustain_smi": [
+  {
+   "label": "sustain",
+   "time": "2026-09-30T00:18:12",
+   "aiclk_mhz": "1350",
+   "power_w": " 96.0",
+   "asic_temp_c": "63.6"
+  },
+  {
+   "label": "sustain",
+   "time": "2026-09-30T00:18:13",
+   "aiclk_mhz": "1350",
+   "power_w": " 82.0",
+   "asic_temp_c": "63.6"
+  },
+  {
+   "label": "sustain",
+   "time": "2026-09-30T00:18:14",
+   "aiclk_mhz": "1343",
+   "power_w": " 81.0",
+   "asic_temp_c": "63.4"
+  },
+  {
+   "label": "sustain",
+   "time": "2026-09-30T00:18:14",
+   "aiclk_mhz": "1350",
+   "power_w": " 77.0",
+   "asic_temp_c": "64.2"
+  },
+  {
+   "label": "sustain",
+   "time": "2026-09-30T00:18:15",
+   "aiclk_mhz": "1350",
+   "power_w": "128.0",
+   "asic_temp_c": "64.4"
+  },
+  {
+   "label": "sustain",
+   "time": "2026-09-30T00:18:16",
+   "aiclk_mhz": "1350",
+   "power_w": " 84.0",
+   "asic_temp_c": "64.1"
+  },
+  {
+   "label": "sustain",
+   "time": "2026-09-30T00:18:16",
+   "aiclk_mhz": "1350",
+   "power_w": " 92.0",
+   "asic_temp_c": "64.5"
+  },
+  {
+   "label": "sustain",
+   "time": "2026-09-30T00:18:17",
+   "aiclk_mhz": "1350",
+   "power_w": " 77.0",
+   "asic_temp_c": "64.5"
+  },
+  {
+   "label": "sustain",
+   "time": "2026-09-30T00:18:18",
+   "aiclk_mhz": "1350",
+   "power_w": " 82.0",
+   "asic_temp_c": "64.0"
+  },
+  {
+   "label": "sustain",
+   "time": "2026-09-30T00:18:19",
+   "aiclk_mhz": "1350",
+   "power_w": "105.0",
+   "asic_temp_c": "64.5"
+  },
+  {
+   "label": "sustain",
+   "time": "2026-09-30T00:18:19",
+   "aiclk_mhz": "1350",
+   "power_w": " 94.0",
+   "asic_temp_c": "64.8"
+  },
+  {
+   "label": "sustain",
+   "time": "2026-09-30T00:18:20",
+   "aiclk_mhz": "1350",
+   "power_w": "138.0",
+   "asic_temp_c": "64.9"
+  },
+  {
+   "label": "sustain",
+   "time": "2026-09-30T00:18:21",
+   "aiclk_mhz": "1350",
+   "power_w": " 84.0",
+   "asic_temp_c": "64.6"
+  },
+  {
+   "label": "sustain",
+   "time": "2026-09-30T00:18:21",
+   "aiclk_mhz": "1350",
+   "power_w": " 93.0",
+   "asic_temp_c": "64.9"
+  },
+  {
+   "label": "sustain",
+   "time": "2026-09-30T00:18:22",
+   "aiclk_mhz": "1350",
+   "power_w": " 67.0",
+   "asic_temp_c": "63.6"
+  }
+ ]
+}

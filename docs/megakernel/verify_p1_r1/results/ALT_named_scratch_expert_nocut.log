@@ -1,0 +1,29 @@
+2026-09-30 15:14:20.501 | warning  |          Always | Unknown motherboard 'ProArt X870E-CREATOR WIFI' for chip_id=0 (bus_id=0x3) — falling back to bus_id as tray_id. Add this motherboard and its bus IDs to mobo_to_bus_ids in physical_system_discovery.cpp. (physical_system_discovery.cpp:119)
+
+[A] alternating_base: capturing fresh-model references ...
+[pi0.5] expert adaRMS norms folded into per-step weights in 3.0s
+2026-09-30 15:14:53.205 | critical |          Always | TT_FATAL: Program size (70752) too large for kernel config buffer (70656) on TENSIX (assert.hpp:104)
+Traceback (most recent call last):
+  File "/tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/verify_alternating.py", line 408, in <module>
+    main()
+  File "/tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/verify_alternating.py", line 376, in main
+    results["A_alternating_base"] = test_alternating_base(device, fused_cfg)
+  File "/tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/verify_alternating.py", line 144, in test_alternating_base
+    ref_a = fresh_ref(device, fused_cfg, base_config(), BASE_WEIGHTS, obs_a)
+  File "/tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/verify_alternating.py", line 108, in fresh_ref
+    out = model.sample_actions_fused(*obs[:3], lang_masks=obs[3]).clone()
+  File "/home/deepgadget/experiments/tt-models/ports/tt-pi-0.5/models/experimental/pi0_5/tt/ttnn_pi0_model.py", line 588, in sample_actions_fused
+    prepared = self._fused_prepare(im2col_hosts, tokens_host, noise_host, valid)
+  File "/home/deepgadget/experiments/tt-models/ports/tt-pi-0.5/models/experimental/pi0_5/tt/ttnn_pi0_model.py", line 508, in _fused_prepare
+    out = self._fused_device_graph()
+  File "/home/deepgadget/experiments/tt-models/ports/tt-pi-0.5/models/experimental/pi0_5/tt/ttnn_pi0_model.py", line 558, in _fused_device_graph
+    return mk.run(self.backbone.kv_caches, attn_in["exp_mask"], attn_in["tables"], self._fused_in_noise)
+  File "/home/deepgadget/experiments/tt-models/ports/tt-pi-0.5/models/experimental/pi0_5/tt/megakernel/program.py", line 215, in run
+    ttnn.generic_op(self.io_tensors(kv, mask, tables, noise, out), prog)
+  File "/home/deepgadget/experiments/gr00t/tt-metal/ttnn/ttnn/decorators.py", line 1106, in __call__
+    result = self.function(*function_args, **function_kwargs)
+RuntimeError: TT_FATAL @ /home/deepgadget/experiments/gr00t/tt-metal/tt_metal/impl/program/program.cpp:3224: state.offset <= max_size
+info:
+Program size (70752) too large for kernel config buffer (70656) on TENSIX
+backtrace:
+

@@ -93,6 +93,11 @@ class PI0ModelTTNN:
         self.fused_cfg = FusedConfig.from_env() if fused is None else fused
         # Multi-chip: PI05_TP=0 (auto) -> the mesh size; single chip -> 1 (see tt/ttnn_ccl.py)
         self.fused_cfg = self.fused_cfg.resolved(_mesh_num_devices(device))
+        if self.fused_cfg.megakernel == "expert" and not _is_mesh(device):
+            # fail fast (before ~30 s of weight conversion) on a device opened without the worker-L1 cut
+            why = self.megakernel_device_refusal(device)
+            if why is not None:
+                raise RuntimeError(f"PI05_MEGAKERNEL=expert refused: {why}")
         if not config.pi05:
             raise RuntimeError("the fused graph supports the pi0.5 (adaRMS) expert only")
         # Fused graph state (persistent device inputs, trace, output)
@@ -130,6 +135,94 @@ class PI0ModelTTNN:
 
         # Initialize components
         self._init_components()
+        self._init_megakernel()
+
+    def _init_megakernel(self):
+        """PI05_MEGAKERNEL (docs/megakernel/DESIGN.md §4.12): ``expert`` runs the whole 10 x 18 expert loop, the action
+        in / out projections and the Euler steps as ONE generic_op (tt/megakernel/) after the ttnn prefix. The stamp
+        (``megakernel_backend`` / ``megakernel_program``) is what tests assert; refusals raise, never fall back."""
+        self.megakernel_backend = self.fused_cfg.megakernel
+        self.megakernel_program = None
+        self._mk: Dict[str, object] = {}
+        self._mk_params = None
+        self._mk_l1: Dict[object, Tuple] = {}  # per prepared shape: L1 allocator signature at its trace capture
+        self.megakernel_l1 = None
+        if self.megakernel_backend == "off":
+            return
+        if self.megakernel_backend == "whole":
+            raise RuntimeError("PI05_MEGAKERNEL=whole (phase 2: the whole sample_actions as one program) is not built yet")
+        from .megakernel.geometry import megakernel_refusal
+
+        why = megakernel_refusal(self.fused_cfg.kv_dtype, self.denoise_config.num_steps)
+        if why is not None:
+            raise RuntimeError(f"PI05_MEGAKERNEL=expert refused: {why}")
+        if _is_mesh(self.device):
+            raise RuntimeError("PI05_MEGAKERNEL=expert is single-chip: TT_MESH_SHAPE must be 1x1")
+        why = self.megakernel_device_refusal(self.device)
+        if why is not None:
+            raise RuntimeError(f"PI05_MEGAKERNEL=expert refused: {why}")
+        from .megakernel.host_model import expert_params
+        from .megakernel.program import KERNEL_SOURCES, kernel_digest
+
+        cw = self.weight_loader.categorized_weights
+        self._mk_params = expert_params(cw["action_expert"], cw["pi0_projections"],
+                                        eps=self.config.expert_config.rms_norm_eps,
+                                        num_steps=self.denoise_config.num_steps)
+        self.megakernel_program = {"kernel_digest": kernel_digest(),
+                                   "sources": [os.path.basename(p) for p in KERNEL_SOURCES]}
+
+    @staticmethod
+    def megakernel_device_refusal(device) -> Optional[str]:
+        """DESIGN.md §4.12 refusal (d): the megakernel program needs the 136,192 B kernel-config ring that only the
+        64 KiB worker-L1 cut leaves (common/device_open.py). Without the cut, tt-metal fails at the first launch with
+        "Program size ... too large for kernel config buffer" by a margin of ~100 B (verify_p1_r1), so the model names it
+        at the start of __init__ (before any weight conversion) and again in _init_megakernel. Worker L1 = the L1 +
+        L1_SMALL allocator regions per bank (1,371,136 + 24,576 with the cut, 1,436,672 + 24,576 without: NOCUT.json)."""
+        from models.experimental.pi0_5.common.device_open import MEGAKERNEL_WORKER_L1_SIZE
+
+        worker = sum(int(ttnn.get_memory_view(device, bt).total_bytes_per_bank)
+                     for bt in (ttnn.BufferType.L1, ttnn.BufferType.L1_SMALL))
+        if worker > MEGAKERNEL_WORKER_L1_SIZE:
+            return (f"the device was opened without the 64 KiB worker-L1 cut (worker L1 {worker} B per bank > "
+                    f"{MEGAKERNEL_WORKER_L1_SIZE}); open it with common/device_open.py (open_pi05_device / "
+                    "device_kwargs), or set PI05_MEGAKERNEL=off for the stock-op comparator path")
+        return None
+
+    def l1_signature(self) -> Tuple:
+        """L1 allocator state (DESIGN.md §4.12 replay guard): an execute_trace replay does not re-validate the
+        megakernel's static circular buffers against L1 buffers allocated after the capture, so the model refuses to
+        replay when this changed."""
+        mv = ttnn.get_memory_view(self.device, ttnn.BufferType.L1)
+        return (int(mv.total_bytes_allocated_per_bank), int(mv.largest_contiguous_bytes_free_per_bank), len(mv.block_table))
+
+    def _check_l1_guard(self) -> None:
+        ref = getattr(self, "_mk_l1", {}).get(self._fused_shape_key)
+        if ref is None or os.environ.get("PI05_MK_L1_GUARD", "1") == "0":
+            return
+        now = self.l1_signature()
+        if now != ref:
+            raise RuntimeError(
+                f"PI05_MEGAKERNEL: L1 allocation state changed since the trace capture ({ref} -> {now}: "
+                "allocated bytes / largest free block / blocks per bank); an L1 buffer allocated after the capture "
+                "can overlap the megakernel's circular buffers during a replay. Free it before sample_actions_fused.")
+
+    def _megakernel_for(self, prefix_len: int, batch: int):
+        """The ExpertMegakernel of this serving shape (built once; the weight arenas are shared by the shapes)."""
+        from .megakernel import geometry as MG
+        from .megakernel.program import ExpertMegakernel
+
+        if batch != 1:
+            raise RuntimeError(f"PI05_MEGAKERNEL=expert serves batch 1 only (got batch {batch})")
+        shape = MG.shape_for(prefix_len, self._suffix_rows)
+        mk = self._mk.get(shape.name)
+        if mk is None:
+            arenas = None
+            for other in self._mk.values():
+                if other.plan.bank == MG.plan_banks(shape).bank:
+                    arenas = (other.w8, other.w16)
+            mk = ExpertMegakernel(self.device, self._mk_params, shape, arenas=arenas)
+            self._mk[shape.name] = mk
+        return mk
 
     def _init_components(self):
         """Initialize all model components."""
@@ -332,6 +425,8 @@ class PI0ModelTTNN:
     _ATTN_INPUTS_TTNN = {"vlm_mask": "dram", "sdpa_mask": "dram", "cos": "l1", "sin": "l1"}
 
     def _attn_input_names(self) -> Dict[str, str]:
+        if getattr(self, "megakernel_backend", "off") == "expert":
+            return self._ATTN_INPUTS_FUSED  # the megakernel reads exp_mask and the four q / k RoPE tables
         fused_attn = self.backbone.expert_blocks[0].attention._fused_attn is not None
         return self._ATTN_INPUTS_FUSED if fused_attn else self._ATTN_INPUTS_TTNN
 
@@ -414,6 +509,8 @@ class PI0ModelTTNN:
         num_images = sum(k[0] for k in key[0]) // batch  # cameras per request
         token_len = key[1][-1]
         plan = check_fused_shape_contract(num_images, token_len, self.config.action_horizon, batch=batch)
+        if self.megakernel_backend == "expert":
+            self._megakernel_for(plan["prefix_len"], batch)  # refusals (shape, batch) before any allocation
 
         device = self.device
         self._fused_in_im2col = [ttnn.to_device(t, device, memory_config=ttnn.DRAM_MEMORY_CONFIG) for t in im2col_hosts]
@@ -452,6 +549,13 @@ class PI0ModelTTNN:
             ttnn.end_trace_capture(device, trace_id, cq_id=0)
             ttnn.synchronize_device(device)
             self._fused_trace_id = trace_id
+            if self.megakernel_backend == "expert":
+                self._mk_l1[key] = self.l1_signature()
+                mv = ttnn.get_memory_view(device, ttnn.BufferType.L1)
+                self.megakernel_l1 = {"total_per_bank": int(mv.total_bytes_per_bank),
+                                      "allocated_per_bank": int(mv.total_bytes_allocated_per_bank),
+                                      "largest_free_per_bank": int(mv.largest_contiguous_bytes_free_per_bank),
+                                      "cb_union": self._megakernel_for(plan["prefix_len"], batch).cb_union}
         return True
 
     def _fused_write_inputs(self, im2col_hosts, tokens_host, noise_host, valid) -> None:
@@ -473,6 +577,10 @@ class PI0ModelTTNN:
         attn_in = self._fused_attn_in()
         prefix_embs = self.prefix_embedding.embed_prefix_fused(self._fused_in_im2col, self._fused_in_tokens)
         self.backbone.forward_vlm_fused(prefix_embs, attn_in["vlm_mask"])  # consumes prefix_embs, fills the KV caches
+
+        if self.megakernel_backend == "expert":
+            mk = self._megakernel_for(self.backbone.kv_cache_plan["prefix_len"], self.backbone.kv_cache_plan["batch"])
+            return mk.run(self.backbone.kv_caches, attn_in["exp_mask"], attn_in["tables"], self._fused_in_noise)
 
         num_steps = self.denoise_config.num_steps
         dts = euler_dts(num_steps)
@@ -507,6 +615,7 @@ class PI0ModelTTNN:
             self._fused_write_inputs(im2col_hosts, tokens_host, noise_host, valid)
 
         if self._fused_trace_id is not None:
+            self._check_l1_guard()
             ttnn.execute_trace(self.device, self._fused_trace_id, cq_id=0, blocking=True)
             actions = ttnn.to_torch(_chip0(self._fused_out))  # expert replicated: every chip holds x_T
         else:

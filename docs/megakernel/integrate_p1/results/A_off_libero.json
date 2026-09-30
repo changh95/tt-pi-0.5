@@ -1,0 +1,183 @@
+{
+ "t0": "2026-09-30 15:42:59",
+ "arm_env": "off",
+ "shape": "libero",
+ "open_kwargs": {
+  "device_id": 0,
+  "l1_small_size": 24576,
+  "trace_region_size": 160000000
+ },
+ "env": {
+  "PI05_MEGAKERNEL": "off",
+  "TT_METAL_CACHE": "/tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/ip1/ttcache_off"
+ },
+ "smi_open": {
+  "t": "2026-09-30 15:43:00",
+  "aiclk": " 800",
+  "power": " 25.0",
+  "temp": "55.8"
+ },
+ "stamp": {
+  "backend": "off",
+  "program": null
+ },
+ "traced": true,
+ "prefix_len": 544,
+ "kv_cache_shape": [
+  1,
+  1,
+  640,
+  256
+ ],
+ "kv_cache_dtype": "DataType.BFLOAT8_B",
+ "digests": {
+  "libero_spatial/t0/i0/call0/step10": "06567926fcd19ce9",
+  "libero_spatial/t0/i0/call12/step70": "e08788ffed05b3b3",
+  "libero_spatial/t3/i1/call0/step10": "e34594639247fb0c",
+  "libero_spatial/t3/i1/call12/step70": "084f436124466724",
+  "libero_spatial/t6/i2/call0/step10": "68c6b29d96f1fe66",
+  "libero_spatial/t6/i2/call12/step70": "7405ffc4d0a49fcf",
+  "libero_spatial/t9/i3/call0/step10": "f170af41fbc29cca",
+  "libero_spatial/t9/i3/call12/step70": "4e0c1a0454348af1"
+ },
+ "distinct_outputs": 8,
+ "pcc7": {
+  "libero_spatial/t0/i0/call0/step10": 0.999844992200279,
+  "libero_spatial/t0/i0/call12/step70": 0.9997847897122235,
+  "libero_spatial/t3/i1/call0/step10": 0.9998678648319074,
+  "libero_spatial/t3/i1/call12/step70": 0.9999390987897641,
+  "libero_spatial/t6/i2/call0/step10": 0.9997118086396971,
+  "libero_spatial/t6/i2/call12/step70": 0.9997768346291702,
+  "libero_spatial/t9/i3/call0/step10": 0.9999170195323196,
+  "libero_spatial/t9/i3/call12/step70": 0.9998659931618386
+ },
+ "pcc7_mean": 0.99983855018715,
+ "pcc7_min": 0.9997118086396971,
+ "ten_calls_eq_first": [
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true
+ ],
+ "ten_raw_replays_eq_first": [
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true
+ ],
+ "poison_readback_all_7": true,
+ "after_poison_eq_obs_j": true,
+ "after_poison_has_7": false,
+ "smi_bench_before": {
+  "t": "2026-09-30 15:43:22",
+  "aiclk": "1350",
+  "power": " 67.0",
+  "temp": "59.5"
+ },
+ "witness_call": {
+  "time_ns_s": 2.30267384,
+  "monotonic_s": 2.302675413,
+  "sum_perf_counter_s": 2.302653480990557,
+  "wall_start_epoch": 1790750602.3659134
+ },
+ "witness_replay": {
+  "time_ns_s": 2.269890522,
+  "sum_perf_counter_s": 2.269859803986037
+ },
+ "replays_in_10s_time_time": 133,
+ "smi_bench_after": {
+  "t": "2026-09-30 15:43:37",
+  "aiclk": "1350",
+  "power": " 67.0",
+  "temp": "60.9"
+ },
+ "call_ms": {
+  "median": 76.71570048842113,
+  "min": 76.47743300185539,
+  "max": 77.11447699693963,
+  "all": [
+   77.09489998524077,
+   76.91902099759318,
+   76.79993700003251,
+   76.68642498902045,
+   76.7061609949451,
+   76.6664880211465,
+   76.71975702396594,
+   76.71794400084764,
+   76.71432799543254,
+   76.49975499953143,
+   76.75198698416352,
+   76.71707298140973,
+   76.89813201432116,
+   76.66224997956306,
+   77.11447699693963,
+   76.51180701213889,
+   76.77251601126045,
+   76.67640701401979,
+   76.69001200702041,
+   76.71096100239083,
+   76.69350798823871,
+   76.84603397501633,
+   76.47743300185539,
+   76.79865500540473,
+   76.49172999663278,
+   76.8960980058182,
+   76.69649401213974,
+   76.95435799541883,
+   77.07527501042932,
+   76.69355798861943
+  ]
+ },
+ "replay_ms": {
+  "median": 75.64599899342284,
+  "min": 75.61816298402846,
+  "max": 75.85981499869376,
+  "all": [
+   75.64545300556347,
+   75.66276600118726,
+   75.65480098128319,
+   75.73874900117517,
+   75.6425779836718,
+   75.62929301639087,
+   75.6465449812822,
+   75.66974899964407,
+   75.64800800173543,
+   75.6292229925748,
+   75.6360359955579,
+   75.63944201683626,
+   75.85981499869376,
+   75.63234900590032,
+   75.61816298402846,
+   75.62361197778955,
+   75.64093501423486,
+   75.6306360126473,
+   75.62082700314932,
+   75.66210499498993,
+   75.65681499545462,
+   75.65913902362809,
+   75.65281697316095,
+   75.68486698437482,
+   75.6188840023242,
+   75.64064502366818,
+   75.66955799120478,
+   75.847132015042,
+   75.65516099566594,
+   75.64370101317763
+  ]
+ },
+ "after_bench_eq_first": true,
+ "megakernel_l1": null,
+ "t1": "2026-09-30 15:43:37"
+}

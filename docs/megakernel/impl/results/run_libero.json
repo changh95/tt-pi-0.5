@@ -1,0 +1,86 @@
+{
+ "schema": "pi05-op-profile-run/1",
+ "created": "2026-09-30T02:45:24+09:00",
+ "shape": "libero",
+ "argv": [
+  "run",
+  "--shape",
+  "libero",
+  "--replays",
+  "3",
+  "--run-json",
+  "/tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/mkprof2/prof_libero/run_libero.json"
+ ],
+ "env": {
+  "TT_METAL_PROFILER_NO_CACHE_OP_INFO": "1",
+  "TT_METAL_PROFILER_CPP_POST_PROCESS": "1",
+  "TT_METAL_DEVICE_PROFILER": "1",
+  "PI05_MEGAKERNEL": "expert",
+  "TT_METAL_PROFILER_PROGRAM_SUPPORT_COUNT": "16000",
+  "TT_METAL_HOME": "/home/deepgadget/experiments/gr00t/tt-metal",
+  "TT_METAL_CACHE": "/home/deepgadget/.cache/tt-metal-cache-pi05-mkprof-libero",
+  "TT_METAL_PROFILER_DIR": "/tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/mkprof2/prof_libero",
+  "TTNN_OP_PROFILER": "1",
+  "TT_METAL_PROFILER_TRACE_TRACKING": "1"
+ },
+ "device": {
+  "compute_grid": [
+   11,
+   10
+  ],
+  "num_cores": 110
+ },
+ "fused_cfg": {
+  "trace": "True",
+  "trace_region_size": "160000000",
+  "residual": "bf16",
+  "mlp_chunk": "256",
+  "vlm_down_pc": "mcast2d",
+  "vlm_gateup_pc": "auto",
+  "vlm_attn_pc": "auto",
+  "siglip_pc": "auto",
+  "siglip_batched": "True",
+  "skip_vlm_tail": "True",
+  "sdpa_vlm": "None",
+  "sdpa_expert": "None",
+  "sdpa_siglip": "None",
+  "dit_blocks": "(1, 8, 4, 1, 4, 0, 2)",
+  "euler_dit_blocks": "(1, 8, 1, 1, 1, 0, 2)",
+  "expert_mm": "mcast1d_fp32",
+  "expert_mm_blocks": "(1, 8, 4, 1, 4, 0, 2)",
+  "tp": "0",
+  "ccl_topology": "ring",
+  "env_keys": "('PI05_MEGAKERNEL',)",
+  "kv_dtype": "bf8",
+  "expert_geglu": "False",
+  "expert_attn": "ttnn",
+  "expert_norm_fold": "False",
+  "megakernel": "expert"
+ },
+ "meta": {
+  "weights": "/home/deepgadget/.cache/huggingface/hub/models--lerobot--pi05_libero/snapshots/a217bfd3b14673cf2ce597e69997ab21866438dd",
+  "token_len": 32,
+  "n_lang": 20,
+  "H": 10,
+  "record": "libero_spatial/t0/i0/call0/step10"
+ },
+ "first_call_s": 15.344792709016474,
+ "eager_s": 0.08179747898248024,
+ "replay_wall_ms_profiled": {
+  "n": 3,
+  "median": 64.92899701697752,
+  "min": 64.85286398674361,
+  "max": 64.94280300103128,
+  "all": [
+   64.8529,
+   64.929,
+   64.9428
+  ]
+ },
+ "replay_bit_identical_to_first_call": [
+  true,
+  true,
+  true
+ ],
+ "eager_equal_to_first_call": true
+}

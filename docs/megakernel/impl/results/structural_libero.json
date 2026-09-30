@@ -1,0 +1,61 @@
+{
+ "csv": "prof_libero/reports/2026_09_30_02_46_47/ops_perf_results_2026_09_30_02_46_47.csv",
+ "replays": [
+  {
+   "session": "1",
+   "ops": 892,
+   "mk_index": 891,
+   "mk_count": 1,
+   "ops_after_mk": 0,
+   "mk_kernel_ns": 16104316,
+   "mk_core_count": "110",
+   "prev_ops": [
+    "RotaryEmbeddingDeviceOperation",
+    "UpdateKVCacheOperation",
+    "UpdateKVCacheOperation"
+   ]
+  },
+  {
+   "session": "2",
+   "ops": 892,
+   "mk_index": 891,
+   "mk_count": 1,
+   "ops_after_mk": 0,
+   "mk_kernel_ns": 16103850,
+   "mk_core_count": "110",
+   "prev_ops": [
+    "RotaryEmbeddingDeviceOperation",
+    "UpdateKVCacheOperation",
+    "UpdateKVCacheOperation"
+   ]
+  },
+  {
+   "session": "3",
+   "ops": 892,
+   "mk_index": 891,
+   "mk_count": 1,
+   "ops_after_mk": 0,
+   "mk_kernel_ns": 16046472,
+   "mk_core_count": "110",
+   "prev_ops": [
+    "RotaryEmbeddingDeviceOperation",
+    "UpdateKVCacheOperation",
+    "UpdateKVCacheOperation"
+   ]
+  },
+  {
+   "session": "4",
+   "ops": 892,
+   "mk_index": 891,
+   "mk_count": 1,
+   "ops_after_mk": 0,
+   "mk_kernel_ns": 16079950,
+   "mk_core_count": "110",
+   "prev_ops": [
+    "RotaryEmbeddingDeviceOperation",
+    "UpdateKVCacheOperation",
+    "UpdateKVCacheOperation"
+   ]
+  }
+ ]
+}

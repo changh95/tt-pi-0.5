@@ -1,0 +1,188 @@
+{
+ "t0": "2026-09-30 14:32:51",
+ "arm": "off",
+ "base_seeds": {
+  "A": 703,
+  "B": 712,
+  "C": 701,
+  "D": 6,
+  "D2": 716
+ },
+ "libero_n_lang": [
+  17,
+  20
+ ],
+ "libero_tags": {
+  "E": "libero_spatial/t3/i1/call0/step10",
+  "F": "libero_spatial/t0/i0/call0/step10"
+ },
+ "checks": [
+  {
+   "phase": "alt_base",
+   "prompt": "A",
+   "bit_identical": true,
+   "pcc": 0.9999999999999999,
+   "maxabs": 0.0
+  },
+  {
+   "phase": "alt_base",
+   "prompt": "B",
+   "bit_identical": true,
+   "pcc": 0.9999999999999999,
+   "maxabs": 0.0
+  },
+  {
+   "phase": "alt_base",
+   "prompt": "C",
+   "bit_identical": true,
+   "pcc": 1.0000000000000007,
+   "maxabs": 0.0
+  },
+  {
+   "phase": "alt_base",
+   "prompt": "D",
+   "bit_identical": true,
+   "pcc": 0.9999999999999997,
+   "maxabs": 0.0
+  },
+  {
+   "phase": "alt_base",
+   "prompt": "D2",
+   "bit_identical": true,
+   "pcc": 1.0000000000000004,
+   "maxabs": 0.0
+  },
+  {
+   "phase": "alt_base",
+   "prompt": "A",
+   "bit_identical": true,
+   "pcc": 0.9999999999999999,
+   "maxabs": 0.0
+  },
+  {
+   "phase": "alt_base",
+   "prompt": "D2",
+   "bit_identical": true,
+   "pcc": 1.0000000000000004,
+   "maxabs": 0.0
+  },
+  {
+   "phase": "alt_base",
+   "prompt": "D",
+   "bit_identical": true,
+   "pcc": 0.9999999999999997,
+   "maxabs": 0.0
+  },
+  {
+   "phase": "alt_base",
+   "prompt": "C",
+   "bit_identical": true,
+   "pcc": 1.0000000000000007,
+   "maxabs": 0.0
+  },
+  {
+   "phase": "alt_base",
+   "prompt": "B",
+   "bit_identical": true,
+   "pcc": 0.9999999999999999,
+   "maxabs": 0.0
+  },
+  {
+   "phase": "libero_after_switch",
+   "prompt": "E",
+   "bit_identical": true,
+   "pcc": 1.0000000000000002,
+   "maxabs": 0.0
+  },
+  {
+   "phase": "libero_after_switch",
+   "prompt": "F",
+   "bit_identical": true,
+   "pcc": 1.0,
+   "maxabs": 0.0
+  },
+  {
+   "phase": "libero_after_switch",
+   "prompt": "E",
+   "bit_identical": true,
+   "pcc": 1.0000000000000002,
+   "maxabs": 0.0
+  },
+  {
+   "phase": "libero_after_switch",
+   "prompt": "F",
+   "bit_identical": true,
+   "pcc": 1.0,
+   "maxabs": 0.0
+  },
+  {
+   "phase": "libero_after_switch",
+   "prompt": "F",
+   "bit_identical": true,
+   "pcc": 1.0,
+   "maxabs": 0.0
+  },
+  {
+   "phase": "libero_after_switch",
+   "prompt": "E",
+   "bit_identical": true,
+   "pcc": 1.0000000000000002,
+   "maxabs": 0.0
+  },
+  {
+   "phase": "base_switch_back",
+   "prompt": "B",
+   "bit_identical": true,
+   "pcc": 0.9999999999999999,
+   "maxabs": 0.0
+  },
+  {
+   "phase": "base_switch_back",
+   "prompt": "D2",
+   "bit_identical": true,
+   "pcc": 1.0000000000000004,
+   "maxabs": 0.0
+  },
+  {
+   "phase": "base_switch_back",
+   "prompt": "A",
+   "bit_identical": true,
+   "pcc": 0.9999999999999999,
+   "maxabs": 0.0
+  },
+  {
+   "phase": "base_switch_back",
+   "prompt": "C",
+   "bit_identical": true,
+   "pcc": 1.0000000000000007,
+   "maxabs": 0.0
+  }
+ ],
+ "stamps": {
+  "A": "off",
+  "B": "off",
+  "C": "off",
+  "D": "off",
+  "D2": "off",
+  "E": "off",
+  "F": "off"
+ },
+ "ref_pairs_max_pcc": 0.9529206153512061,
+ "ref_pairs_any_equal": false,
+ "pcc7_fresh": {
+  "E": 0.9998678648319074,
+  "F": 0.999844992200279
+ },
+ "all_bit_identical": true,
+ "n_checks": 20,
+ "fresh_ref_eq_other_process": {
+  "A": true,
+  "B": true,
+  "C": true,
+  "D": true,
+  "D2": true,
+  "E": true,
+  "F": true
+ },
+ "t1": "2026-09-30 14:34:58"
+}

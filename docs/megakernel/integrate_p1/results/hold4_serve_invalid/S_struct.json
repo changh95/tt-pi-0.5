@@ -1,0 +1,188 @@
+{
+ "default_base": {
+  "n_rows_csv": 23602,
+  "n_sessions": 21,
+  "op_counts": [
+   892
+  ],
+  "n_kv_ops": [
+   36
+  ],
+  "n_after_last_kv": [
+   1
+  ],
+  "after_codes_first": [
+   [
+    "GenericOpDeviceOperation",
+    1
+   ]
+  ],
+  "after0_first": {
+   "OP CODE": "GenericOpDeviceOperation",
+   "CORE COUNT": "110",
+   "DEVICE KERNEL DURATION [ns]": "17509844",
+   "COMPUTE KERNEL SOURCE": "['/home/deepgadget/experiments/tt-models/ports/tt-pi-0.5/models/experimental/pi0_5/tt/megakernel/kernels/mk_trisc.cpp']",
+   "DATA MOVEMENT KERNEL SOURCE": "['/home/deepgadget/experiments/tt-models/ports/tt-pi-0.5/models/experimental/pi0_5/tt/megakernel/kernels/mk_brisc.cpp'; '/home/deepgadget/experiments/tt-models/ports/tt-pi-0.5/models/experimental/pi0_5/tt/megakernel/kernels/mk_ncrisc.cpp']",
+   "PROGRAM HASH": "5666833099641526279"
+  },
+  "after0_program_hashes": [
+   "5666833099641526279"
+  ],
+  "missing_durations": 0,
+  "mk_kernel_ms": {
+   "median": 17.490461,
+   "min": 17.447737,
+   "max": 17.520967,
+   "n": 21
+  },
+  "post_cache_device_ms_first": 17.509844
+ },
+ "default_libero": {
+  "n_rows_csv": 23602,
+  "n_sessions": 21,
+  "op_counts": [
+   892
+  ],
+  "n_kv_ops": [
+   36
+  ],
+  "n_after_last_kv": [
+   1
+  ],
+  "after_codes_first": [
+   [
+    "GenericOpDeviceOperation",
+    1
+   ]
+  ],
+  "after0_first": {
+   "OP CODE": "GenericOpDeviceOperation",
+   "CORE COUNT": "110",
+   "DEVICE KERNEL DURATION [ns]": "16059355",
+   "COMPUTE KERNEL SOURCE": "['/home/deepgadget/experiments/tt-models/ports/tt-pi-0.5/models/experimental/pi0_5/tt/megakernel/kernels/mk_trisc.cpp']",
+   "DATA MOVEMENT KERNEL SOURCE": "['/home/deepgadget/experiments/tt-models/ports/tt-pi-0.5/models/experimental/pi0_5/tt/megakernel/kernels/mk_brisc.cpp'; '/home/deepgadget/experiments/tt-models/ports/tt-pi-0.5/models/experimental/pi0_5/tt/megakernel/kernels/mk_ncrisc.cpp']",
+   "PROGRAM HASH": "15689587393604410966"
+  },
+  "after0_program_hashes": [
+   "15689587393604410966"
+  ],
+  "missing_durations": 0,
+  "mk_kernel_ms": {
+   "median": 16.070838,
+   "min": 16.046436,
+   "max": 16.128415,
+   "n": 21
+  },
+  "post_cache_device_ms_first": 16.059355
+ },
+ "off_base": {
+  "n_rows_csv": 22602,
+  "n_sessions": 5,
+  "op_counts": [
+   2551
+  ],
+  "n_kv_ops": [
+   36
+  ],
+  "n_after_last_kv": [
+   1660
+  ],
+  "after_codes_first": [
+   [
+    "GenericOpDeviceOperation",
+    540
+   ],
+   [
+    "MatmulDeviceOperation",
+    370
+   ],
+   [
+    "MinimalMatmulDeviceOperation",
+    370
+   ],
+   [
+    "LayerNormDeviceOperation",
+    190
+   ],
+   [
+    "TypecastDeviceOperation",
+    180
+   ],
+   [
+    "BinaryNgDeviceOperation",
+    10
+   ]
+  ],
+  "after0_first": {
+   "OP CODE": "MatmulDeviceOperation",
+   "CORE COUNT": "32",
+   "DEVICE KERNEL DURATION [ns]": "3510",
+   "COMPUTE KERNEL SOURCE": "['ttnn/cpp/ttnn/operations/matmul/device/kernels/compute/bmm_large_block_zm_fused_bias_activation.cpp']",
+   "DATA MOVEMENT KERNEL SOURCE": "['ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in1_sender_writer_padding.cpp'; 'ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in0_receiver.cpp'; 'ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in0_sender_padding.cpp']",
+   "PROGRAM HASH": "11139310002942686598"
+  },
+  "after0_program_hashes": [
+   "11139310002942686598"
+  ],
+  "missing_durations": 0,
+  "mk_kernel_ms": null,
+  "post_cache_device_ms_first": 30.312243
+ },
+ "off_libero": {
+  "n_rows_csv": 22602,
+  "n_sessions": 5,
+  "op_counts": [
+   2551
+  ],
+  "n_kv_ops": [
+   36
+  ],
+  "n_after_last_kv": [
+   1660
+  ],
+  "after_codes_first": [
+   [
+    "GenericOpDeviceOperation",
+    540
+   ],
+   [
+    "MatmulDeviceOperation",
+    370
+   ],
+   [
+    "MinimalMatmulDeviceOperation",
+    370
+   ],
+   [
+    "LayerNormDeviceOperation",
+    190
+   ],
+   [
+    "TypecastDeviceOperation",
+    180
+   ],
+   [
+    "BinaryNgDeviceOperation",
+    10
+   ]
+  ],
+  "after0_first": {
+   "OP CODE": "MatmulDeviceOperation",
+   "CORE COUNT": "32",
+   "DEVICE KERNEL DURATION [ns]": "2651",
+   "COMPUTE KERNEL SOURCE": "['ttnn/cpp/ttnn/operations/matmul/device/kernels/compute/bmm_large_block_zm_fused_bias_activation.cpp']",
+   "DATA MOVEMENT KERNEL SOURCE": "['ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in1_sender_writer_padding.cpp'; 'ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in0_receiver.cpp'; 'ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in0_sender_padding.cpp']",
+   "PROGRAM HASH": "11213821084215224400"
+  },
+  "after0_program_hashes": [
+   "11213821084215224400"
+  ],
+  "missing_durations": 0,
+  "mk_kernel_ms": null,
+  "post_cache_device_ms_first": 26.827386
+ },
+ "prefix_codes_equal_base": true,
+ "prefix_len_ops_base": 891,
+ "prefix_codes_equal_libero": true,
+ "prefix_len_ops_libero": 891
+}

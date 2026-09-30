@@ -1,0 +1,14 @@
+2026-09-30_15:24:09 hold1 launch
+2026-09-30_15:40:10 hold1 launch
+2026-09-30_15:51:28 hold1 done hold1 exit 0
+2026-09-30_15:51:28 hold2 launch
+2026-09-30_16:08:34 hold2 launch (resumed session)
+2026-09-30_16:21:40 hold2 done rc=0
+2026-09-30_16:21:48 hold3 launch (resumed, git a46beb5)
+2026-09-30_16:41:23 hold3 done rc=0
+2026-09-30_16:41:23 hold4 launch (resumed, git a46beb5)
+2026-09-30_16:47:13 hold4 done rc=0
+2026-09-30_16:49:31 hold5 queued (served A/B re-run)
+2026-09-30_16:53:49 hold5 done rc=0
+2026-09-30_16:54:33 hold6 queued (served A/B, fixed stop)
+2026-09-30_17:08:47 hold6 done rc=0
