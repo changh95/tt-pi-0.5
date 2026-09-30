@@ -333,3 +333,57 @@ Open (not changed by me):
 - Other non-blocking items: owner x/r landing ordered only by causality; mixed-width matmuls with no static guard;
   CB_RTOK pushed without a reserve; debug x dump on every launch.
 Next: phase 2 (WP P2-0).
+
+## 2026-09-30 15:17:00 KST -- verify-p1-r1: second independent verification of phase 1 (verifier session, no code changed)
+
+HEAD 51a9ba3 (kernel_digest 328761c8a1ce3fd9). New scripts (docs/megakernel/verify_p1_r1/scripts/, not verify_p1_r0's), results in
+../results/. Four holds 14:21-15:15, both arms in the same session. PI05_MEGAKERNEL picked the arm and the device was opened by
+common/device_open.py. Each arm had its OWN TT_METAL_CACHE. md5 of every tt/ and common/ source (sums_*.txt) was the same
+(ALL 1eee2dfc...) at the start and end of holds 1-2 and before and after the soak.
+- A/B arms differ (kernels_{expert,off}.txt): the expert cache compiled mk_brisc / mk_ncrisc / mk_trisc and none of the shipped
+  expert's generic_op kernels (compute / reader / writer) or minimal-matmul kernels. The off cache compiled no mk_* kernel.
+  From the profiles: the prefix is the same 891 op codes in both arms, then 1 op (expert) vs 1660 ops (off).
+- Structural (tracy, S_struct.json): expert has 21 replay sessions per shape, 892 ops each, 36 UpdateKVCache ops, and exactly 1 op
+  after the last one. That op is a GenericOp on 110 cores, with compute mk_trisc.cpp and data movement mk_brisc.cpp + mk_ncrisc.cpp,
+  and one program hash per shape. No device durations were missing. Kernel time median 17.495 ms base (17.459-17.533), 16.079 LIBERO
+  (gates < 31.26 / 27.85). Off: 2551 ops, sum of post-cache kernel durations 30.32 / 26.83 ms.
+- Size (size_check_r1.json, mock-cluster compile): 70,728 B base / 71,064 B LIBERO (<= 128 KB). Real-device ELFs in my cache
+  have the same text+data as the mock ELFs of the same hash. The profiler build is slightly larger (brisc 18,812 vs 18,732).
+- Amended base gate (O_r1.json, 22 seeds). These are the 6 of test_pcc plus 16 NEW seeds with n_lang on and around the 32-token
+  tiles (1, 2, 31, 32, 33, 63, 64, 65, 96, 128, 129, 159, 191, 192, 223, 224). The oracle is re-derived (scripts/oracle.py):
+  my own 10-step Euler loop around the reference's fp32 velocity function, with the mask and positions built independently.
+  It is fed each arm's own device bf8 prefix K/V (read back) and the device noise.
+  Controls: (1) fed the reference's own VLM cache, it reproduces ref.sample_actions (PCC 1 - 5e-14, max|d| 5.2e-7; the
+  residual is dt rounding). (2) K/V and noise are bit-identical across the arms on 22/22 seeds, and the oracles are equal.
+  (3) Negative control: an oracle fed another seed's K/V scores mk 0.93 / 0.88 / -0.08, against 0.9997 for the right K/V.
+  Result: the megakernel is closer on 22/22 seeds. Mean 0.99974 (min 0.99916) vs shipped 0.99596 (min 0.98575).
+  The smallest margin is +4.3e-5 (seed 708, n 65). Seed 2: 0.99979 vs 0.99806.
+  vs the full fp32 reference: mean mk 0.97535 vs shipped 0.96921, mk closer on 19/22.
+- openpi golden PCC7 (A_expert_libero.json): mean 0.999884, min 0.999778 (shipped 0.999839 / 0.999712): PASS.
+- Replays: 10 calls after all other prompts and 10 raw execute_trace were bit-identical to the first call, in both arms and both
+  shapes; the 20 profiled replays were too. Output poisoning: I wrote 7.0 into the trace's output buffer (the read-back was all
+  7.0), then called with another prompt. The output was bit-identical to that prompt's earlier output with no 7.0 left, so the
+  traced program writes the output.
+- Alternating / shape switch (ALT_{expert,off}.json, own design): base A B C D D2 A D2 D C B, where D / D2 have the same length
+  and different content, so the attention inputs are not rewritten between them. Then LIBERO E F E F F E, then base B D2 A C.
+  All 20 calls were bit-identical to fresh-model references. The fresh refs were also bit-identical to the other process's
+  (d_arm) outputs for the same seeds. The refs differ pairwise (max PCC 0.952). The named repo test
+  tests/megakernel/verify_alternating.py under expert: OVERALL all_ok=True. The task's scratchpad copy (09-29) passed with off.
+- Soak (soak_results.txt): 20/20 consecutive processes, genuine rc=0. Each did warm-up + capture + 30 calls cycling n_lang 1 / 128 /
+  224. All had all_equal and finite output, the same digest 099ce3592052e5c4, and took 36-40 s each. No hang.
+- Latency with a clock witness (A_*.json). Per call median: base 70.95 ms (MAD-based se 0.04) vs shipped 84.14; LIBERO 65.76 vs
+  76.90. Replay: 69.54 / 64.39 vs 82.80 / 75.63. For the 30-call loop, time.time_ns and monotonic_ns agree with the perf_counter
+  sum to within 1 ms. A fixed 10 s time.time window gave 144 vs 121 replays (base) and 156 vs 133 (LIBERO). tt-smi aiclk was 1350
+  before and after every bench.
+- Suites: CPU 38 passed (cpu_suites.txt). tests/pcc/test_pcc_pi05_fused.py: libero PASS in both arms. Base FAILS its own min-0.95
+  fp32-reference floor in BOTH arms on seed 3 (mk 0.94833, shipped 0.93811), which is pre-existing; the per-seed values are identical
+  to O_r1.json.
+Findings (non-blocking):
+- DESIGN §4.12 refusal (d), "device not opened with the 64 KiB cut", is not implemented in the model. The scratchpad
+  verify_alternating.py opens the device without the cut. Under expert it failed cleanly (no hang, 36 s) inside tt-metal with
+  TT_FATAL "Program size (70752) too large for kernel config buffer (70656)". That is a 96 B margin by accident, not a named
+  refusal (ALT_named_scratch_expert_nocut.log).
+- The `echo "$(date) ... rc=$?"` idiom reports the rc of `date` (always 0). The rc columns of hold1/2/4.log here, and
+  verify_p1_r0's hold1-3.log, are therefore not exit codes; every result above is confirmed from its output file instead. The soak
+  used `rc=$?` on its own line, so its rc values are genuine.
+Verdict: phase 1 ACCEPTED on the amended gates (all re-run gates pass). Open for the user: the base pytest floor (see above).

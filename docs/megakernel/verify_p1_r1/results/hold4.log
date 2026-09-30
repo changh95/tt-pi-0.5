@@ -1,0 +1,11 @@
+2026-09-30_15:07:49 named scratch alt (off) start
+2026-09-30_15:10:38 named scratch alt (off) rc=0
+2026-09-30_15:10:38 pytest test_pcc_pi05_fused (expert) start
+2026-09-30_15:12:38 pytest test_pcc_pi05_fused (expert) rc=0 2026-09-30 15:12:38.166 | info     |             UMD | Cluster destructor completed. (cluster.cpp:1020)
+2026-09-30_15:12:38 pytest test_pcc_pi05_fused (off) start
+2026-09-30_15:14:18 pytest test_pcc_pi05_fused (off) rc=0 2026-09-30 15:14:17.881 | info     |             UMD | Cluster destructor completed. (cluster.cpp:1020)
+2026-09-30_15:14:18 named scratch alt (expert, NO cut) start
+2026-09-30_15:14:54 named scratch alt (expert, NO cut) rc=0
+2026-09-30_15:14:54 [device-guard pid=813368] RESET AFTER JOB (WITH_DEVICE_RESET_AFTER=1, rc=0): /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/vp1r1/hold4.sh
+2026-09-30_15:14:54 [device-guard pid=813368] RESET: tt-smi -r 0 (probe hung/failed with no other device users)
+2026-09-30_15:15:35 [device-guard pid=813368] reset exit=0

@@ -1,0 +1,29 @@
+2026-09-30 14:19:22.141 | DEBUG    | ttnn:<module>:45 - Initial ttnn.CONFIG:
+Config{cache_path=/home/deepgadget/.cache/ttnn,model_cache_path=/home/deepgadget/.cache/ttnn/models,tmp_dir=/tmp/ttnn,enable_model_cache=false,enable_fast_runtime_mode=true,validate_program_args=false,throw_exception_on_fallback=false,enable_logging=false,enable_graph_report=false,enable_graph_python_stack_traces=false,enable_detailed_buffer_report=false,enable_detailed_tensor_report=false,enable_comparison_mode=false,comparison_mode_should_raise_exception=false,comparison_mode_pcc=0.9999,root_report_path=generated/ttnn/reports,report_name=std::nullopt,std::nullopt}
+2026-09-30 14:19:33 ctrl 1 {'valid_eq_embed_prefix': True, 'mask_eq': (False,), 'pos_eq': True, 'pcc': 0.9999999999999806, 'maxabs': 5.21540641784668e-07, 'cache_shape': [1, 1, 736, 256]}
+2026-09-30 14:19:33 ref 1 40
+2026-09-30 14:19:43 ctrl 2 {'valid_eq_embed_prefix': True, 'mask_eq': (False,), 'pos_eq': True, 'pcc': 0.9999999999999506, 'maxabs': 1.6391277313232422e-07, 'cache_shape': [1, 1, 736, 256]}
+2026-09-30 14:19:43 ref 2 97
+2026-09-30 14:19:48 ref 3 12
+2026-09-30 14:19:54 ref 4 150
+2026-09-30 14:19:59 ref 5 201
+2026-09-30 14:20:05 ref 6 224
+2026-09-30 14:20:16 ctrl 701 {'valid_eq_embed_prefix': True, 'mask_eq': (False,), 'pos_eq': True, 'pcc': 0.9999999999999455, 'maxabs': 1.1920928955078125e-07, 'cache_shape': [1, 1, 736, 256]}
+2026-09-30 14:20:16 ref 701 1
+2026-09-30 14:20:21 ref 702 2
+2026-09-30 14:20:26 ref 703 31
+2026-09-30 14:20:32 ref 704 32
+2026-09-30 14:20:37 ref 705 33
+2026-09-30 14:20:48 ctrl 706 {'valid_eq_embed_prefix': True, 'mask_eq': (False,), 'pos_eq': True, 'pcc': 0.9999999999999746, 'maxabs': 1.1920928955078125e-07, 'cache_shape': [1, 1, 736, 256]}
+2026-09-30 14:20:48 ref 706 63
+2026-09-30 14:20:54 ref 707 64
+2026-09-30 14:20:59 ref 708 65
+2026-09-30 14:21:05 ref 709 96
+2026-09-30 14:21:10 ref 710 128
+2026-09-30 14:21:15 ref 711 129
+2026-09-30 14:21:21 ref 712 159
+2026-09-30 14:21:26 ref 713 191
+2026-09-30 14:21:32 ref 714 192
+2026-09-30 14:21:37 ref 715 223
+2026-09-30 14:21:43 ref 716 224
+2026-09-30 14:21:43 DONE {"1": {"valid_eq_embed_prefix": true, "mask_eq": [false], "pos_eq": true, "pcc": 0.9999999999999806, "maxabs": 5.21540641784668e-07, "cache_shape": [1, 1, 736, 256]}, "2": {"valid_eq_embed_prefix": true, "mask_eq": [false], "pos_eq": true, "pcc": 0.9999999999999506, "maxabs": 1.6391277313232422e-07, "cache_shape": [1, 1, 736, 256]}, "701": {"valid_eq_embed_prefix": true, "mask_eq": [false], "pos_eq": true, "pcc": 0.9999999999999455, "maxabs": 1.1920928955078125e-07, "cache_shape": [1, 1, 736, 256]}, "706": {"valid_eq_embed_prefix": true, "mask_eq": [false], "pos_eq": true, "pcc": 0.9999999999999746, "maxabs": 1.1920928955078125e-07, "cache_shape": [1, 1, 736, 256]}}
