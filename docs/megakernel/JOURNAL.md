@@ -253,3 +253,36 @@ whole sample_actions binary / L1 overlay; the phase-1 program is 70.7 KB of the 
 Known deviations from DESIGN v2 in the build (speed levers, not correctness): pair cores instead of Q/K/V producers +
 pair exchange, single merger per (head, row), bf16 ctx (no two-format CB), no dual-NoC hub multicast; WP P1-1 / P1-2
 harness gates were not run (the integrated loop meets the speed gates with 44 % / 42 % margin).
+
+## 2026-09-30 13:57:28 KST -- verify-p1-r0: independent verification of phase 1 (verifier session, no code changed)
+
+Everything re-run by the verifier's own scripts (docs/megakernel/verify_p1_r0/scripts/, results in ../results/), HEAD
+e8cbc78, private TT_METAL_CACHE, both arms in the same session 13:07-13:56. The PI05_MEGAKERNEL env var picked the arm.
+Source md5s (tt/**/*.cpp,hpp,py) were the same at 13:05 (checksums_start.txt), before the soak (13:37) and after it (13:56).
+- Structural (tracy, S_verifier.json; P_*.json): expert: 21 traced sessions, 892 ops each, 36 KV-cache ops, and exactly
+  ONE op after the last one: GenericOp mk_trisc.cpp on 110 cores. No session was missing a device duration.
+  Off (shipped): 2551 ops, 1660 after the last KV op (matmul / layernorm / fused_attn / row_rsqrt / geglu_rc ...). The prefix is the same 891 ops
+  in both arms, so the A/B arms are different programs. Megakernel kernel time median 17.503 ms base / 16.070 LIBERO
+  (20 replays + first; gates < 31.26 / 27.85). Binaries from the CSV: base 18,812+2,300+21,612+18,484+7,692 B (<= 128 KB).
+- Amended base gate (O_verifier.json). The oracle was RE-DERIVED independently of host_model: the torch reference's own
+  denoising.sample_actions / forward_expert (fp32), fed each arm's own device prefix K/V (bf8 caches read back) and the device noise.
+  Positive control: fed the reference's own VLM cache, it reproduces the reference bit-exactly (seeds 1, 2).
+  20 seeds (6 of test_pcc + 14 new, n_real incl. 1 / 224 / 128 / 150). Result: megakernel closer to the oracle on 20/20. Mean 0.99980
+  (min 0.99942) vs shipped 0.99649 (min 0.98784). Seed 2: 0.99979 vs 0.99806. Prefix K/V bit-identical across the arms on all 20.
+  vs the full fp32 reference: mean mk 0.97350, shipped 0.96853. The base pytest's own min-0.95 floor stays red for BOTH arms (seed 3: mk 0.94833,
+  shipped 0.93811; pre-existing on main).
+- openpi golden PCC7 (A_expert_libero.json): mean 0.999884, min 0.999778 (shipped same session 0.999839 / 0.999712): PASS.
+- Replays: 10 re-upload calls + 10 raw execute_trace, bit-identical to the first call, both shapes and both arms. The 20 profiled
+  replays were also identical.
+- Alternating / shape switch vs fresh-model references (ALT_expert.json, own design): 18/18 calls bit-identical across base
+  A B C D x2 (n_real 12/150/1/224), then LIBERO E F E F F E, then base again D A C B. The positive control was max PCC between refs 0.952.
+  The shipped arm also passed 18/18. The named tests/megakernel/verify_alternating.py also passed (OVERALL all_ok=True, ALT_named_expert.log).
+- Soak (soak_results.txt, hold4.log): 20/20 consecutive processes rc=0, each doing warm-up + capture + 31 calls that alternate two
+  prompts. Every run gave all_equal=true and the same digest c9a66e4da14f7563, about 40 s each. No hangs.
+- Latency with a clock witness (A_*.json): per call base 70.97 ms vs shipped 84.13, LIBERO 65.71 vs 76.91. Replay 69.54 / 64.38 vs
+  82.83 / 75.63. The witness is time.time and monotonic over the 30-call loop (= the perf_counter sum to within 0.1 ms), plus a 10 s sustained replay count
+  (144 vs 121 replays at base) and tt-smi aiclk 1350 MHz throughout both arms.
+- CPU suites: test_fused_host + test_cpu_mk + test_reference_vs_openpi 34 passed (cpu_suites.txt).
+Not re-run by the verifier: served latency (P1-6), LIBERO n_lang 32 / 1 edge cases, the replay L1 guard.
+Open: the 2026-09-30 gate amendment is NOT yet recorded in DESIGN.md §7 (still the old "within 0.005" text).
+Verdict: phase 1 ACCEPTED on the amended gates.

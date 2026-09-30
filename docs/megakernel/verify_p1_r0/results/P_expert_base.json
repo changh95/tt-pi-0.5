@@ -1,0 +1,47 @@
+{
+ "t0": "2026-09-30 13:13:02",
+ "arm": "expert",
+ "shape": "base",
+ "kw": {
+  "device_id": 0,
+  "l1_small_size": 24576,
+  "trace_region_size": 160000000,
+  "worker_l1_size": 1395712
+ },
+ "replays_equal_first": [
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true
+ ],
+ "stamp": {
+  "backend": "expert",
+  "program": {
+   "kernel_digest": "328761c8a1ce3fd9",
+   "sources": [
+    "mk_brisc.cpp",
+    "mk_defs.hpp",
+    "mk_dm.hpp",
+    "mk_ncrisc.cpp",
+    "mk_trisc.cpp"
+   ]
+  }
+ },
+ "t1": "2026-09-30 13:14:53"
+}

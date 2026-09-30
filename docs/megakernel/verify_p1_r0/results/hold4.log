@@ -1,0 +1,44 @@
+2026-09-30_13:32:41 named alt start
+2026-09-30_13:37:28 named alt rc=0
+2026-09-30_13:37:28 run 1 start
+2026-09-30_13:38:10 run 1 rc=0 RESULT {"backend": "expert", "digest_kernel": "328761c8a1ce3fd9", "calls": 31, "all_equal": true, "digest": "c9a66e4da14f7563", "wall_s": 39.5, "time": "2026-09-30 13:38:09"}
+2026-09-30_13:38:10 run 2 start
+2026-09-30_13:38:53 run 2 rc=0 RESULT {"backend": "expert", "digest_kernel": "328761c8a1ce3fd9", "calls": 31, "all_equal": true, "digest": "c9a66e4da14f7563", "wall_s": 39.8, "time": "2026-09-30 13:38:51"}
+2026-09-30_13:38:53 run 3 start
+2026-09-30_13:39:34 run 3 rc=0 RESULT {"backend": "expert", "digest_kernel": "328761c8a1ce3fd9", "calls": 31, "all_equal": true, "digest": "c9a66e4da14f7563", "wall_s": 39.0, "time": "2026-09-30 13:39:33"}
+2026-09-30_13:39:34 run 4 start
+2026-09-30_13:40:17 run 4 rc=0 RESULT {"backend": "expert", "digest_kernel": "328761c8a1ce3fd9", "calls": 31, "all_equal": true, "digest": "c9a66e4da14f7563", "wall_s": 39.6, "time": "2026-09-30 13:40:15"}
+2026-09-30_13:40:17 run 5 start
+2026-09-30_13:40:57 run 5 rc=0 RESULT {"backend": "expert", "digest_kernel": "328761c8a1ce3fd9", "calls": 31, "all_equal": true, "digest": "c9a66e4da14f7563", "wall_s": 37.8, "time": "2026-09-30 13:40:56"}
+2026-09-30_13:40:57 run 6 start
+2026-09-30_13:41:40 run 6 rc=0 RESULT {"backend": "expert", "digest_kernel": "328761c8a1ce3fd9", "calls": 31, "all_equal": true, "digest": "c9a66e4da14f7563", "wall_s": 40.5, "time": "2026-09-30 13:41:39"}
+2026-09-30_13:41:40 run 7 start
+2026-09-30_13:42:23 run 7 rc=0 RESULT {"backend": "expert", "digest_kernel": "328761c8a1ce3fd9", "calls": 31, "all_equal": true, "digest": "c9a66e4da14f7563", "wall_s": 39.8, "time": "2026-09-30 13:42:22"}
+2026-09-30_13:42:23 run 8 start
+2026-09-30_13:43:03 run 8 rc=0 RESULT {"backend": "expert", "digest_kernel": "328761c8a1ce3fd9", "calls": 31, "all_equal": true, "digest": "c9a66e4da14f7563", "wall_s": 37.6, "time": "2026-09-30 13:43:02"}
+2026-09-30_13:43:03 run 9 start
+2026-09-30_13:43:46 run 9 rc=0 RESULT {"backend": "expert", "digest_kernel": "328761c8a1ce3fd9", "calls": 31, "all_equal": true, "digest": "c9a66e4da14f7563", "wall_s": 40.4, "time": "2026-09-30 13:43:45"}
+2026-09-30_13:43:46 run 10 start
+2026-09-30_13:44:29 run 10 rc=0 RESULT {"backend": "expert", "digest_kernel": "328761c8a1ce3fd9", "calls": 31, "all_equal": true, "digest": "c9a66e4da14f7563", "wall_s": 39.8, "time": "2026-09-30 13:44:28"}
+2026-09-30_13:44:29 run 11 start
+2026-09-30_13:45:11 run 11 rc=0 RESULT {"backend": "expert", "digest_kernel": "328761c8a1ce3fd9", "calls": 31, "all_equal": true, "digest": "c9a66e4da14f7563", "wall_s": 39.7, "time": "2026-09-30 13:45:10"}
+2026-09-30_13:45:11 run 12 start
+2026-09-30_13:45:55 run 12 rc=0 RESULT {"backend": "expert", "digest_kernel": "328761c8a1ce3fd9", "calls": 31, "all_equal": true, "digest": "c9a66e4da14f7563", "wall_s": 40.7, "time": "2026-09-30 13:45:54"}
+2026-09-30_13:45:55 run 13 start
+2026-09-30_13:46:37 run 13 rc=0 RESULT {"backend": "expert", "digest_kernel": "328761c8a1ce3fd9", "calls": 31, "all_equal": true, "digest": "c9a66e4da14f7563", "wall_s": 39.8, "time": "2026-09-30 13:46:36"}
+2026-09-30_13:46:37 run 14 start
+2026-09-30_13:47:21 run 14 rc=0 RESULT {"backend": "expert", "digest_kernel": "328761c8a1ce3fd9", "calls": 31, "all_equal": true, "digest": "c9a66e4da14f7563", "wall_s": 40.5, "time": "2026-09-30 13:47:19"}
+2026-09-30_13:47:21 run 15 start
+2026-09-30_13:48:04 run 15 rc=0 RESULT {"backend": "expert", "digest_kernel": "328761c8a1ce3fd9", "calls": 31, "all_equal": true, "digest": "c9a66e4da14f7563", "wall_s": 40.6, "time": "2026-09-30 13:48:03"}
+2026-09-30_13:48:04 run 16 start
+2026-09-30_13:48:47 run 16 rc=0 RESULT {"backend": "expert", "digest_kernel": "328761c8a1ce3fd9", "calls": 31, "all_equal": true, "digest": "c9a66e4da14f7563", "wall_s": 40.6, "time": "2026-09-30 13:48:46"}
+2026-09-30_13:48:47 run 17 start
+2026-09-30_13:49:28 run 17 rc=0 RESULT {"backend": "expert", "digest_kernel": "328761c8a1ce3fd9", "calls": 31, "all_equal": true, "digest": "c9a66e4da14f7563", "wall_s": 37.5, "time": "2026-09-30 13:49:26"}
+2026-09-30_13:49:28 run 18 start
+2026-09-30_13:50:11 run 18 rc=0 RESULT {"backend": "expert", "digest_kernel": "328761c8a1ce3fd9", "calls": 31, "all_equal": true, "digest": "c9a66e4da14f7563", "wall_s": 40.9, "time": "2026-09-30 13:50:10"}
+2026-09-30_13:50:11 run 19 start
+2026-09-30_13:50:55 run 19 rc=0 RESULT {"backend": "expert", "digest_kernel": "328761c8a1ce3fd9", "calls": 31, "all_equal": true, "digest": "c9a66e4da14f7563", "wall_s": 40.6, "time": "2026-09-30 13:50:53"}
+2026-09-30_13:50:55 run 20 start
+2026-09-30_13:51:37 run 20 rc=0 RESULT {"backend": "expert", "digest_kernel": "328761c8a1ce3fd9", "calls": 31, "all_equal": true, "digest": "c9a66e4da14f7563", "wall_s": 39.8, "time": "2026-09-30 13:51:36"}
+2026-09-30_13:51:37 named alt start
+2026-09-30_13:56:44 named alt rc=0

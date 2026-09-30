@@ -1,0 +1,21 @@
+{
+ "t0": "2026-09-30 13:17:11",
+ "arm": "off",
+ "shape": "base",
+ "kw": {
+  "device_id": 0,
+  "l1_small_size": 24576,
+  "trace_region_size": 160000000
+ },
+ "replays_equal_first": [
+  true,
+  true,
+  true,
+  true
+ ],
+ "stamp": {
+  "backend": "off",
+  "program": null
+ },
+ "t1": "2026-09-30 13:18:03"
+}

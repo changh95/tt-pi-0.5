@@ -1,0 +1,11 @@
+2026-09-30_13:07:30 START expert base
+2026-09-30_13:09:15 END expert base rc=0
+2026-09-30_13:09:15 START off base
+2026-09-30_13:10:05 END off base rc=0
+2026-09-30_13:10:05 START expert libero
+2026-09-30_13:11:08 END expert libero rc=0
+2026-09-30_13:11:08 START off libero
+2026-09-30_13:11:54 END off libero rc=0
+2026-09-30_13:11:54 [device-guard pid=711166] RESET AFTER JOB (WITH_DEVICE_RESET_AFTER=1, rc=0): /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/verify_p1/hold1.sh
+2026-09-30_13:11:54 [device-guard pid=711166] RESET: tt-smi -r 0 (probe hung/failed with no other device users)
+2026-09-30_13:12:36 [device-guard pid=711166] reset exit=0

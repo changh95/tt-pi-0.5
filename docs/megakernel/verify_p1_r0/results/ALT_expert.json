@@ -1,0 +1,151 @@
+{
+ "t0": "2026-09-30 13:25:00",
+ "arm": "expert",
+ "n_lang_libero": [
+  17,
+  20
+ ],
+ "checks": [
+  {
+   "phase": "alt_base",
+   "prompt": "A",
+   "bit_identical": true,
+   "pcc": 1.0,
+   "maxabs": 0.0
+  },
+  {
+   "phase": "alt_base",
+   "prompt": "B",
+   "bit_identical": true,
+   "pcc": 1.0,
+   "maxabs": 0.0
+  },
+  {
+   "phase": "alt_base",
+   "prompt": "C",
+   "bit_identical": true,
+   "pcc": 0.9999999999999999,
+   "maxabs": 0.0
+  },
+  {
+   "phase": "alt_base",
+   "prompt": "D",
+   "bit_identical": true,
+   "pcc": 1.0,
+   "maxabs": 0.0
+  },
+  {
+   "phase": "alt_base",
+   "prompt": "A",
+   "bit_identical": true,
+   "pcc": 1.0,
+   "maxabs": 0.0
+  },
+  {
+   "phase": "alt_base",
+   "prompt": "B",
+   "bit_identical": true,
+   "pcc": 1.0,
+   "maxabs": 0.0
+  },
+  {
+   "phase": "alt_base",
+   "prompt": "C",
+   "bit_identical": true,
+   "pcc": 0.9999999999999999,
+   "maxabs": 0.0
+  },
+  {
+   "phase": "alt_base",
+   "prompt": "D",
+   "bit_identical": true,
+   "pcc": 1.0,
+   "maxabs": 0.0
+  },
+  {
+   "phase": "alt_libero_after_switch",
+   "prompt": "E",
+   "bit_identical": true,
+   "pcc": 0.9999999999999998,
+   "maxabs": 0.0
+  },
+  {
+   "phase": "alt_libero_after_switch",
+   "prompt": "F",
+   "bit_identical": true,
+   "pcc": 1.0,
+   "maxabs": 0.0
+  },
+  {
+   "phase": "alt_libero_after_switch",
+   "prompt": "E",
+   "bit_identical": true,
+   "pcc": 0.9999999999999998,
+   "maxabs": 0.0
+  },
+  {
+   "phase": "alt_libero_after_switch",
+   "prompt": "F",
+   "bit_identical": true,
+   "pcc": 1.0,
+   "maxabs": 0.0
+  },
+  {
+   "phase": "alt_libero_after_switch",
+   "prompt": "F",
+   "bit_identical": true,
+   "pcc": 1.0,
+   "maxabs": 0.0
+  },
+  {
+   "phase": "alt_libero_after_switch",
+   "prompt": "E",
+   "bit_identical": true,
+   "pcc": 0.9999999999999998,
+   "maxabs": 0.0
+  },
+  {
+   "phase": "switch_back_base",
+   "prompt": "D",
+   "bit_identical": true,
+   "pcc": 1.0,
+   "maxabs": 0.0
+  },
+  {
+   "phase": "switch_back_base",
+   "prompt": "A",
+   "bit_identical": true,
+   "pcc": 1.0,
+   "maxabs": 0.0
+  },
+  {
+   "phase": "switch_back_base",
+   "prompt": "C",
+   "bit_identical": true,
+   "pcc": 0.9999999999999999,
+   "maxabs": 0.0
+  },
+  {
+   "phase": "switch_back_base",
+   "prompt": "B",
+   "bit_identical": true,
+   "pcc": 1.0,
+   "maxabs": 0.0
+  }
+ ],
+ "stamps": [
+  "expert",
+  "expert",
+  "expert",
+  "expert",
+  "expert",
+  "expert"
+ ],
+ "positive_control_max_pcc_between_refs": 0.9521275116489937,
+ "pcc7_fresh": {
+  "E": 0.9999283839042867,
+  "F": 0.9999007120343301
+ },
+ "all_bit_identical": true,
+ "t1": "2026-09-30 13:29:54"
+}
