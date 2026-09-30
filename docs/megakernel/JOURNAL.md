@@ -543,7 +543,7 @@ Files: docs/megakernel/publish_p1/{scripts,results}/ (copies of scratchpad/pub1)
   profiler), or the megakernel-p1 LIBERO files. The rows for the 125.9 ms image and the old 0.938-0.998 fp32 range were removed.
 - Verify (results/hf_verify.log): 151 files in the tree, none missing or unexpected, deleted blobs gone. sha256: 133 files
   downloaded + 15 LFS image blobs via lfs.sha256, 0 mismatches. code/: all 83 GitHub-main files byte-identical (HF-only
-  = tt-metal's common/lightweightmodule.py). Image pull-back: removed local images, then  docker-loaded sha256:fe0d2e3d68a752709a443cbe6b8e5aa5f9d914ab21f03631959cb81623aeeafe
+  = tt-metal's common/lightweightmodule.py). Image pull-back: removed local images, then "tt-model pull changh95/pi05-base-p150" docker-loaded sha256:fe0d2e3d68a752709a443cbe6b8e5aa5f9d914ab21f03631959cb81623aeeafe
   (= recorded digest). Served the pulled package by repo id (results/serve_pulled.log): megakernel expert, digest
   328761c8a1ce3fd9, smoke PASS, 70.97 ms. Headless Chromium (results/pw_video.log): the README video
   played (readyState 4, t 3.99 s of 29.63 s, no media error). The one failed request (replay.mp4, 404) comes from the HF
