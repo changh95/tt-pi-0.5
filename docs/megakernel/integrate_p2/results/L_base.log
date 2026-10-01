@@ -1,0 +1,33 @@
+2026-10-01 12:27:01.032 | DEBUG    | ttnn:<module>:45 - Initial ttnn.CONFIG:
+Config{cache_path=/home/deepgadget/.cache/ttnn,model_cache_path=/home/deepgadget/.cache/ttnn/models,tmp_dir=/tmp/ttnn,enable_model_cache=false,enable_fast_runtime_mode=true,validate_program_args=false,throw_exception_on_fallback=false,enable_logging=false,enable_graph_report=false,enable_graph_python_stack_traces=false,enable_detailed_buffer_report=false,enable_detailed_tensor_report=false,enable_comparison_mode=false,comparison_mode_should_raise_exception=false,comparison_mode_pcc=0.9999,root_report_path=generated/ttnn/reports,report_name=std::nullopt,std::nullopt}
+2026-10-01 12:27:01.168 | info     |          Device | Opening user mode device driver (tt_cluster.cpp:224)
+2026-10-01 12:27:01.168 | info     |             UMD | Cluster constructor started. (cluster.cpp:408)
+2026-10-01 12:27:01.168 | info     |             UMD | Creating TopologyDiscovery for architecture: blackhole (topology_discovery.cpp:96)
+2026-10-01 12:27:01.168 | info     |             UMD | Starting topology discovery. (topology_discovery.cpp:115)
+2026-10-01 12:27:01.171 | info     |             UMD | Established firmware bundle version: 19.12.0 (topology_discovery.cpp:576)
+2026-10-01 12:27:01.171 | info     |             UMD | Completed topology discovery. (topology_discovery.cpp:119)
+2026-10-01 12:27:01.675 | info     |             UMD | Opening local chip ids/PCIe ids: {0}/[0] and remote chip ids {} (cluster.cpp:175)
+2026-10-01 12:27:01.675 | info     |             UMD | IOMMU: disabled (cluster.cpp:149)
+2026-10-01 12:27:01.675 | info     |             UMD | KMD version: 2.11.0 (cluster.cpp:152)
+2026-10-01 12:27:01.675 | info     |             UMD | Cluster constructor completed. (cluster.cpp:683)
+2026-10-01 12:27:01.675 | info     |             UMD | Starting devices in cluster (cluster.cpp:1289)
+2026-10-01 12:27:01.683 | info     |             UMD | Starting devices in cluster completed. (cluster.cpp:1297)
+2026-10-01 12:27:02.046 | info     |     Distributed | Using auto discovery to generate mesh graph. (metal_env.cpp:422)
+2026-10-01 12:27:02.046 | info     |     Distributed | Constructing control plane using auto-discovery (no mesh graph descriptor). (metal_env.cpp:484)
+2026-10-01 12:27:02.046 | warning  |          Always | Unknown motherboard 'ProArt X870E-CREATOR WIFI' for chip_id=0 (bus_id=0x3) — falling back to bus_id as tray_id. Add this motherboard and its bus IDs to mobo_to_bus_ids in physical_system_discovery.cpp. (physical_system_discovery.cpp:119)
+2026-10-01 12:27:02.046 | info     |          Fabric | Logical multi-mesh adjacency: intermesh degree histogram {0:1}; intra-mesh degree histograms mesh0 {0:1} (topology_mapper_utils.cpp:3190)
+2026-10-01 12:27:02.046 | info     |          Fabric | Physical multi-mesh adjacency: intermesh degree histogram {0:1}; intra-mesh degree histograms mesh0 {0:1} (topology_mapper_utils.cpp:3198)
+2026-10-01 12:27:02.153 | info     |           Metal | Enabling program cache on MeshDevice 1 (mesh_device.cpp:1176)
+[pi0.5] expert adaRMS norms folded into per-step weights in 5.1s
+2026-10-01 12:27:52.829 | warning  |           Metal | Allocating device buffers is potentially unsafe due to the existence of an active trace. These buffers may be corrupted once a trace is executed if they are not released before then. Use the trace allocation tracker to verify. (allocator.cpp:136)
+2026-10-01 12:27:53 siglip {'ms_1layer_Rreps': 5.183198023587465, 'ms_nlayers_Rreps': 97.27687004487962, 'n_layers': 27, 'ms_1layer_1rep': 1.8800999969244003, 'per_layer_us_marginal': 354.2064308511236, 'per_layer_us_naive_nlayers': 360.2847038699245, 'engine_stamps_present': 8}
+2026-10-01 12:27:54 vlm {'ms_1layer_Rreps': 17.686045030131936, 'ms_nlayers_Rreps': 276.5893479809165, 'n_layers': 17, 'ms_1layer_1rep': 3.1829620129428804, 'per_layer_us_marginal': 1618.1456434424035, 'per_layer_us_naive_nlayers': 1626.9961645936264, 'engine_stamps_present': 8}
+2026-10-01 12:27:56 prefix {'ms_Rreps': 382.18620902625844, 'ms_1rep': 39.650784980040044, 'per_rep_ms_marginal': 38.05949156069093, 'all': [382.18620902625844, 382.74893700145185, 380.7391630252823]}
+RESULT {"t0": "2026-10-01 12:27:02", "shape": "base", "reps": 10, "timing": {"siglip": {"ms_1layer_Rreps": 5.183198023587465, "ms_nlayers_Rreps": 97.27687004487962, "n_layers": 27, "all_1": [5.5018269922584295, 5.6341360323131084, 5.174099991563708, 5.183198023587465, 5.153501988388598], "all_n": [97.00664202682674, 97.11731999414042, 97.69209200749174, 97.35856403131038, 97.27687004487962], "ms_1layer_1rep": 1.8800999969244003, "per_layer_us_marginal": 354.2064308511236, "per_layer_us_naive_nlayers": 360.2847038699245, "engine_stamps_present": 8}, "vlm": {"ms_1layer_Rreps": 17.686045030131936, "ms_nlayers_Rreps": 276.5893479809165, "n_layers": 17, "all_1": [18.02931196289137, 17.628256988245994, 17.686045030131936, 17.72185298614204, 17.60464202379808], "all_n": [275.8478130563162, 276.5893479809165, 276.55066398438066, 278.3196149975993, 280.0186529639177], "ms_1layer_1rep": 3.1829620129428804, "per_layer_us_marginal": 1618.1456434424035, "per_layer_us_naive_nlayers": 1626.9961645936264, "engine_stamps_present": 8}, "prefix": {"ms_Rreps": 382.18620902625844, "ms_1rep": 39.650784980040044, "per_rep_ms_marginal": 38.05949156069093, "all": [382.18620902625844, 382.74893700145185, 380.7391630252823]}}, "after_eq_before": true, "t1": "2026-10-01 12:27:56"}
+2026-10-01 12:27:56.928 | info     |    BuildKernels | JIT cache stats: 150/155 hits (96.8%) [150 cached, 24 build-once dedup, 0 merged artifacts, 0 merged genfiles] (build_cache_telemetry.cpp:268)
+2026-10-01 12:27:56.928 | info     |    BuildKernels | JIT telemetry: 43 registered TelemetryTokens (build_cache_telemetry.cpp:325)
+2026-10-01 12:27:56.931 | info     |          Device | Closing user mode device drivers (tt_cluster.cpp:550)
+2026-10-01 12:27:56.931 | info     |             UMD | Closing devices in cluster (cluster.cpp:1302)
+2026-10-01 12:27:57.121 | info     |             UMD | Closing devices in cluster completed. (cluster.cpp:1311)
+2026-10-01 12:27:57.121 | info     |             UMD | Cluster destructor started. (cluster.cpp:1017)
+2026-10-01 12:27:57.121 | info     |             UMD | Cluster destructor completed. (cluster.cpp:1020)

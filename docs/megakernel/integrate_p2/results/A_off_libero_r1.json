@@ -1,0 +1,184 @@
+{
+ "t0": "2026-10-01 11:36:10",
+ "arm_env": "off",
+ "shape": "libero",
+ "open_kwargs": {
+  "device_id": 0,
+  "l1_small_size": 24576,
+  "trace_region_size": 160000000
+ },
+ "env": {
+  "PI05_MEGAKERNEL": "off",
+  "TT_METAL_CACHE": "/tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/ip2/ttcache_off"
+ },
+ "smi_open": {
+  "t": "2026-10-01 11:36:11",
+  "aiclk": " 800",
+  "power": " 23.0",
+  "temp": "54.9"
+ },
+ "stamp": {
+  "backend": "off",
+  "program": null
+ },
+ "first_call_ms": 9143.473326985259,
+ "traced": true,
+ "prefix_len": 544,
+ "kv_cache_shape": [
+  1,
+  1,
+  640,
+  256
+ ],
+ "kv_cache_dtype": "DataType.BFLOAT8_B",
+ "digests": {
+  "libero_spatial/t0/i0/call0/step10": "06567926fcd19ce9",
+  "libero_spatial/t0/i0/call12/step70": "e08788ffed05b3b3",
+  "libero_spatial/t3/i1/call0/step10": "e34594639247fb0c",
+  "libero_spatial/t3/i1/call12/step70": "084f436124466724",
+  "libero_spatial/t6/i2/call0/step10": "68c6b29d96f1fe66",
+  "libero_spatial/t6/i2/call12/step70": "7405ffc4d0a49fcf",
+  "libero_spatial/t9/i3/call0/step10": "f170af41fbc29cca",
+  "libero_spatial/t9/i3/call12/step70": "4e0c1a0454348af1"
+ },
+ "distinct_outputs": 8,
+ "pcc7": {
+  "libero_spatial/t0/i0/call0/step10": 0.999844992200279,
+  "libero_spatial/t0/i0/call12/step70": 0.9997847897122235,
+  "libero_spatial/t3/i1/call0/step10": 0.9998678648319074,
+  "libero_spatial/t3/i1/call12/step70": 0.9999390987897641,
+  "libero_spatial/t6/i2/call0/step10": 0.9997118086396971,
+  "libero_spatial/t6/i2/call12/step70": 0.9997768346291702,
+  "libero_spatial/t9/i3/call0/step10": 0.9999170195323196,
+  "libero_spatial/t9/i3/call12/step70": 0.9998659931618386
+ },
+ "pcc7_mean": 0.99983855018715,
+ "pcc7_min": 0.9997118086396971,
+ "ten_calls_eq_first": [
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true
+ ],
+ "ten_raw_replays_eq_first": [
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true
+ ],
+ "poison_readback_all_7": true,
+ "after_poison_eq_obs_j": true,
+ "after_poison_has_7": false,
+ "smi_bench_before": {
+  "t": "2026-10-01 11:36:45",
+  "aiclk": "1350",
+  "power": " 65.0",
+  "temp": "59.0"
+ },
+ "witness_call": {
+  "time_ns_s": 2.311188164,
+  "monotonic_s": 2.311189997,
+  "sum_perf_counter_s": 2.3111617817776278,
+  "wall_start_epoch": 1790822205.3692288
+ },
+ "witness_replay": {
+  "time_ns_s": 2.270082158,
+  "sum_perf_counter_s": 2.270048214995768
+ },
+ "replays_in_10s_time_time": 133,
+ "smi_bench_after": {
+  "t": "2026-10-01 11:37:00",
+  "aiclk": "1350",
+  "power": " 67.0",
+  "temp": "61.3"
+ },
+ "call_ms": {
+  "median": 76.96707150898874,
+  "min": 76.58987899776548,
+  "max": 77.89512898307294,
+  "all": [
+   77.29131600353867,
+   76.96698600193486,
+   76.96083595510572,
+   77.11040595313534,
+   77.02766999136657,
+   77.76348199695349,
+   76.80413196794689,
+   77.26711995201185,
+   76.96715701604262,
+   76.90817699767649,
+   76.61935401847586,
+   76.72943995567039,
+   76.95477397646755,
+   77.28179701371118,
+   77.22756499424577,
+   77.0598910166882,
+   77.03444396611303,
+   77.32165296329185,
+   77.89512898307294,
+   76.91275503020734,
+   76.77434501238167,
+   76.83528901543468,
+   76.85257197590545,
+   77.05603400245309,
+   76.80060400161892,
+   76.80897001409903,
+   76.58987899776548,
+   77.39956898149103,
+   76.89766702242196,
+   77.04276900039986
+  ]
+ },
+ "replay_ms": {
+  "median": 75.6490225030575,
+  "min": 75.60948899481446,
+  "max": 75.83478203741834,
+  "all": [
+   75.63101896084845,
+   75.62489702831954,
+   75.6611360120587,
+   75.77914703870192,
+   75.71508700493723,
+   75.6304279784672,
+   75.67079400178045,
+   75.63682895852253,
+   75.81254001706839,
+   75.63141902210191,
+   75.62080898787826,
+   75.62283298466355,
+   75.69909701123834,
+   75.61860600253567,
+   75.63791098073125,
+   75.83478203741834,
+   75.6467379978858,
+   75.60948899481446,
+   75.6536410190165,
+   75.66502300323918,
+   75.62631997279823,
+   75.66252799006179,
+   75.64982399344444,
+   75.65497397445142,
+   75.63609897624701,
+   75.66243701148778,
+   75.67115500569344,
+   75.61532000545412,
+   75.64822101267055,
+   75.81911201123148
+  ]
+ },
+ "after_bench_eq_first": true,
+ "megakernel_l1": null,
+ "t1": "2026-10-01 11:37:00"
+}

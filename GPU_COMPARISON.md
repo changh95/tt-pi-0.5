@@ -1,6 +1,44 @@
 # pi05-base-p150 — Blackhole p150a vs RTX 5090 (same host, same weights, same input)
 
-GPU pass: 2026-09-14; p150a side updated 2026-09-29 (next section). Original note: Facts only; every GPU number below was measured in this pass, every p150a number is copied (with its source line) from the validation / publish reports and logs. The p150a was NOT touched.
+GPU pass: 2026-09-14; p150a side updated 2026-09-29 and 2026-10-01 (next sections). Original note: Facts only; every GPU number below was measured in this pass, every p150a number is copied (with its source line) from the validation / publish reports and logs. The p150a was NOT touched.
+
+## Update 2026-10-01: the whole-model megakernel (current default path)
+
+The p150a's default path is now the whole-model megakernel: every request runs SigLIP x2, the projector, the language
+embedding, the VLM prefill, the 10-step expert loop and the Euler updates as ONE persistent `ttnn.generic_op` (one
+device op per trace replay; tt-pi-0.5 branch `megakernel-2026-09-29`, docs/megakernel/). Measured 2026-10-01 on the
+served shape (2 x 224² + 224 tokens, H = 50, 10 steps) by `server/app.py` (`docs/megakernel/integrate_p2/results/`
+`S_whole_123520.lat.json`, 30 warm requests): `timing_ms.inference` median **56.0 ms** (55.965; a second server 55.91),
+`timing_ms.total` **57.6 ms**; the in-process trace replay alone (`execute_trace`, host wall, median of 30,
+`A_whole_base_r1.json`) is 54.1 ms. The GPU numbers are still the 2026-09-14 runs of the pre-fix torch reference (not
+re-measured). Ratio = p150a ms / GPU ms (> 1 means the GPU is faster).
+
+| row | p150a ms | GPU setting | GPU ms (2026-09-14) | ratio p150a/GPU |
+|---|---:|---|---:|---:|
+| device forward (p150a `timing_ms.inference` vs GPU incl_h2d) | 55.965 | fp32 strict | 144.066 | **0.39** |
+|  |  | tf32 | 108.693 | **0.51** |
+|  |  | bf16 autocast (fp32 weights) | 121.476 | **0.46** |
+|  |  | fp16 autocast (fp32 weights) | 123.674 | **0.45** |
+|  |  | bf16 weights resident (eager) | 99.869 | **0.56** |
+|  |  | bf16 autocast + `torch.compile` default | 88.419 | **0.63** |
+|  |  | bf16 autocast + `torch.compile` reduce-overhead | 98.388 | **0.57** |
+|  |  | bf16 weights resident + `torch.compile` reduce-overhead | 59.97 | **0.93** |
+|  |  | bf16 weights resident + whole-request `torch.compile` default | 46.62 | **1.20** |
+|  |  | bf16 weights resident + whole-request `torch.compile` reduce-overhead | 48.609 | **1.15** |
+| forward only (p150a trace replay vs GPU excl_h2d) | 54.101 | fp32 strict | 143.77 | 0.38 |
+|  |  | tf32 | 108.54 | 0.50 |
+|  |  | bf16 autocast (fp32 weights) | 121.19 | 0.45 |
+|  |  | fp16 autocast (fp32 weights) | 126.91 | 0.43 |
+|  |  | bf16 weights resident (eager) | 99.78 | 0.54 |
+|  |  | bf16 weights resident + whole-request `torch.compile` default | 46.39 | 1.17 |
+| served e2e (p150a `timing_ms.total` vs GPU served-like) | 57.57 | fp32 strict | 156.514 | **0.37** |
+|  |  | tf32 | 110.221 | **0.52** |
+|  |  | bf16 autocast (fp32 weights) | 122.868 | **0.47** |
+|  |  | bf16 weights resident (eager) | 101.484 | **0.57** |
+
+Reading: the p150a (56.0 ms) is faster than every eager GPU row (bf16 weights resident 99.9 ms: ratio 0.56) and than
+the stage-wise compiled rows (best 59.97 ms: ratio 0.93); the GPU's single whole-request compiled graph (46.6 ms) is
+1.20x faster than the p150a. p150a power was not measured, so no efficiency comparison is made.
 
 ## Update 2026-09-29: the p150a side re-measured (current image)
 

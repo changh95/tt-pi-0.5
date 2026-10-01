@@ -1,0 +1,153 @@
+{
+ "shape": "libero",
+ "t0": "2026-10-01 12:08:26",
+ "kernel_digest": "4aa02cdf21ed0c94",
+ "args": [
+  {
+   "src": "whole_ncrisc.cpp",
+   "rt_max": 76,
+   "rt_min_core": 76,
+   "common": 204,
+   "n_cores": 110,
+   "n_ct": 33
+  },
+  {
+   "src": "whole_brisc.cpp",
+   "rt_max": 76,
+   "rt_min_core": 76,
+   "common": 141,
+   "n_cores": 110,
+   "n_ct": 33
+  },
+  {
+   "src": "whole_trisc.cpp",
+   "rt_max": 43,
+   "rt_min_core": 76,
+   "common": 103,
+   "n_cores": 110,
+   "n_ct": 33
+  }
+ ],
+ "n_cbs_ids": 63,
+ "cb_ids": [
+  0,
+  1,
+  2,
+  3,
+  4,
+  5,
+  6,
+  7,
+  8,
+  9,
+  10,
+  11,
+  12,
+  13,
+  14,
+  15,
+  16,
+  17,
+  18,
+  19,
+  20,
+  21,
+  22,
+  23,
+  24,
+  25,
+  26,
+  27,
+  28,
+  29,
+  30,
+  31,
+  32,
+  33,
+  34,
+  35,
+  36,
+  37,
+  38,
+  39,
+  40,
+  41,
+  42,
+  43,
+  44,
+  45,
+  46,
+  47,
+  48,
+  49,
+  50,
+  51,
+  52,
+  53,
+  54,
+  55,
+  56,
+  57,
+  58,
+  59,
+  60,
+  61,
+  62
+ ],
+ "compile_s": 2.1,
+ "elfs": {
+  "whole_brisc/10586104121372470253/brisc/brisc.elf": {
+   "load_filesz": 26912,
+   "alloc_progbits": 26912
+  },
+  "whole_brisc/10586104121372470253/brisc/brisc.elf.xip.elf": {
+   "load_filesz": 26912,
+   "alloc_progbits": 26912
+  },
+  "whole_ncrisc/17102472149006382981/ncrisc/ncrisc.elf": {
+   "load_filesz": 16248,
+   "alloc_progbits": 16248
+  },
+  "whole_ncrisc/17102472149006382981/ncrisc/ncrisc.elf.xip.elf": {
+   "load_filesz": 16248,
+   "alloc_progbits": 16248
+  },
+  "whole_trisc/1679187254153856958/trisc0/trisc0.elf": {
+   "load_filesz": 35320,
+   "alloc_progbits": 35320
+  },
+  "whole_trisc/1679187254153856958/trisc0/trisc0.elf.xip.elf": {
+   "load_filesz": 35320,
+   "alloc_progbits": 35320
+  },
+  "whole_trisc/1679187254153856958/trisc1/trisc1.elf": {
+   "load_filesz": 30612,
+   "alloc_progbits": 30612
+  },
+  "whole_trisc/1679187254153856958/trisc1/trisc1.elf.xip.elf": {
+   "load_filesz": 30612,
+   "alloc_progbits": 30612
+  },
+  "whole_trisc/1679187254153856958/trisc2/trisc2.elf": {
+   "load_filesz": 13728,
+   "alloc_progbits": 13728
+  },
+  "whole_trisc/1679187254153856958/trisc2/trisc2.elf.xip.elf": {
+   "load_filesz": 13728,
+   "alloc_progbits": 13728
+  }
+ },
+ "n_whole_elfs": 5,
+ "footprint": {
+  "binaries_load": 122848,
+  "binaries_alloc": 122848,
+  "args_bytes": 2572,
+  "cb_bytes": 1008,
+  "sem_bytes": 64,
+  "total_load": 126492,
+  "total_alloc": 126492,
+  "gate": 131072,
+  "ring": 136192,
+  "pass": true
+ }
+}

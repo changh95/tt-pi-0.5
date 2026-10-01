@@ -1,0 +1,43 @@
+2026-10-01_12:07:29 soak 1 start
+2026-10-01_12:08:36 soak 1 rc=0 RESULT {"backend": "whole", "kernel_digest": "4aa02cdf21ed0c94", "calls": 31, "all_equal": true, "digest": "886f7341c1085571", "finite": true, "wall_s": 63.2, "time": "2026-10-01 12:08:34"}
+2026-10-01_12:08:36 soak 2 start
+2026-10-01_12:09:29 soak 2 rc=0 RESULT {"backend": "whole", "kernel_digest": "4aa02cdf21ed0c94", "calls": 31, "all_equal": true, "digest": "886f7341c1085571", "finite": true, "wall_s": 50.1, "time": "2026-10-01 12:09:28"}
+2026-10-01_12:09:29 soak 3 start
+2026-10-01_12:10:24 soak 3 rc=0 RESULT {"backend": "whole", "kernel_digest": "4aa02cdf21ed0c94", "calls": 31, "all_equal": true, "digest": "886f7341c1085571", "finite": true, "wall_s": 50.8, "time": "2026-10-01 12:10:22"}
+2026-10-01_12:10:24 soak 4 start
+2026-10-01_12:11:20 soak 4 rc=0 RESULT {"backend": "whole", "kernel_digest": "4aa02cdf21ed0c94", "calls": 31, "all_equal": true, "digest": "886f7341c1085571", "finite": true, "wall_s": 53.3, "time": "2026-10-01 12:11:18"}
+2026-10-01_12:11:20 soak 5 start
+2026-10-01_12:12:16 soak 5 rc=0 RESULT {"backend": "whole", "kernel_digest": "4aa02cdf21ed0c94", "calls": 31, "all_equal": true, "digest": "886f7341c1085571", "finite": true, "wall_s": 52.2, "time": "2026-10-01 12:12:14"}
+2026-10-01_12:12:16 soak 6 start
+2026-10-01_12:13:11 soak 6 rc=0 RESULT {"backend": "whole", "kernel_digest": "4aa02cdf21ed0c94", "calls": 31, "all_equal": true, "digest": "886f7341c1085571", "finite": true, "wall_s": 51.8, "time": "2026-10-01 12:13:09"}
+2026-10-01_12:13:11 soak 7 start
+2026-10-01_12:14:05 soak 7 rc=0 RESULT {"backend": "whole", "kernel_digest": "4aa02cdf21ed0c94", "calls": 31, "all_equal": true, "digest": "886f7341c1085571", "finite": true, "wall_s": 50.6, "time": "2026-10-01 12:14:03"}
+2026-10-01_12:14:05 soak 8 start
+2026-10-01_12:15:01 soak 8 rc=0 RESULT {"backend": "whole", "kernel_digest": "4aa02cdf21ed0c94", "calls": 31, "all_equal": true, "digest": "886f7341c1085571", "finite": true, "wall_s": 52.9, "time": "2026-10-01 12:14:59"}
+2026-10-01_12:15:01 soak 9 start
+2026-10-01_12:15:56 soak 9 rc=0 RESULT {"backend": "whole", "kernel_digest": "4aa02cdf21ed0c94", "calls": 31, "all_equal": true, "digest": "886f7341c1085571", "finite": true, "wall_s": 52.2, "time": "2026-10-01 12:15:55"}
+2026-10-01_12:15:56 soak 10 start
+2026-10-01_12:16:54 soak 10 rc=0 RESULT {"backend": "whole", "kernel_digest": "4aa02cdf21ed0c94", "calls": 31, "all_equal": true, "digest": "886f7341c1085571", "finite": true, "wall_s": 53.8, "time": "2026-10-01 12:16:52"}
+2026-10-01_12:16:54 soak 11 start
+2026-10-01_12:17:49 soak 11 rc=0 RESULT {"backend": "whole", "kernel_digest": "4aa02cdf21ed0c94", "calls": 31, "all_equal": true, "digest": "886f7341c1085571", "finite": true, "wall_s": 52.1, "time": "2026-10-01 12:17:47"}
+2026-10-01_12:17:49 soak 12 start
+2026-10-01_12:18:44 soak 12 rc=0 RESULT {"backend": "whole", "kernel_digest": "4aa02cdf21ed0c94", "calls": 31, "all_equal": true, "digest": "886f7341c1085571", "finite": true, "wall_s": 52.0, "time": "2026-10-01 12:18:43"}
+2026-10-01_12:18:44 soak 13 start
+2026-10-01_12:19:41 soak 13 rc=0 RESULT {"backend": "whole", "kernel_digest": "4aa02cdf21ed0c94", "calls": 31, "all_equal": true, "digest": "886f7341c1085571", "finite": true, "wall_s": 53.2, "time": "2026-10-01 12:19:39"}
+2026-10-01_12:19:41 soak 14 start
+2026-10-01_12:20:36 soak 14 rc=0 RESULT {"backend": "whole", "kernel_digest": "4aa02cdf21ed0c94", "calls": 31, "all_equal": true, "digest": "886f7341c1085571", "finite": true, "wall_s": 51.9, "time": "2026-10-01 12:20:34"}
+2026-10-01_12:20:36 soak 15 start
+2026-10-01_12:21:32 soak 15 rc=0 RESULT {"backend": "whole", "kernel_digest": "4aa02cdf21ed0c94", "calls": 31, "all_equal": true, "digest": "886f7341c1085571", "finite": true, "wall_s": 53.1, "time": "2026-10-01 12:21:30"}
+2026-10-01_12:21:32 soak 16 start
+2026-10-01_12:22:26 soak 16 rc=0 RESULT {"backend": "whole", "kernel_digest": "4aa02cdf21ed0c94", "calls": 31, "all_equal": true, "digest": "886f7341c1085571", "finite": true, "wall_s": 50.0, "time": "2026-10-01 12:22:24"}
+2026-10-01_12:22:26 soak 17 start
+2026-10-01_12:23:19 soak 17 rc=0 RESULT {"backend": "whole", "kernel_digest": "4aa02cdf21ed0c94", "calls": 31, "all_equal": true, "digest": "886f7341c1085571", "finite": true, "wall_s": 49.9, "time": "2026-10-01 12:23:17"}
+2026-10-01_12:23:19 soak 18 start
+2026-10-01_12:24:15 soak 18 rc=0 RESULT {"backend": "whole", "kernel_digest": "4aa02cdf21ed0c94", "calls": 31, "all_equal": true, "digest": "886f7341c1085571", "finite": true, "wall_s": 53.2, "time": "2026-10-01 12:24:13"}
+2026-10-01_12:24:15 soak 19 start
+2026-10-01_12:25:12 soak 19 rc=0 RESULT {"backend": "whole", "kernel_digest": "4aa02cdf21ed0c94", "calls": 31, "all_equal": true, "digest": "886f7341c1085571", "finite": true, "wall_s": 53.4, "time": "2026-10-01 12:25:10"}
+2026-10-01_12:25:12 soak 20 start
+2026-10-01_12:26:08 soak 20 rc=0 RESULT {"backend": "whole", "kernel_digest": "4aa02cdf21ed0c94", "calls": 31, "all_equal": true, "digest": "886f7341c1085571", "finite": true, "wall_s": 52.8, "time": "2026-10-01 12:26:06"}
+2026-10-01_12:26:09 [device-guard pid=1416603] RESET AFTER JOB (WITH_DEVICE_RESET_AFTER=1, rc=0): timeout 1800 /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/ip2/hold4.sh
+2026-10-01_12:26:09 [device-guard pid=1416603] RESET: tt-smi -r 0 (probe hung/failed with no other device users)
+2026-10-01_12:26:50 [device-guard pid=1416603] reset exit=0

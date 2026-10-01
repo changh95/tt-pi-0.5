@@ -1,0 +1,16 @@
+{
+ "t0": "2026-10-01 11:47:39",
+ "arm": "whole",
+ "marker_after_first": "2026-10-01 11:48:30",
+ "calls_equal_first_of_prompt": [
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true
+ ]
+}

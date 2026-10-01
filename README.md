@@ -92,9 +92,15 @@ Host wall time per call (upload + trace replay + readback), median of 30 calls p
 | LIBERO shape: 2 x 224² images, 32 tokens, H = 10 | **53.10 / 53.11 ms** | 51.21 / 51.24 ms | 65.73 / 65.78 ms | 76.97 / 76.96 ms |
 
 Every difference is more than 80 times 2 x the MAD-based standard error of the median. 50 actions / 55.9 ms = 894
-actions/s.
+actions/s (in-process call median).
 
-SERVED_PLACEHOLDER
+Served over HTTP by `server/app.py` (served shape, 30 warm requests per server, servers alternated default / `expert` /
+default / `expert`, each confirmed by `/info` `megakernel.backend`; `integrate_p2/results/S_*`): `timing_ms.inference`
+median **55.97 / 55.91 ms** default vs 70.84 / 70.87 ms `expert`; `timing_ms.total` 57.6 / 57.4 vs 72.3 / 72.4 ms; client
+wall 59.0 / 58.6 vs 73.5 / 73.9 ms. `server/smoke_test.py` passes on every server, and a mask probe through the batcher
+shows the request's own `lang_masks` reach the model (prompts `[2, 0]` and `[2]` give different actions, repeats are
+identical). The startup refusals of the default for `PI05_NUM_IMAGES=1`, `PI05_BATCH_SIZES=1,2` and `PI05_KV_DTYPE=bf16`
+fire before the device is opened.
 
 ### LIBERO closed loop
 
@@ -304,18 +310,18 @@ python models/experimental/pi0_5/tests/demo/extract_libero_samples.py   # LIBERO
 Action chunk 50×32, 2×224² + 224 tokens, 10 denoising steps; ratio = p150a ms / GPU ms. The GPU rows
 were measured on 2026-09-14 with this repo's torch reference as it was then (before the mask / RoPE
 fix, which changes the attention mask and positions; the tensor shapes are unchanged); they were not
-re-measured. The p150a row is the current served number.
+re-measured. The p150a row is the current served number (`integrate_p2/results/S_whole_123520.lat.json`: 55.97 ms; the second default server gave 55.91).
 
 | setting | ms | vs p150a |
 |---|---:|---|
-| p150a, default path with the phase-1 expert megakernel (served `timing_ms.inference`, 2026-09-30) | 70.9 | — |
-| RTX 5090 fp32 strict | 144.1 | p150a 2.03× faster |
-| RTX 5090 bf16 autocast | 121.5 | p150a 1.71× faster |
-| RTX 5090 fp16 autocast | 123.7 | p150a 1.74× faster |
-| RTX 5090 bf16 weights resident (eager) | 99.9 | p150a 1.41× faster |
-| RTX 5090 bf16 weights + whole-request `torch.compile` | 46.6 | GPU 1.52× |
+| p150a, default path = the whole-model megakernel (served `timing_ms.inference`, 2026-10-01) | 56.0 | — |
+| RTX 5090 fp32 strict | 144.1 | p150a 2.57× faster |
+| RTX 5090 bf16 autocast | 121.5 | p150a 2.17× faster |
+| RTX 5090 fp16 autocast | 123.7 | p150a 2.21× faster |
+| RTX 5090 bf16 weights resident (eager) | 99.9 | p150a 1.79× faster |
+| RTX 5090 bf16 weights + whole-request `torch.compile` | 46.6 | GPU 1.20× |
 
 Methodology: same host, the torch reference (same weights and preprocessing as the served path) run
 eagerly in PyTorch 2.11 cu128 (fp32 weights + `torch.autocast` unless stated; no TensorRT), batch 1,
 medians of 50 iterations after warm-up, H2D/D2H included. p150a power was not measured, so no
-efficiency comparison is made. The p150a is faster than every eager GPU row; the GPU needs resident bf16 weights and a compiled whole-request graph to be faster (1.52×). Full table: [`GPU_COMPARISON.md`](GPU_COMPARISON.md).
+efficiency comparison is made. The p150a is faster than every eager GPU row; the GPU needs resident bf16 weights and a compiled whole-request graph to be faster (1.20×). Full table: [`GPU_COMPARISON.md`](GPU_COMPARISON.md).

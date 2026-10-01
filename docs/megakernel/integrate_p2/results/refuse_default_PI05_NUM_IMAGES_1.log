@@ -1,0 +1,19 @@
+INFO:     Started server process [1432318]
+INFO:     Waiting for application startup.
+2026-10-01 12:39:11.767 | DEBUG    | ttnn:<module>:45 - Initial ttnn.CONFIG:
+Config{cache_path=/home/deepgadget/.cache/ttnn,model_cache_path=/home/deepgadget/.cache/ttnn/models,tmp_dir=/tmp/ttnn,enable_model_cache=false,enable_fast_runtime_mode=true,validate_program_args=false,throw_exception_on_fallback=false,enable_logging=false,enable_graph_report=false,enable_graph_python_stack_traces=false,enable_detailed_buffer_report=false,enable_detailed_tensor_report=false,enable_comparison_mode=false,comparison_mode_should_raise_exception=false,comparison_mode_pcc=0.9999,root_report_path=generated/ttnn/reports,report_name=std::nullopt,std::nullopt}
+2026-10-01 12:39:11,811 INFO pi05.server: config: {'weights_repo': 'lerobot/pi05_base', 'weights_revision': None, 'weights_dir': None, 'tokenizer_repo': 'google/paligemma-3b-pt-224', 'tokenizer_dir': None, 'tokenizer_required': True, 'device_id': 0, 'l1_small_size': 24576, 'token_len': 224, 'num_images': 1, 'num_steps': 10, 'seed': 42, 'warmup_runs': 2, 'free_host_weights': True, 'batch_sizes': (1,), 'batch_window_ms': 4.0, 'layout': 'mesh', 'dp_group': 2, 'profile': 'single-robot', 'prefix_chips': 2, 'pipeline_margin_ms': 4.0} mesh=1x1
+2026-10-01 12:39:11,852 INFO pi05.server: Loading weights: lerobot/pi05_base @ default branch (model.safetensors, config.json)
+2026-10-01 12:39:12,319 INFO pi05.server: Loading weights done: 812 tensors in 0.0 s
+2026-10-01 12:39:13,310 INFO pi05.server: Loading tokenizer google/paligemma-3b-pt-224
+2026-10-01 12:39:15,249 ERROR pi05.server: PI05_MEGAKERNEL=whole refused at startup: PI05_NUM_IMAGES=1 (the whole-model megakernel is built for 2 camera slots)
+ERROR:    Traceback (most recent call last):
+  File "/tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/pylib/starlette/routing.py", line 654, in lifespan
+    async with self.lifespan_context(app) as maybe_state:
+  File "/home/deepgadget/.local/share/uv/python/cpython-3.10-linux-x86_64-gnu/lib/python3.10/contextlib.py", line 199, in __aenter__
+    return await anext(self.gen)
+  File "/home/deepgadget/experiments/tt-models/ports/tt-pi-0.5/models/experimental/pi0_5/server/app.py", line 731, in lifespan
+    raise RuntimeError(f"PI05_MEGAKERNEL={fused_cfg.megakernel} refused: {why}")
+RuntimeError: PI05_MEGAKERNEL=whole refused: PI05_NUM_IMAGES=1 (the whole-model megakernel is built for 2 camera slots)
+
+ERROR:    Application startup failed. Exiting.

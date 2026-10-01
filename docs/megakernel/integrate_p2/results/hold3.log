@@ -1,0 +1,13 @@
+2026-10-01_11:49:34 START alt whole(default)
+2026-10-01_11:56:26 END alt rc=0
+2026-10-01_11:56:26 START named repo alt whole(default)
+2026-10-01_12:03:02 END named repo alt rc=0 OVERALL all_ok=True
+2026-10-01_12:03:02 START edge whole
+2026-10-01_12:03:55 END edge whole rc=0 RESULT ok whole
+2026-10-01_12:03:55 START edge off
+2026-10-01_12:04:20 END edge off rc=0 RESULT ok off
+2026-10-01_12:04:20 START pytest test_pcc_pi05_fused (PI05_MEGAKERNEL unset)
+2026-10-01_12:06:39 END pytest rc=0 2 passed in 136.70s (0:02:16)
+2026-10-01_12:06:39 [device-guard pid=1411604] RESET AFTER JOB (WITH_DEVICE_RESET_AFTER=1, rc=0): timeout 1800 /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/ip2/hold3.sh
+2026-10-01_12:06:39 [device-guard pid=1411604] RESET: tt-smi -r 0 (probe hung/failed with no other device users)
+2026-10-01_12:07:20 [device-guard pid=1411604] reset exit=0

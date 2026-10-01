@@ -1,0 +1,30 @@
+{
+ "n": 30,
+ "total_ms_median": 57.415,
+ "inference_ms_median": 55.91,
+ "client_wall_ms_median": 58.64385451423004,
+ "megakernel": {
+  "backend": "whole",
+  "program": {
+   "kernel_digest": "4aa02cdf21ed0c94",
+   "sources": [
+    "kernels/mk_brisc.cpp",
+    "kernels/mk_defs.hpp",
+    "kernels/mk_dm.hpp",
+    "kernels/mk_ncrisc.cpp",
+    "kernels/mk_trisc.cpp",
+    "kernels_p2/pe_brisc.hpp",
+    "kernels_p2/pe_common.hpp",
+    "kernels_p2/pe_defs.hpp",
+    "kernels_p2/pe_dm.hpp",
+    "kernels_p2/pe_ncrisc.hpp",
+    "kernels_p2/pe_trisc.hpp",
+    "kernels_p2/whole_brisc.cpp",
+    "kernels_p2/whole_ncrisc.cpp",
+    "kernels_p2/whole_trisc.cpp"
+   ]
+  }
+ },
+ "hardware": "Tenstorrent Blackhole, single chip (mesh 1x1) via tt-nn; whole-model megakernel: the entire sample_actions (SigLIP x2, projector, language embedding, VLM prefill -> K / V caches, the 10-step expert loop) as ONE persistent generic_op, one Metal trace",
+ "time": "2026-10-01 12:38:17"
+}

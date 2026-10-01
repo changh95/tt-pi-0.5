@@ -1,0 +1,31 @@
+2026-10-01 12:33:22.447 | DEBUG    | ttnn:<module>:45 - Initial ttnn.CONFIG:
+Config{cache_path=/home/deepgadget/.cache/ttnn,model_cache_path=/home/deepgadget/.cache/ttnn/models,tmp_dir=/tmp/ttnn,enable_model_cache=false,enable_fast_runtime_mode=true,validate_program_args=false,throw_exception_on_fallback=false,enable_logging=false,enable_graph_report=false,enable_graph_python_stack_traces=false,enable_detailed_buffer_report=false,enable_detailed_tensor_report=false,enable_comparison_mode=false,comparison_mode_should_raise_exception=false,comparison_mode_pcc=0.9999,root_report_path=generated/ttnn/reports,report_name=std::nullopt,std::nullopt}
+2026-10-01 12:33:22.799 | info     |          Device | Opening user mode device driver (tt_cluster.cpp:224)
+2026-10-01 12:33:22.799 | info     |             UMD | Cluster constructor started. (cluster.cpp:408)
+2026-10-01 12:33:22.799 | info     |             UMD | Creating TopologyDiscovery for architecture: blackhole (topology_discovery.cpp:96)
+2026-10-01 12:33:22.799 | info     |             UMD | Starting topology discovery. (topology_discovery.cpp:115)
+2026-10-01 12:33:22.802 | info     |             UMD | Established firmware bundle version: 19.12.0 (topology_discovery.cpp:576)
+2026-10-01 12:33:22.802 | info     |             UMD | Completed topology discovery. (topology_discovery.cpp:119)
+2026-10-01 12:33:23.059 | info     |             UMD | Opening local chip ids/PCIe ids: {0}/[0] and remote chip ids {} (cluster.cpp:175)
+2026-10-01 12:33:23.059 | info     |             UMD | IOMMU: disabled (cluster.cpp:149)
+2026-10-01 12:33:23.059 | info     |             UMD | KMD version: 2.11.0 (cluster.cpp:152)
+2026-10-01 12:33:23.059 | info     |             UMD | Cluster constructor completed. (cluster.cpp:683)
+2026-10-01 12:33:23.059 | info     |             UMD | Starting devices in cluster (cluster.cpp:1289)
+2026-10-01 12:33:23.149 | info     |             UMD | Starting devices in cluster completed. (cluster.cpp:1297)
+2026-10-01 12:33:23.493 | info     |     Distributed | Using auto discovery to generate mesh graph. (metal_env.cpp:422)
+2026-10-01 12:33:23.493 | info     |     Distributed | Constructing control plane using auto-discovery (no mesh graph descriptor). (metal_env.cpp:484)
+2026-10-01 12:33:23.493 | warning  |          Always | Unknown motherboard 'ProArt X870E-CREATOR WIFI' for chip_id=0 (bus_id=0x3) — falling back to bus_id as tray_id. Add this motherboard and its bus IDs to mobo_to_bus_ids in physical_system_discovery.cpp. (physical_system_discovery.cpp:119)
+2026-10-01 12:33:23.493 | info     |          Fabric | Logical multi-mesh adjacency: intermesh degree histogram {0:1}; intra-mesh degree histograms mesh0 {0:1} (topology_mapper_utils.cpp:3190)
+2026-10-01 12:33:23.493 | info     |          Fabric | Physical multi-mesh adjacency: intermesh degree histogram {0:1}; intra-mesh degree histograms mesh0 {0:1} (topology_mapper_utils.cpp:3198)
+2026-10-01 12:33:23.626 | info     |           Metal | Enabling program cache on MeshDevice 1 (mesh_device.cpp:1176)
+[pi0.5] expert adaRMS norms folded into per-step weights in 5.1s
+2026-10-01 12:34:13 obs libero_spatial/t0/i0/call0/step10 23102.2 ms 4ec1e89d52a18d29
+2026-10-01 12:34:13 obs libero_spatial/t0/i0/call12/step70 53.1 ms 236cec719dcc6dba
+RESULT {"t0": "2026-10-01 12:33:22", "arm_env": "whole", "shape": "libero", "open_kwargs": {"device_id": 0, "l1_small_size": 24576, "trace_region_size": 160000000, "worker_l1_size": 1395712}, "smi_open": {"t": "2026-10-01 12:33:22", "aiclk": " 800", "power": " 23.0", "temp": "54.9"}, "stamp": {"backend": "whole", "program": {"kernel_digest": "4aa02cdf21ed0c94", "sources": ["kernels/mk_brisc.cpp", "kernels/mk_defs.hpp", "kernels/mk_dm.hpp", "kernels/mk_ncrisc.cpp", "kernels/mk_trisc.cpp", "kernels_p2/pe_brisc.hpp", "kernels_p2/pe_common.hpp", "kernels_p2/pe_defs.hpp", "kernels_p2/pe_dm.hpp", "kernels_p2/pe_ncrisc.hpp", "kernels_p2/pe_trisc.hpp", "kernels_p2/whole_brisc.cpp", "kernels_p2/whole_ncrisc.cpp", "kernels_p2/whole_trisc.cpp"]}}, "first_call_ms": 23102.192982973065, "traced": true, "prefix_len": 544, "kv_cache_shape": [1, 1, 640, 256], "kv_cache_dtype": "DataType.BFLOAT8_B", "distinct_outputs": 2, "pcc7_mean": 0.9999781896195195, "pcc7_min": 0.9999736267789925, "ten_calls_eq_first": [true, true, true, true, true, true, true, true, true, true], "ten_raw_replays_eq_first": [true, true, true, true, true, true, true, true, true, true], "poison_readback_all_7": true, "after_poison_eq_obs_j": true, "after_poison_has_7": false, "smi_bench_before": {"t": "2026-10-01 12:34:15", "aiclk": "1350", "power": " 67.0", "temp": "60.5"}, "witness_call": {"time_ns_s": 1.594695263, "monotonic_s": 1.594697077, "sum_perf_counter_s": 1.5946681950008497, "wall_start_epoch": 1790825655.138643}, "witness_replay": {"time_ns_s": 1.536668828, "sum_perf_counter_s": 1.5366376569727436}, "replays_in_10s_time_time": 196, "smi_bench_after": {"t": "2026-10-01 12:34:28", "aiclk": "1350", "power": " 69.0", "temp": "63.5"}, "after_bench_eq_first": true, "megakernel_l1": {"total_per_bank": 1371136, "allocated_per_bank": 117248, "largest_free_per_bank": 1253888, "cb_union": 851616}, "t1": "2026-10-01 12:34:28", "call_median": 53.11087748850696, "replay_median": 51.24200598220341}
+2026-10-01 12:34:29.955 | info     |    BuildKernels | JIT cache stats: 150/150 hits (100.0%) [150 cached, 24 build-once dedup, 0 merged artifacts, 0 merged genfiles] (build_cache_telemetry.cpp:268)
+2026-10-01 12:34:29.955 | info     |    BuildKernels | JIT telemetry: 33 registered TelemetryTokens (build_cache_telemetry.cpp:325)
+2026-10-01 12:34:29.958 | info     |          Device | Closing user mode device drivers (tt_cluster.cpp:550)
+2026-10-01 12:34:29.958 | info     |             UMD | Closing devices in cluster (cluster.cpp:1302)
+2026-10-01 12:34:30.089 | info     |             UMD | Closing devices in cluster completed. (cluster.cpp:1311)
+2026-10-01 12:34:30.090 | info     |             UMD | Cluster destructor started. (cluster.cpp:1017)
+2026-10-01 12:34:30.091 | info     |             UMD | Cluster destructor completed. (cluster.cpp:1020)

@@ -1,0 +1,13 @@
+{
+ "n_rows": 2171,
+ "n_sessions": 10,
+ "ops_per_session": [
+  1
+ ],
+ "session_op_codes": [
+  "GenericOpDeviceOperation"
+ ],
+ "non_session_rows_before_first_session": 2161,
+ "non_session_rows_after_first_session": 0,
+ "after_codes": []
+}

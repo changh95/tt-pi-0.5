@@ -858,3 +858,28 @@ Device gate plan (scratchpad/ip2 = copies of verify_p2_r0/scripts; arm "whole" =
 resolved name; expert / off explicit; fp32 whole-model references ref_{base,libero}.pt reused from vp2r0: reference/ and
 weights unchanged): hold1 arms x shapes (32 base seeds + 8 LIBERO), hold2 profiles (raw tracy logs deleted per run: disk
 25 GB free), hold3 alternation + edge + pytest, hold4 soak 20, hold5 layer times + latency r2, hold6 served A/B + refusals.
+
+## 2026-10-01 12:40:57 KST -- integrate-p2: gate re-run on the final code commit (holds 1-6, 11:29-12:40)
+
+Code 0f19387 (+ ce9806a docs). Source md5 aggregate (tt/ + common/) ALL 6ffe696f1c7e8e2d796609ce49689132 at the start
+and the end of every hold (sums_*.txt). Arm "whole" = PI05_MEGAKERNEL UNSET (every A_whole_*.json records env
+PI05_MEGAKERNEL None and stamp backend whole, digest 4aa02cdf21ed0c94). Each hold WITH_DEVICE_RESET_AFTER=1 + timeout
+1800, private caches scratchpad/ip2/ttcache_*. Files: docs/megakernel/integrate_p2/results/ (scripts ../scripts/ =
+verify_p2_r0's with the arm runner of env.sh, plus c_prof3.py, c_lat.py, hold6.sh). No hang, every rc 0.
+| gate | result | evidence |
+|---|---|---|
+| default = the verified build | the default's outputs are bit-identical to verify-p2-r0's explicit whole on all 32 base seeds + 8 LIBERO records (digests equal; expert / off also identical to their vp2r0 runs) | A_*_r1.json vs vp2r0 |
+| Structural: ONE op per replay | PASS 21 / 21 sessions per shape = 1 GenericOp (whole_trisc / whole_brisc + whole_ncrisc), 110 cores, one program hash per shape; device 53.94 ms base (53.80-54.08) / 51.26 LIBERO (51.17-51.38); request path (9 calls n 1/128/224): 10 sessions x 1 op, 0 device ops outside the trace; arms differ: expert 892 ops (1 after the 36th KV write), off 2551 (1660 after), prefix op codes expert == off | S_struct.json, S_prof3.json, ops_*.csv.gz, P_*.json |
+| openpi golden PCC7 | PASS mean 0.999976, min 0.999955 (expert 0.999884 / 0.999778, off 0.999839 / 0.999712) | A_*_libero_r1.json |
+| Amended per-seed gate vs the fp32 whole-model reference | PASS 32 / 32 closer than off; mean 0.99851 (min 0.98882) vs off 0.97034 (min 0.76397), expert 0.97666; margin vs off min +0.00121 (seed 703), median +0.0101; vs expert 31 / 32 (seed 707 whole 0.99522 vs expert 0.99769, off 0.99175); LIBERO 8 / 8 | G_gates_r1.json |
+| P2-3 amended (K/V vs fp32) | PASS 288 / 288 per shape (PCC and rel-L2); whole min 0.99171 / 0.99905 vs ttnn 0.92868 / 0.99060; expert K/V == off bitwise | G_gates_r1.json |
+| Ten replays / poisoning | PASS every arm and shape (10 calls, 10 raw execute_trace, poison check, after-bench equal) | A_*_r1.json |
+| Alternating / shape switch | PASS 20 / 20 bit-identical vs fresh-model refs (ref pairs max PCC 0.955); repo verify_alternating.py under the default all_ok=True | ALT_whole.json, ALT_named_whole.json |
+| 20-run soak | PASS 20 / 20 rc 0, 31 calls each all_equal, finite, one digest 886f7341c1085571 (= verify-p2-r0's), 49.9-63.2 s; source md5s and compiled whole_* / mk_* ELF md5s identical before / after | hold4.log, sums_soak_*.txt, kelf_soak_*.txt |
+| Edge cases | PASS: base n 1/224/128/150 are seeds inside the 32; LIBERO n 32 / 1 closer than off on 4 / 4 | EDGE_libero.json |
+| Suites | PASS: pytest test_pcc_pi05_fused.py with PI05_MEGAKERNEL unset 2 passed (stamp whole); CPU 52 passed | pytest_pcc_default.log, cpu_suites.txt |
+| Speed (whole < phase 1, alternated, > 2 x MAD se) | PASS: call median base 55.87 / 55.95 vs expert 70.84 / 70.77 vs off 84.17 / 84.06 ms (diff vs expert 14.97 / 14.82, 2 se 0.13 / 0.15); LIBERO 53.10 / 53.11 vs 65.73 / 65.78 vs 76.97 / 76.96 (diff 12.63 / 12.67, 2 se 0.11 / 0.14); replay 54.10 / 51.21 ms; aiclk 1350 before / after every bench | G_speed.json |
+| P2-1 / P2-2 / P2-3 times (host clock, in the real model) | PASS: SigLIP layer 354.2 us base / 352.1 LIBERO (go line 355; base margin 0.8 us, verify-p2-r0 had 353.1); VLM 1618 / 1526 us (<= 2200); prefix 38.06 / 35.74 ms (< 52.42 / 48.72) | L_base.json, L_libero.json |
+| Size | PASS 128,636 B base / 126,492 B LIBERO (empty mock cache; identical to verify-p2-r0) | M_size_*.json |
+| Served A/B (P2-5) | PASS: inference median whole 55.97 / 55.91 vs expert 70.84 / 70.87 ms (P1-6 70.72); total 57.57 / 57.42 vs 72.29 / 72.37; smoke PASS x4; /info backend = arm on every server; mask probe pass x4 (batcher, batch 1: [2, 0] vs [2] differ by 0.837, repeat identical); no uvicorn left after each stop | S_*.json, S_*.smoke.log |
+| Startup refusals of the default | PI05_NUM_IMAGES=1 (new), PI05_BATCH_SIZES=1,2, PI05_KV_DTYPE=bf16: rc 3, "PI05_MEGAKERNEL=whole refused at startup: ...", no "Opening device" line | refuse_default_*.log |
