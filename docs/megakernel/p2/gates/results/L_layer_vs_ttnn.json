@@ -1,0 +1,21 @@
+{
+ "digest": "4aa02cdf21ed0c94",
+ "time": "2026-10-01 00:32:07",
+ "n_lang": 150,
+ "siglip_layer0": {
+  "pcc_engine_vs_ttnn": 0.9999174,
+  "rel_engine_vs_fp32": 0.006656,
+  "rel_ttnn_vs_fp32": 0.013311,
+  "pcc_engine_vs_fp32": 0.9999795,
+  "pcc_ttnn_vs_fp32": 0.9999148,
+  "pass": true
+ },
+ "vlm_layer0": {
+  "pcc_engine_vs_ttnn": 0.9998711,
+  "rel_engine_vs_fp32": 0.005554,
+  "rel_ttnn_vs_fp32": 0.017003,
+  "pcc_engine_vs_fp32": 0.9999939,
+  "pcc_ttnn_vs_fp32": 0.9998678,
+  "pass": true
+ }
+}

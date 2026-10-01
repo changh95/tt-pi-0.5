@@ -1,0 +1,212 @@
+2026-10-01 11:39:16.795 | INFO     | __main__:main:212 - Setting profiler artifacts folder to /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/ip2/prof
+2026-10-01 11:39:16.795 | INFO     | __main__:main:364 - Using port 8086
+2026-10-01 11:39:16.796 | INFO     | tracy:run_report_setup:91 - Verifying tracy profiling tools
+2026-10-01 11:39:16.797 | INFO     | tracy:run_report_setup:112 - Capture command: ('/home/deepgadget/experiments/gr00t/tt-metal/build/tools/profiler/bin/tracy-capture -o /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/ip2/prof/.logs/tracy_profile_log_host.tracy -f -p 8086',)
+Connecting to 127.0.0.1:8086...2026-10-01 11:39:16.806 | INFO     | __main__:run_workload:399 - Test process started
+2026-10-01 11:39:17.456 | INFO     | __main__:main:212 - Setting profiler artifacts folder to /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/ip2/prof
+2026-10-01 11:39:17.695 | DEBUG    | ttnn:<module>:45 - Initial ttnn.CONFIG:
+Config{cache_path=/home/deepgadget/.cache/ttnn,model_cache_path=/home/deepgadget/.cache/ttnn/models,tmp_dir=/tmp/ttnn,enable_model_cache=false,enable_fast_runtime_mode=true,validate_program_args=false,throw_exception_on_fallback=false,enable_logging=false,enable_graph_report=false,enable_graph_python_stack_traces=false,enable_detailed_buffer_report=false,enable_detailed_tensor_report=false,enable_comparison_mode=false,comparison_mode_should_raise_exception=false,comparison_mode_pcc=0.9999,root_report_path=generated/ttnn/reports,report_name=std::nullopt,std::nullopt}
+2026-10-01 11:39:18.444 | info     |          Device | Opening user mode device driver (tt_cluster.cpp:224)
+2026-10-01 11:39:18.444 | info     |             UMD | Cluster constructor started. (cluster.cpp:408)
+2026-10-01 11:39:18.444 | info     |             UMD | Creating TopologyDiscovery for architecture: blackhole (topology_discovery.cpp:96)
+2026-10-01 11:39:18.444 | info     |             UMD | Starting topology discovery. (topology_discovery.cpp:115)
+2026-10-01 11:39:18.447 | info     |             UMD | Established firmware bundle version: 19.12.0 (topology_discovery.cpp:576)
+2026-10-01 11:39:18.447 | info     |             UMD | Completed topology discovery. (topology_discovery.cpp:119)
+2026-10-01 11:39:18.950 | info     |             UMD | Opening local chip ids/PCIe ids: {0}/[0] and remote chip ids {} (cluster.cpp:175)
+2026-10-01 11:39:18.950 | info     |             UMD | IOMMU: disabled (cluster.cpp:149)
+2026-10-01 11:39:18.950 | info     |             UMD | KMD version: 2.11.0 (cluster.cpp:152)
+2026-10-01 11:39:18.950 | info     |             UMD | Cluster constructor completed. (cluster.cpp:683)
+2026-10-01 11:39:18.950 | info     |             UMD | Starting devices in cluster (cluster.cpp:1289)
+2026-10-01 11:39:18.994 | info     |             UMD | Starting devices in cluster completed. (cluster.cpp:1297)
+2026-10-01 11:39:19.342 | info     |     Distributed | Using auto discovery to generate mesh graph. (metal_env.cpp:422)
+2026-10-01 11:39:19.342 | info     |     Distributed | Constructing control plane using auto-discovery (no mesh graph descriptor). (metal_env.cpp:484)
+2026-10-01 11:39:19.342 | warning  |          Always | Unknown motherboard 'ProArt X870E-CREATOR WIFI' for chip_id=0 (bus_id=0x3) — falling back to bus_id as tray_id. Add this motherboard and its bus IDs to mobo_to_bus_ids in physical_system_discovery.cpp. (physical_system_discovery.cpp:119)
+2026-10-01 11:39:19.342 | info     |          Fabric | Logical multi-mesh adjacency: intermesh degree histogram {0:1}; intra-mesh degree histograms mesh0 {0:1} (topology_mapper_utils.cpp:3190)
+2026-10-01 11:39:19.342 | info     |          Fabric | Physical multi-mesh adjacency: intermesh degree histogram {0:1}; intra-mesh degree histograms mesh0 {0:1} (topology_mapper_utils.cpp:3198)
+2026-10-01 11:39:19.542 | info     |           Metal | Profiler started on device 0 (profiler_initializer.cpp:49)
+2026-10-01 11:39:19.589 | info     |           Metal | Enabling program cache on MeshDevice 1 (mesh_device.cpp:1176)
+[pi0.5] expert adaRMS norms folded into per-step weights in 5.2s
+Building ncrisc, compile step:
+/home/deepgadget/experiments/gr00t/tt-metal/runtime/sfpi/compiler/bin/riscv-tt-elf-g++ -O2 -std=c++17 -ftt-nttp -ftt-constinit -ftt-consteval -ftt-no-dyninit -flto=1 -flto-partition=one -ffast-math -fno-finite-math-only -fsigned-zeros -fno-associative-math -fno-exceptions -fno-rtti -fno-use-cxa-atexit -g -MMD -Wall -Werror -Wno-error=deprecated-declarations -Wno-error=multistatement-macros -Wno-error=parentheses -Wno-error=unused-but-set-variable -Wno-unused-variable -Wno-unused-function --param=min-pagesize=0 -mcpu=tt-bh -fno-tree-loop-distribute-patterns -I. -I.. -I/home/deepgadget/experiments/gr00t/tt-metal/ -I/home/deepgadget/experiments/gr00t/tt-metal/ttnn -I/home/deepgadget/experiments/gr00t/tt-metal/ttnn/cpp -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/inc -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/tt-llk/common -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/tt-llk/tools/include -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hostdevcommon/api -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/api/ -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/ckernels/blackhole/metal/common -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/ckernels/blackhole/metal/llk_io -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/inc/internal/tt-1xx -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/inc/internal/tt-1xx/blackhole -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/inc/internal/tt-1xx/blackhole/blackhole_defines -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/inc/internal/tt-1xx/blackhole/noc -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/tt-llk/tt_llk_blackhole/common/inc -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/tt-llk/tt_llk_blackhole/llk_lib -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/firmware/src/tt-1xx -I/home/deepgadget/experiments/tt-models/ports/tt-pi-0.5/models/experimental/pi0_5/tt/megakernel/kernels_p2 -DIS_NOT_POW2_NUM_L1_BANKS=1 -DLOG_BASE_2_OF_NUM_DRAM_BANKS=3 -DNUM_DRAM_BANKS=8 -DNUM_L1_BANKS=110 -DPCIE_NOC_X=19 -DPCIE_NOC_Y=24 -DTENSIX_FIRMWARE -DLOCAL_MEM_EN=0 -DPROFILE_KERNEL=1 -DPROFILER_FULL_HOST_BUFFER_SIZE_PER_RISC=768000 -DPROCESSOR_INDEX=1 -DCOMPILE_FOR_NCRISC -DPROGRAMMABLE_CORE_TYPE=0 -DARCH_BLACKHOLE -DDISPATCH_MESSAGE_ADDR=4290184248 -DKERNEL_BUILD -DMK_FID8_HIFI2=1 -DPE_CT0=20 -DPE_WHOLE=1 -DNOC_INDEX=0 -DNOC_MODE=0 -DFULL_KERNEL_NAME="whole_ncrisc/17336752065940737305/" -DKERNEL_COMPILE_TIME_ARGS=1,17,3,6,3184315597,897988541,0,1088,2,2048,0,2048,0,2048,0,2048,2,2048,2,2048,18,17,6,1,32,897988541,897988541,1110770931,955776,2,4096,0,1088 -c -o /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/ip2/ttcache_whole_prof/tt-metal-cache17494936293838345441/kernels/whole_ncrisc/17336752065940737305/ncrisc/ncrisck.14569496671380540618_1393099.o /home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/firmware/src/tt-1xx/ncrisck.cc -MF /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/ip2/ttcache_whole_prof/tt-metal-cache17494936293838345441/kernels/whole_ncrisc/17336752065940737305/ncrisc/ncrisck.14569496671380540618_1393099.d
+In file included from /home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/inc/api/dataflow/dataflow_api.h:24,
+                 from /home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/inc/internal/firmware_common.h:24,
+                 from /home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/firmware/src/tt-1xx/ncrisck.cc:17:
+/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/tools/profiler/kernel_profiler.hpp: In function 'void kernel_profiler::quick_push()':
+/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/tools/profiler/kernel_profiler.hpp:29:22: note: '#pragma message: PROFILER-NOC-QUICK-PUSH,/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/tools/profiler/kernel_profiler.hpp,630,KERNEL_PROFILER'
+   29 | #define DO_PRAGMA(x) _Pragma(#x)
+      |                      ^~~~~~~
+/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/tools/profiler/kernel_profiler.hpp:39:5: note: in expansion of macro 'DO_PRAGMA'
+   39 |     DO_PRAGMA(message(PROFILER_MSG_NAME(name))); \
+      |     ^~~~~~~~~
+/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/tools/profiler/kernel_profiler.hpp:630:5: note: in expansion of macro 'SrcLocNameToHash'
+  630 |     SrcLocNameToHash("PROFILER-NOC-QUICK-PUSH");
+      |     ^~~~~~~~~~~~~~~~
+/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/firmware/src/tt-1xx/ncrisck.cc: In function 'uint32_t _start()':
+/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/tools/profiler/kernel_profiler.hpp:29:22: note: '#pragma message: NCRISC-KERNEL,/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/firmware/src/tt-1xx/ncrisck.cc,70,KERNEL_PROFILER'
+   29 | #define DO_PRAGMA(x) _Pragma(#x)
+      |                      ^~~~~~~
+/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/tools/profiler/kernel_profiler.hpp:1043:5: note: in expansion of macro 'DO_PRAGMA'
+ 1043 |     DO_PRAGMA(message(PROFILER_MSG_NAME(name)));                               \
+      |     ^~~~~~~~~
+/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/firmware/src/tt-1xx/ncrisck.cc:70:5: note: in expansion of macro 'DeviceZoneScopedMainChildN'
+   70 |     DeviceZoneScopedMainChildN("NCRISC-KERNEL");
+      |     ^~~~~~~~~~~~~~~~~~~~~~~~~~
+Building brisc, compile step:
+/home/deepgadget/experiments/gr00t/tt-metal/runtime/sfpi/compiler/bin/riscv-tt-elf-g++ -O2 -std=c++17 -ftt-nttp -ftt-constinit -ftt-consteval -ftt-no-dyninit -flto=1 -flto-partition=one -ffast-math -fno-finite-math-only -fsigned-zeros -fno-associative-math -fno-exceptions -fno-rtti -fno-use-cxa-atexit -g -MMD -Wall -Werror -Wno-error=deprecated-declarations -Wno-error=multistatement-macros -Wno-error=parentheses -Wno-error=unused-but-set-variable -Wno-unused-variable -Wno-unused-function --param=min-pagesize=0 -mcpu=tt-bh -fno-tree-loop-distribute-patterns -I. -I.. -I/home/deepgadget/experiments/gr00t/tt-metal/ -I/home/deepgadget/experiments/gr00t/tt-metal/ttnn -I/home/deepgadget/experiments/gr00t/tt-metal/ttnn/cpp -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/inc -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/tt-llk/common -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/tt-llk/tools/include -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hostdevcommon/api -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/api/ -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/ckernels/blackhole/metal/common -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/ckernels/blackhole/metal/llk_io -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/inc/internal/tt-1xx -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/inc/internal/tt-1xx/blackhole -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/inc/internal/tt-1xx/blackhole/blackhole_defines -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/inc/internal/tt-1xx/blackhole/noc -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/tt-llk/tt_llk_blackhole/common/inc -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/tt-llk/tt_llk_blackhole/llk_lib -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/firmware/src/tt-1xx -I/home/deepgadget/experiments/tt-models/ports/tt-pi-0.5/models/experimental/pi0_5/tt/megakernel/kernels_p2 -DIS_NOT_POW2_NUM_L1_BANKS=1 -DLOG_BASE_2_OF_NUM_DRAM_BANKS=3 -DNUM_DRAM_BANKS=8 -DNUM_L1_BANKS=110 -DPCIE_NOC_X=19 -DPCIE_NOC_Y=24 -DTENSIX_FIRMWARE -DLOCAL_MEM_EN=0 -DPROFILE_KERNEL=1 -DPROFILER_FULL_HOST_BUFFER_SIZE_PER_RISC=768000 -DPROCESSOR_INDEX=0 -DCOMPILE_FOR_BRISC -DPROGRAMMABLE_CORE_TYPE=0 -DARCH_BLACKHOLE -DDISPATCH_MESSAGE_ADDR=4290184248 -DKERNEL_BUILD -DMK_FID8_HIFI2=1 -DPE_CT0=20 -DPE_WHOLE=1 -DNOC_INDEX=1 -DNOC_MODE=0 -DFULL_KERNEL_NAME="whole_brisc/13750430574558470529/" -DKERNEL_COMPILE_TIME_ARGS=1,17,3,6,3184315597,897988541,0,1088,2,2048,0,2048,0,2048,0,2048,2,2048,2,2048,18,17,6,1,32,897988541,897988541,1110770931,955776,2,4096,0,1088 -c -o /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/ip2/ttcache_whole_prof/tt-metal-cache17494936293838345441/kernels/whole_brisc/13750430574558470529/brisc/brisck.14569496671380540618_1393099.o /home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/firmware/src/tt-1xx/brisck.cc -MF /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/ip2/ttcache_whole_prof/tt-metal-cache17494936293838345441/kernels/whole_brisc/13750430574558470529/brisc/brisck.14569496671380540618_1393099.d
+In file included from /home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/inc/api/dataflow/dataflow_api.h:24,
+                 from /home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/inc/internal/firmware_common.h:24,
+                 from /home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/firmware/src/tt-1xx/brisck.cc:16:
+/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/tools/profiler/kernel_profiler.hpp: In function 'void kernel_profiler::finish_profiler(bool)':
+/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/tools/profiler/kernel_profiler.hpp:29:22: note: '#pragma message: PROFILER-NOC-FLUSH,/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/tools/profiler/kernel_profiler.hpp,478,KERNEL_PROFILER'
+   29 | #define DO_PRAGMA(x) _Pragma(#x)
+      |                      ^~~~~~~
+/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/tools/profiler/kernel_profiler.hpp:39:5: note: in expansion of macro 'DO_PRAGMA'
+   39 |     DO_PRAGMA(message(PROFILER_MSG_NAME(name))); \
+      |     ^~~~~~~~~
+/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/tools/profiler/kernel_profiler.hpp:478:17: note: in expansion of macro 'SrcLocNameToHash'
+  478 |                 SrcLocNameToHash("PROFILER-NOC-FLUSH");
+      |                 ^~~~~~~~~~~~~~~~
+/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/tools/profiler/kernel_profiler.hpp:29:22: note: '#pragma message: PROFILER-DRAM-PUSH,/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/tools/profiler/kernel_profiler.hpp,487,KERNEL_PROFILER'
+   29 | #define DO_PRAGMA(x) _Pragma(#x)
+      |                      ^~~~~~~
+/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/tools/profiler/kernel_profiler.hpp:39:5: note: in expansion of macro 'DO_PRAGMA'
+   39 |     DO_PRAGMA(message(PROFILER_MSG_NAME(name))); \
+      |     ^~~~~~~~~
+/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/tools/profiler/kernel_profiler.hpp:487:17: note: in expansion of macro 'SrcLocNameToHash'
+  487 |                 SrcLocNameToHash("PROFILER-DRAM-PUSH");
+      |                 ^~~~~~~~~~~~~~~~
+/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/tools/profiler/kernel_profiler.hpp: In function 'void kernel_profiler::quick_push()':
+/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/tools/profiler/kernel_profiler.hpp:29:22: note: '#pragma message: PROFILER-NOC-QUICK-PUSH,/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/tools/profiler/kernel_profiler.hpp,630,KERNEL_PROFILER'
+   29 | #define DO_PRAGMA(x) _Pragma(#x)
+      |                      ^~~~~~~
+/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/tools/profiler/kernel_profiler.hpp:39:5: note: in expansion of macro 'DO_PRAGMA'
+   39 |     DO_PRAGMA(message(PROFILER_MSG_NAME(name))); \
+      |     ^~~~~~~~~
+/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/tools/profiler/kernel_profiler.hpp:630:5: note: in expansion of macro 'SrcLocNameToHash'
+  630 |     SrcLocNameToHash("PROFILER-NOC-QUICK-PUSH");
+      |     ^~~~~~~~~~~~~~~~
+/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/firmware/src/tt-1xx/brisck.cc: In function 'uint32_t _start()':
+/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/tools/profiler/kernel_profiler.hpp:29:22: note: '#pragma message: BRISC-KERNEL,/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/firmware/src/tt-1xx/brisck.cc,77,KERNEL_PROFILER'
+   29 | #define DO_PRAGMA(x) _Pragma(#x)
+      |                      ^~~~~~~
+/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/tools/profiler/kernel_profiler.hpp:1043:5: note: in expansion of macro 'DO_PRAGMA'
+ 1043 |     DO_PRAGMA(message(PROFILER_MSG_NAME(name)));                               \
+      |     ^~~~~~~~~
+/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/firmware/src/tt-1xx/brisck.cc:77:9: note: in expansion of macro 'DeviceZoneScopedMainChildN'
+   77 |         DeviceZoneScopedMainChildN("BRISC-KERNEL");
+      |         ^~~~~~~~~~~~~~~~~~~~~~~~~~
+Building trisc0, compile step:
+/home/deepgadget/experiments/gr00t/tt-metal/runtime/sfpi/compiler/bin/riscv-tt-elf-g++ -O3 -std=c++17 -ftt-nttp -ftt-constinit -ftt-consteval -ftt-no-dyninit -flto=1 -flto-partition=one -ffast-math -fno-finite-math-only -fsigned-zeros -fno-associative-math -fno-exceptions -fno-rtti -fno-use-cxa-atexit -g -MMD -Wall -Werror -Wno-error=deprecated-declarations -Wno-error=multistatement-macros -Wno-error=parentheses -Wno-error=unused-but-set-variable -Wno-unused-variable -Wno-unused-function --param=min-pagesize=0 -mcpu=tt-bh-tensix -I. -I.. -I/home/deepgadget/experiments/gr00t/tt-metal/ -I/home/deepgadget/experiments/gr00t/tt-metal/ttnn -I/home/deepgadget/experiments/gr00t/tt-metal/ttnn/cpp -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/inc -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/tt-llk/common -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/tt-llk/tools/include -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hostdevcommon/api -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/api/ -I/home/deepgadget/experiments/gr00t/tt-metal/runtime/sfpi/include -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/ckernels/blackhole/metal/common -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/ckernels/blackhole/metal/llk_io -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/inc/internal/tt-1xx -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/inc/internal/tt-1xx/blackhole -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/inc/internal/tt-1xx/blackhole/blackhole_defines -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/inc/internal/tt-1xx/blackhole/noc -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/tt-llk/tt_llk_blackhole/common/inc -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/tt-llk/tt_llk_blackhole/llk_lib -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/ckernels/blackhole/metal/llk_api -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/ckernels/blackhole/metal/llk_api/llk_sfpu -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/firmware/src/tt-1xx -I/home/deepgadget/experiments/tt-models/ports/tt-pi-0.5/models/experimental/pi0_5/tt/megakernel/kernels_p2 -DIS_NOT_POW2_NUM_L1_BANKS=1 -DLOG_BASE_2_OF_NUM_DRAM_BANKS=3 -DNUM_DRAM_BANKS=8 -DNUM_L1_BANKS=110 -DPCIE_NOC_X=19 -DPCIE_NOC_Y=24 -DTENSIX_FIRMWARE -DLOCAL_MEM_EN=0 -DPROFILE_KERNEL=1 -DPROFILER_FULL_HOST_BUFFER_SIZE_PER_RISC=768000 -DPROCESSOR_INDEX=2 -DUCK_CHLKC_UNPACK -DCOMPILE_FOR_TRISC=0 -DPROGRAMMABLE_CORE_TYPE=0 -DARCH_BLACKHOLE -DDISPATCH_MESSAGE_ADDR=4290184248 -DKERNEL_BUILD -DFULL_KERNEL_NAME="whole_trisc/59939266376725438/" -DKERNEL_COMPILE_TIME_ARGS=1,17,3,6,3184315597,897988541,0,1088,2,2048,0,2048,0,2048,0,2048,2,2048,2,2048,18,17,6,1,32,897988541,897988541,1110770931,955776,2,4096,0,1088 -c -o /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/ip2/ttcache_whole_prof/tt-metal-cache17494936293838345441/kernels/whole_trisc/59939266376725438/trisc0/trisck.14569496671380540618_1393099.o /home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/firmware/src/tt-1xx/trisck.cc -MF /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/ip2/ttcache_whole_prof/tt-metal-cache17494936293838345441/kernels/whole_trisc/59939266376725438/trisc0/trisck.14569496671380540618_1393099.d
+In file included from /home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/ckernels/blackhole/metal/llk_io/llk_io_unpack.h:13,
+                 from /home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/inc/api/compute/compute_kernel_api.h:95,
+                 from /home/deepgadget/experiments/tt-models/ports/tt-pi-0.5/models/experimental/pi0_5/tt/megakernel/kernels_p2/../kernels/mk_trisc.cpp:22,
+                 from /home/deepgadget/experiments/tt-models/ports/tt-pi-0.5/models/experimental/pi0_5/tt/megakernel/kernels_p2/whole_trisc.cpp:9,
+                 from ../chlkc_unpack.cpp:4,
+                 from /home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/ckernels/blackhole/metal/common/chlkc_list.h:26,
+                 from /home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/firmware/src/tt-1xx/trisck.cc:13:
+/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/ckernels/blackhole/metal/llk_io/llk_io_unpack.h: In function 'void llk_wait_tiles(int, int32_t)':
+/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/tools/profiler/kernel_profiler.hpp:29:22: note: '#pragma message: CB-COMPUTE-WAIT-FRONT,/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/ckernels/blackhole/metal/llk_io/llk_io_unpack.h,19,KERNEL_PROFILER'
+   29 | #define DO_PRAGMA(x) _Pragma(#x)
+      |                      ^~~~~~~
+/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/tools/profiler/kernel_profiler.hpp:1048:5: note: in expansion of macro 'DO_PRAGMA'
+ 1048 |     DO_PRAGMA(message(PROFILER_MSG_NAME(name)));                               \
+      |     ^~~~~~~~~
+/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/ckernels/blackhole/metal/llk_io/llk_io_unpack.h:19:5: note: in expansion of macro 'DeviceZoneScopedSumN1'
+   19 |     DeviceZoneScopedSumN1("CB-COMPUTE-WAIT-FRONT");
+      |     ^~~~~~~~~~~~~~~~~~~~~
+/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/firmware/src/tt-1xx/trisck.cc: In function 'uint32_t _start()':
+/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/tools/profiler/kernel_profiler.hpp:29:22: note: '#pragma message: TRISC-KERNEL,/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/firmware/src/tt-1xx/trisck.cc,88,KERNEL_PROFILER'
+   29 | #define DO_PRAGMA(x) _Pragma(#x)
+      |                      ^~~~~~~
+/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/tools/profiler/kernel_profiler.hpp:1043:5: note: in expansion of macro 'DO_PRAGMA'
+ 1043 |     DO_PRAGMA(message(PROFILER_MSG_NAME(name)));                               \
+      |     ^~~~~~~~~
+/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/firmware/src/tt-1xx/trisck.cc:88:5: note: in expansion of macro 'DeviceZoneScopedMainChildN'
+   88 |     DeviceZoneScopedMainChildN("TRISC-KERNEL");
+      |     ^~~~~~~~~~~~~~~~~~~~~~~~~~
+Building trisc2, compile step:
+/home/deepgadget/experiments/gr00t/tt-metal/runtime/sfpi/compiler/bin/riscv-tt-elf-g++ -O3 -std=c++17 -ftt-nttp -ftt-constinit -ftt-consteval -ftt-no-dyninit -flto=1 -flto-partition=one -ffast-math -fno-finite-math-only -fsigned-zeros -fno-associative-math -fno-exceptions -fno-rtti -fno-use-cxa-atexit -g -MMD -Wall -Werror -Wno-error=deprecated-declarations -Wno-error=multistatement-macros -Wno-error=parentheses -Wno-error=unused-but-set-variable -Wno-unused-variable -Wno-unused-function --param=min-pagesize=0 -mcpu=tt-bh-tensix -I. -I.. -I/home/deepgadget/experiments/gr00t/tt-metal/ -I/home/deepgadget/experiments/gr00t/tt-metal/ttnn -I/home/deepgadget/experiments/gr00t/tt-metal/ttnn/cpp -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/inc -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/tt-llk/common -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/tt-llk/tools/include -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hostdevcommon/api -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/api/ -I/home/deepgadget/experiments/gr00t/tt-metal/runtime/sfpi/include -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/ckernels/blackhole/metal/common -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/ckernels/blackhole/metal/llk_io -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/inc/internal/tt-1xx -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/inc/internal/tt-1xx/blackhole -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/inc/internal/tt-1xx/blackhole/blackhole_defines -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/inc/internal/tt-1xx/blackhole/noc -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/tt-llk/tt_llk_blackhole/common/inc -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/tt-llk/tt_llk_blackhole/llk_lib -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/ckernels/blackhole/metal/llk_api -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/ckernels/blackhole/metal/llk_api/llk_sfpu -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/firmware/src/tt-1xx -I/home/deepgadget/experiments/tt-models/ports/tt-pi-0.5/models/experimental/pi0_5/tt/megakernel/kernels_p2 -DIS_NOT_POW2_NUM_L1_BANKS=1 -DLOG_BASE_2_OF_NUM_DRAM_BANKS=3 -DNUM_DRAM_BANKS=8 -DNUM_L1_BANKS=110 -DPCIE_NOC_X=19 -DPCIE_NOC_Y=24 -DTENSIX_FIRMWARE -DLOCAL_MEM_EN=0 -DPROFILE_KERNEL=1 -DPROFILER_FULL_HOST_BUFFER_SIZE_PER_RISC=768000 -DPROCESSOR_INDEX=4 -DUCK_CHLKC_PACK -DCOMPILE_FOR_TRISC=2 -DPROGRAMMABLE_CORE_TYPE=0 -DARCH_BLACKHOLE -DDISPATCH_MESSAGE_ADDR=4290184248 -DKERNEL_BUILD -DFULL_KERNEL_NAME="whole_trisc/59939266376725438/" -DKERNEL_COMPILE_TIME_ARGS=1,17,3,6,3184315597,897988541,0,1088,2,2048,0,2048,0,2048,0,2048,2,2048,2,2048,18,17,6,1,32,897988541,897988541,1110770931,955776,2,4096,0,1088 -c -o /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/ip2/ttcache_whole_prof/tt-metal-cache17494936293838345441/kernels/whole_trisc/59939266376725438/trisc2/trisck.14569496671380540618_1393099.o /home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/firmware/src/tt-1xx/trisck.cc -MF /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/ip2/ttcache_whole_prof/tt-metal-cache17494936293838345441/kernels/whole_trisc/59939266376725438/trisc2/trisck.14569496671380540618_1393099.d
+In file included from /home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/ckernels/blackhole/metal/llk_io/llk_io_pack.h:14,
+                 from /home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/inc/api/compute/compute_kernel_api.h:70,
+                 from /home/deepgadget/experiments/tt-models/ports/tt-pi-0.5/models/experimental/pi0_5/tt/megakernel/kernels_p2/../kernels/mk_trisc.cpp:22,
+                 from /home/deepgadget/experiments/tt-models/ports/tt-pi-0.5/models/experimental/pi0_5/tt/megakernel/kernels_p2/whole_trisc.cpp:9,
+                 from ../chlkc_pack.cpp:4,
+                 from /home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/ckernels/blackhole/metal/common/chlkc_list.h:21,
+                 from /home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/firmware/src/tt-1xx/trisck.cc:13:
+/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/ckernels/blackhole/metal/llk_io/llk_io_pack.h: In function 'void llk_wait_for_free_tiles(int32_t, int32_t)':
+/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/tools/profiler/kernel_profiler.hpp:29:22: note: '#pragma message: CB-COMPUTE-RESERVE-BACK,/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/ckernels/blackhole/metal/llk_io/llk_io_pack.h,21,KERNEL_PROFILER'
+   29 | #define DO_PRAGMA(x) _Pragma(#x)
+      |                      ^~~~~~~
+/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/tools/profiler/kernel_profiler.hpp:1053:5: note: in expansion of macro 'DO_PRAGMA'
+ 1053 |     DO_PRAGMA(message(PROFILER_MSG_NAME(name)));                               \
+      |     ^~~~~~~~~
+/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/ckernels/blackhole/metal/llk_io/llk_io_pack.h:21:5: note: in expansion of macro 'DeviceZoneScopedSumN2'
+   21 |     DeviceZoneScopedSumN2("CB-COMPUTE-RESERVE-BACK");
+      |     ^~~~~~~~~~~~~~~~~~~~~
+/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/firmware/src/tt-1xx/trisck.cc: In function 'uint32_t _start()':
+/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/tools/profiler/kernel_profiler.hpp:29:22: note: '#pragma message: TRISC-KERNEL,/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/firmware/src/tt-1xx/trisck.cc,88,KERNEL_PROFILER'
+   29 | #define DO_PRAGMA(x) _Pragma(#x)
+      |                      ^~~~~~~
+/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/tools/profiler/kernel_profiler.hpp:1043:5: note: in expansion of macro 'DO_PRAGMA'
+ 1043 |     DO_PRAGMA(message(PROFILER_MSG_NAME(name)));                               \
+      |     ^~~~~~~~~
+/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/firmware/src/tt-1xx/trisck.cc:88:5: note: in expansion of macro 'DeviceZoneScopedMainChildN'
+   88 |     DeviceZoneScopedMainChildN("TRISC-KERNEL");
+      |     ^~~~~~~~~~~~~~~~~~~~~~~~~~
+Building trisc1, compile step:
+/home/deepgadget/experiments/gr00t/tt-metal/runtime/sfpi/compiler/bin/riscv-tt-elf-g++ -O3 -std=c++17 -ftt-nttp -ftt-constinit -ftt-consteval -ftt-no-dyninit -flto=1 -flto-partition=one -ffast-math -fno-finite-math-only -fsigned-zeros -fno-associative-math -fno-exceptions -fno-rtti -fno-use-cxa-atexit -g -MMD -Wall -Werror -Wno-error=deprecated-declarations -Wno-error=multistatement-macros -Wno-error=parentheses -Wno-error=unused-but-set-variable -Wno-unused-variable -Wno-unused-function --param=min-pagesize=0 -mcpu=tt-bh-tensix -I. -I.. -I/home/deepgadget/experiments/gr00t/tt-metal/ -I/home/deepgadget/experiments/gr00t/tt-metal/ttnn -I/home/deepgadget/experiments/gr00t/tt-metal/ttnn/cpp -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/inc -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/tt-llk/common -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/tt-llk/tools/include -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hostdevcommon/api -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/api/ -I/home/deepgadget/experiments/gr00t/tt-metal/runtime/sfpi/include -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/ckernels/blackhole/metal/common -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/ckernels/blackhole/metal/llk_io -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/inc/internal/tt-1xx -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/inc/internal/tt-1xx/blackhole -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/inc/internal/tt-1xx/blackhole/blackhole_defines -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/inc/internal/tt-1xx/blackhole/noc -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/tt-llk/tt_llk_blackhole/common/inc -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/tt-llk/tt_llk_blackhole/llk_lib -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/ckernels/blackhole/metal/llk_api -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/ckernels/blackhole/metal/llk_api/llk_sfpu -I/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/firmware/src/tt-1xx -I/home/deepgadget/experiments/tt-models/ports/tt-pi-0.5/models/experimental/pi0_5/tt/megakernel/kernels_p2 -DIS_NOT_POW2_NUM_L1_BANKS=1 -DLOG_BASE_2_OF_NUM_DRAM_BANKS=3 -DNUM_DRAM_BANKS=8 -DNUM_L1_BANKS=110 -DPCIE_NOC_X=19 -DPCIE_NOC_Y=24 -DTENSIX_FIRMWARE -DLOCAL_MEM_EN=0 -DPROFILE_KERNEL=1 -DPROFILER_FULL_HOST_BUFFER_SIZE_PER_RISC=768000 -DPROCESSOR_INDEX=3 -DUCK_CHLKC_MATH -DCOMPILE_FOR_TRISC=1 -DPROGRAMMABLE_CORE_TYPE=0 -DARCH_BLACKHOLE -DDISPATCH_MESSAGE_ADDR=4290184248 -DKERNEL_BUILD -DFULL_KERNEL_NAME="whole_trisc/59939266376725438/" -DKERNEL_COMPILE_TIME_ARGS=1,17,3,6,3184315597,897988541,0,1088,2,2048,0,2048,0,2048,0,2048,2,2048,2,2048,18,17,6,1,32,897988541,897988541,1110770931,955776,2,4096,0,1088 -c -o /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/ip2/ttcache_whole_prof/tt-metal-cache17494936293838345441/kernels/whole_trisc/59939266376725438/trisc1/trisck.14569496671380540618_1393099.o /home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/firmware/src/tt-1xx/trisck.cc -MF /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/ip2/ttcache_whole_prof/tt-metal-cache17494936293838345441/kernels/whole_trisc/59939266376725438/trisc1/trisck.14569496671380540618_1393099.d
+In file included from /home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/firmware/src/tt-1xx/trisck.cc:15:
+/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/firmware/src/tt-1xx/trisck.cc: In function 'uint32_t _start()':
+/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/tools/profiler/kernel_profiler.hpp:29:22: note: '#pragma message: TRISC-KERNEL,/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/firmware/src/tt-1xx/trisck.cc,88,KERNEL_PROFILER'
+   29 | #define DO_PRAGMA(x) _Pragma(#x)
+      |                      ^~~~~~~
+/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/tools/profiler/kernel_profiler.hpp:1043:5: note: in expansion of macro 'DO_PRAGMA'
+ 1043 |     DO_PRAGMA(message(PROFILER_MSG_NAME(name)));                               \
+      |     ^~~~~~~~~
+/home/deepgadget/experiments/gr00t/tt-metal/tt_metal/hw/firmware/src/tt-1xx/trisck.cc:88:5: note: in expansion of macro 'DeviceZoneScopedMainChildN'
+   88 |     DeviceZoneScopedMainChildN("TRISC-KERNEL");
+      |     ^~~~~~~~~~~~~~~~~~~~~~~~~~
+2026-10-01 11:40:14.099 | info     |           Metal | Device kernel duration perf summary (device=0): count=2181, min=1050ns, avg=546487.7ns, max=51375718ns (profiler_analysis.cpp:727)
+2026-10-01 11:40:14.099 | info     |           Metal | Device kernel duration perf histogram (device=0): (buckets=10, bucket_size=5137500ns, range=[0..51375000), underflow(<0ns)=0, overflow(>=51375000ns)=1) (profiler_analysis.cpp:770)
+2026-10-01 11:40:14.099 | info     |           Metal |   [           0 ..      5137500) |########################################|     2158 (profiler_analysis.cpp:775)
+2026-10-01 11:40:14.099 | info     |           Metal |   [     5137500 ..     10275000) |                                        |        0 (profiler_analysis.cpp:775)
+2026-10-01 11:40:14.099 | info     |           Metal |   [    10275000 ..     15412500) |                                        |        0 (profiler_analysis.cpp:775)
+2026-10-01 11:40:14.099 | info     |           Metal |   [    15412500 ..     20550000) |                                        |        0 (profiler_analysis.cpp:775)
+2026-10-01 11:40:14.099 | info     |           Metal |   [    20550000 ..     25687500) |                                        |        0 (profiler_analysis.cpp:775)
+2026-10-01 11:40:14.099 | info     |           Metal |   [    25687500 ..     30825000) |                                        |        0 (profiler_analysis.cpp:775)
+2026-10-01 11:40:14.099 | info     |           Metal |   [    30825000 ..     35962500) |                                        |        0 (profiler_analysis.cpp:775)
+2026-10-01 11:40:14.099 | info     |           Metal |   [    35962500 ..     41100000) |                                        |        0 (profiler_analysis.cpp:775)
+2026-10-01 11:40:14.099 | info     |           Metal |   [    41100000 ..     46237500) |                                        |        0 (profiler_analysis.cpp:775)
+2026-10-01 11:40:14.099 | info     |           Metal |   [    46237500 ..     51375000) |                                        |       22 (profiler_analysis.cpp:775)
+RESULT {"t0": "2026-10-01 11:39:19", "arm": "whole", "shape": "libero", "replays_equal_first": [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true], "stamp": {"backend": "whole", "program": {"kernel_digest": "4aa02cdf21ed0c94", "sources": ["kernels/mk_brisc.cpp", "kernels/mk_defs.hpp", "kernels/mk_dm.hpp", "kernels/mk_ncrisc.cpp", "kernels/mk_trisc.cpp", "kernels_p2/pe_brisc.hpp", "kernels_p2/pe_common.hpp", "kernels_p2/pe_defs.hpp", "kernels_p2/pe_dm.hpp", "kernels_p2/pe_ncrisc.hpp", "kernels_p2/pe_trisc.hpp", "kernels_p2/whole_brisc.cpp", "kernels_p2/whole_ncrisc.cpp", "kernels_p2/whole_trisc.cpp"]}}, "t1": "2026-10-01 11:40:15"}
+2026-10-01 11:40:17.037 | info     |    BuildKernels | JIT cache stats: 156/161 hits (96.9%) [156 cached, 24 build-once dedup, 0 merged artifacts, 0 merged genfiles] (build_cache_telemetry.cpp:268)
+2026-10-01 11:40:17.037 | info     |    BuildKernels | JIT telemetry: 43 registered TelemetryTokens (build_cache_telemetry.cpp:325)
+2026-10-01 11:40:17.045 | info     |          Device | Closing user mode device drivers (tt_cluster.cpp:550)
+2026-10-01 11:40:17.045 | info     |             UMD | Closing devices in cluster (cluster.cpp:1302)
+2026-10-01 11:40:17.233 | info     |             UMD | Closing devices in cluster completed. (cluster.cpp:1311)
+2026-10-01 11:40:17.233 | info     |             UMD | Cluster destructor started. (cluster.cpp:1017)
+2026-10-01 11:40:17.233 | info     |             UMD | Cluster destructor completed. (cluster.cpp:1020)
+
+Timer resolution: 0 ns
+
+Frames: 2
+Time span: 1:50.4
+Zones: 2,301,366
+Elapsed time: 59.66 s
+Saving trace... done!
+Trace size 18.83 MB (15.87% ratio)
+2026-10-01 11:40:17.673 | INFO     | __main__:main:436 - Copying /home/deepgadget/experiments/gr00t/tt-metal/generated/profiler/.logs/tracy_profile_log_host.tracy to /home/deepgadget/experiments/gr00t/tt-metal/build/profiler/build_wasm/traces/d_prof2_2026_10_01_11_40_17.tracy
+2026-10-01 11:40:17.673 | WARNING  | __main__:main:441 - Could not copy /home/deepgadget/experiments/gr00t/tt-metal/generated/profiler/.logs/tracy_profile_log_host.tracy to /home/deepgadget/experiments/gr00t/tt-metal/build/profiler/build_wasm/traces/d_prof2_2026_10_01_11_40_17.tracy: [Errno 2] No such file or directory: '/home/deepgadget/experiments/gr00t/tt-metal/generated/profiler/.logs/tracy_profile_log_host.tracy'
+2026-10-01 11:40:17.673 | INFO     | __main__:main:448 - embed.tracy -> traces/d_prof2_2026_10_01_11_40_17.tracy
+2026-10-01 11:40:17.673 | INFO     | tracy.serve_wasm:launch_server_subprocess:284 - Launching tracy web app GUI server subprocess...
+2026-10-01 11:40:17.673 | INFO     | tracy.serve_wasm:launch_server_subprocess:287 - Tracy WASM web UI (open in browser): http://localhost:8080/ (WebSocket for live reload: ws://localhost:8081/)
+2026-10-01 11:40:17.673 | INFO     | tracy.serve_wasm:launch_server_subprocess:294 - Tracy WASM server already serving port 8080; reusing it (live-reload refreshes the browser).
+2026-10-01 11:40:18.852 | INFO     | tracy:generate_report:162 - Host side ops time report generated at /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/ip2/prof/.logs/tracy_ops_times.csv
+2026-10-01 11:40:18.918 | INFO     | tracy:generate_report:173 - Host side ops data report generated at /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/ip2/prof/.logs/tracy_ops_data.csv
+2026-10-01 11:40:18.918 | INFO     | tracy.process_ops_logs:import_tracy_op_logs:422 - Importing ops logs
+2026-10-01 11:40:20.323 | INFO     | tracy.perf_counter_analysis:get_device_op_data:2107 - Getting device ops
+2026-10-01 11:40:20.324 | INFO     | tracy.process_ops_logs:append_device_data:1081 - Appending device data
+2026-10-01 11:40:23.845 | INFO     | tracy.process_ops_logs:generate_reports:1412 - OPs' perf analysis is finished! Generating reports ...
+2026-10-01 11:40:23.845 | INFO     | tracy.process_ops_logs:generate_reports:1432 - Copying runtime artifacts
+2026-10-01 11:40:24.042 | INFO     | tracy.process_ops_logs:generate_reports:1441 - Generating OPs CSV
+2026-10-01 11:40:25.146 | INFO     | tracy.process_ops_logs:generate_reports:1897 - OPs csv generated at: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/ip2/prof/reports/2026_10_01_11_40_23/ops_perf_results_2026_10_01_11_40_23.csv

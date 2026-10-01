@@ -1,0 +1,6 @@
+# mock_base 2026-10-01_10:18:19 /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/vp2r0/mockcache_base
+e84703a299174e2b6ad67684ef6e15c6 27720 whole_brisc/5510233277677116402/brisc/brisc.elf
+374a9ebc35935397597e4d9538c181f2 16260 whole_ncrisc/5836064544659294985/ncrisc/ncrisc.elf
+0fc8ba822af0494e1d434122f35a7584 36068 whole_trisc/4520576496296679604/trisc0/trisc0.elf
+c9dcc4d5dfd3ebbccbacafa358083010 30684 whole_trisc/4520576496296679604/trisc1/trisc1.elf
+ec77a8ea47e2bcf1b3653a997c8581dd 14212 whole_trisc/4520576496296679604/trisc2/trisc2.elf

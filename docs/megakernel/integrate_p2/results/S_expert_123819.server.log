@@ -1,0 +1,83 @@
+INFO:     Started server process [1431905]
+INFO:     Waiting for application startup.
+2026-10-01 12:38:21.653 | DEBUG    | ttnn:<module>:45 - Initial ttnn.CONFIG:
+Config{cache_path=/home/deepgadget/.cache/ttnn,model_cache_path=/home/deepgadget/.cache/ttnn/models,tmp_dir=/tmp/ttnn,enable_model_cache=false,enable_fast_runtime_mode=true,validate_program_args=false,throw_exception_on_fallback=false,enable_logging=false,enable_graph_report=false,enable_graph_python_stack_traces=false,enable_detailed_buffer_report=false,enable_detailed_tensor_report=false,enable_comparison_mode=false,comparison_mode_should_raise_exception=false,comparison_mode_pcc=0.9999,root_report_path=generated/ttnn/reports,report_name=std::nullopt,std::nullopt}
+2026-10-01 12:38:21,697 INFO pi05.server: config: {'weights_repo': 'lerobot/pi05_base', 'weights_revision': None, 'weights_dir': None, 'tokenizer_repo': 'google/paligemma-3b-pt-224', 'tokenizer_dir': None, 'tokenizer_required': True, 'device_id': 0, 'l1_small_size': 24576, 'token_len': 224, 'num_images': 2, 'num_steps': 10, 'seed': 42, 'warmup_runs': 2, 'free_host_weights': True, 'batch_sizes': (1,), 'batch_window_ms': 4.0, 'layout': 'mesh', 'dp_group': 2, 'profile': 'single-robot', 'prefix_chips': 2, 'pipeline_margin_ms': 4.0} mesh=1x1
+2026-10-01 12:38:21,738 INFO pi05.server: Loading weights: lerobot/pi05_base @ default branch (model.safetensors, config.json)
+2026-10-01 12:38:22,233 INFO pi05.server: Loading weights done: 812 tensors in 0.0 s
+2026-10-01 12:38:23,231 INFO pi05.server: Loading tokenizer google/paligemma-3b-pt-224
+2026-10-01 12:38:25,106 INFO pi05.server: Opening device {'device_id': 0, 'l1_small_size': 24576, 'trace_region_size': 160000000, 'worker_l1_size': 1395712} fused={'trace': True, 'trace_region_size': 160000000, 'residual': 'bf16', 'mlp_chunk': 256, 'vlm_down_pc': 'mcast2d', 'vlm_gateup_pc': 'auto', 'vlm_attn_pc': 'auto', 'siglip_pc': 'auto', 'siglip_batched': True, 'skip_vlm_tail': True, 'sdpa_vlm': None, 'sdpa_expert': None, 'sdpa_siglip': None, 'dit_blocks': (1, 8, 4, 1, 4, 0, 2), 'euler_dit_blocks': (1, 8, 1, 1, 1, 0, 2), 'expert_mm': 'mcast1d_fp32', 'expert_mm_blocks': (1, 8, 4, 1, 4, 0, 2), 'tp': 0, 'ccl_topology': 'ring', 'env_keys': ('PI05_MEGAKERNEL',), 'kv_dtype': 'bf8', 'expert_geglu': False, 'expert_attn': 'ttnn', 'expert_norm_fold': False, 'megakernel': 'expert'}
+2026-10-01 12:38:25.106 | info     |          Device | Opening user mode device driver (tt_cluster.cpp:224)
+2026-10-01 12:38:25.106 | info     |             UMD | Cluster constructor started. (cluster.cpp:408)
+2026-10-01 12:38:25.106 | info     |             UMD | Creating TopologyDiscovery for architecture: blackhole (topology_discovery.cpp:96)
+2026-10-01 12:38:25.106 | info     |             UMD | Starting topology discovery. (topology_discovery.cpp:115)
+2026-10-01 12:38:25.109 | info     |             UMD | Established firmware bundle version: 19.12.0 (topology_discovery.cpp:576)
+2026-10-01 12:38:25.110 | info     |             UMD | Completed topology discovery. (topology_discovery.cpp:119)
+2026-10-01 12:38:25.363 | info     |             UMD | Opening local chip ids/PCIe ids: {0}/[0] and remote chip ids {} (cluster.cpp:175)
+2026-10-01 12:38:25.363 | info     |             UMD | IOMMU: disabled (cluster.cpp:149)
+2026-10-01 12:38:25.363 | info     |             UMD | KMD version: 2.11.0 (cluster.cpp:152)
+2026-10-01 12:38:25.363 | info     |             UMD | Cluster constructor completed. (cluster.cpp:683)
+2026-10-01 12:38:25.364 | info     |             UMD | Starting devices in cluster (cluster.cpp:1289)
+2026-10-01 12:38:25.365 | info     |             UMD | Starting devices in cluster completed. (cluster.cpp:1297)
+2026-10-01 12:38:25.725 | info     |     Distributed | Using auto discovery to generate mesh graph. (metal_env.cpp:422)
+2026-10-01 12:38:25.725 | info     |     Distributed | Constructing control plane using auto-discovery (no mesh graph descriptor). (metal_env.cpp:484)
+2026-10-01 12:38:25.725 | warning  |          Always | Unknown motherboard 'ProArt X870E-CREATOR WIFI' for chip_id=0 (bus_id=0x3) — falling back to bus_id as tray_id. Add this motherboard and its bus IDs to mobo_to_bus_ids in physical_system_discovery.cpp. (physical_system_discovery.cpp:119)
+2026-10-01 12:38:25.725 | info     |          Fabric | Logical multi-mesh adjacency: intermesh degree histogram {0:1}; intra-mesh degree histograms mesh0 {0:1} (topology_mapper_utils.cpp:3190)
+2026-10-01 12:38:25.725 | info     |          Fabric | Physical multi-mesh adjacency: intermesh degree histogram {0:1}; intra-mesh degree histograms mesh0 {0:1} (topology_mapper_utils.cpp:3198)
+2026-10-01 12:38:25.834 | info     |           Metal | Enabling program cache on MeshDevice 1 (mesh_device.cpp:1176)
+2026-10-01 12:38:25,834 INFO pi05.server: Loading pipeline: converting 812 tensors to device (PI0ModelTTNN, pi05=True) ...
+[pi0.5] expert adaRMS norms folded into per-step weights in 5.1s
+2026-10-01 12:38:47,957 INFO pi05.server: Model built in 22.1 s (fused graph; the first warm-up call compiles and captures the trace)
+2026-10-01 12:38:48,114 INFO pi05.server: Released the fp32 host copy of the checkpoint
+2026-10-01 12:38:48,114 INFO pi05.server: Warming up: 2 x sample_actions on 2 black image(s), L=224 tokens, 10 steps ...
+2026-10-01 12:39:02,660 INFO pi05.server: Warmup 1/2: 14543.9 ms
+2026-10-01 12:39:02,731 INFO pi05.server: Warmup 2/2: 71.0 ms
+2026-10-01 12:39:02,731 INFO pi05.server: Warmup complete (first 14543.9 ms, steady 71.0 ms) -- fused graph traced
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:20000 (Press CTRL+C to quit)
+INFO:     127.0.0.1:45900 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45914 - "GET /info HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45930 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45940 - "GET /info HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45950 - "POST /predict HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45960 - "POST /predict HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45976 - "POST /predict HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45984 - "POST /predict HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45992 - "POST /predict HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46006 - "POST /predict HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46022 - "POST /predict HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46038 - "POST /predict HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46052 - "POST /predict HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46062 - "POST /predict HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46078 - "POST /predict HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46088 - "POST /predict HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46090 - "POST /predict HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46104 - "POST /predict HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46106 - "POST /predict HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46118 - "POST /predict HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46132 - "POST /predict HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46148 - "POST /predict HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46150 - "POST /predict HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46162 - "POST /predict HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46172 - "POST /predict HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46184 - "POST /predict HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46190 - "POST /predict HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46194 - "POST /predict HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46206 - "POST /predict HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46216 - "POST /predict HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46232 - "POST /predict HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46246 - "POST /predict HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46256 - "POST /predict HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46260 - "POST /predict HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46262 - "POST /predict HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46268 - "POST /predict HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46274 - "POST /predict HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46280 - "GET /info HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46288 - "POST /predict HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46300 - "POST /predict HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46304 - "POST /predict HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+2026-10-01 12:39:08,967 INFO pi05.server: Closing device
+INFO:     Application shutdown complete.
+INFO:     Finished server process [1431905]

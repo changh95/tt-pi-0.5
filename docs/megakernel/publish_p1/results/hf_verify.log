@@ -1,0 +1,10 @@
+repo sha 9f6b082bfdda94c1fdf319670764e250c660b369
+tree: 151 files; missing: [] unexpected: []
+deleted still present: []
+sha256: 133 files downloaded and hashed, 15 LFS image blobs checked via Hub lfs.sha256 (== local sha == blob name); mismatches: []
+code/: 83 GitHub main files, all byte-identical in HF code/: True []; HF-only: ['common/lightweightmodule.py']
+HEAD 200 video/mp4 1548215 https://huggingface.co/changh95/pi05-base-p150/resolve/main/demo/pi05_libero_spatial.mp4
+HEAD 200 image/png 703720 https://huggingface.co/changh95/pi05-base-p150/resolve/main/demo/pi05_libero_spatial_poster.png
+HEAD 200 video/mp4 343498 https://huggingface.co/changh95/pi05-base-p150/resolve/main/demo/pi05_tt_libero_spatial_t3_i0.mp4
+HEAD 200 image/png 737 https://huggingface.co/changh95/pi05-base-p150/resolve/main/media/sample_base.png
+HEAD 200 text/html; charset=utf-8 155329 https://huggingface.co/changh95/pi05-base-p150

@@ -1,0 +1,232 @@
+{
+ "golden": "/home/deepgadget/experiments/gr00t/libero_eval/pi05/openloop_golden.pt",
+ "time": "2026-10-01 12:41:29",
+ "backend": "tt-p150a:models.experimental.pi0_5.tt.ttnn_pi0_model.PI0ModelTTNN.sample_actions_fused[traced=True,H=10,steps=10,lang_len=32,arch=Arch.BLACKHOLE,code=ce9806a34c46+dirty(megakernel-2026-09-29),tt-metal=668c29075755,megakernel=whole,trace=True,tp=1,expert_attn=fused,expert_norm_fold=True,expert_geglu=True,expert_mm=mcast1d_fp32,kv_dtype=bf8,residual=bf16,mlp_chunk=256,vlm_attn_pc=mcast2d,vlm_gateup_pc=mcast2d,vlm_down_pc=mcast2d,siglip_pc=mcast2d,siglip_batched=True,skip_vlm_tail=True,backend=whole,mk_digest=4aa02cdf21ed0c94]",
+ "backend_detail": {
+  "model": "models.experimental.pi0_5.tt.ttnn_pi0_model.PI0ModelTTNN",
+  "entry": "sample_actions_fused(lang_masks=...)",
+  "traced": true,
+  "pi05": true,
+  "H": 10,
+  "steps": 10,
+  "arch": "Arch.BLACKHOLE",
+  "lang_len": 32,
+  "code": {
+   "repo": "/home/deepgadget/experiments/tt-models/ports/tt-pi-0.5",
+   "commit": "ce9806a34c46f2a1b93d0da62fddc3867b6f0906",
+   "branch": "megakernel-2026-09-29",
+   "dirty_tracked": true,
+   "module_file": "/home/deepgadget/experiments/tt-models/ports/tt-pi-0.5/models/experimental/pi0_5/tt/ttnn_pi0_model.py"
+  },
+  "tt_metal": {
+   "repo": "/home/deepgadget/experiments/gr00t/tt-metal",
+   "commit": "668c290757550588d0ce46b180c344a462a2aaf5",
+   "branch": "main",
+   "dirty_tracked": false,
+   "ttnn_file": "/home/deepgadget/experiments/gr00t/tt-metal/ttnn/ttnn/__init__.py"
+  },
+  "fused_cfg": {
+   "trace": "True",
+   "trace_region_size": "160000000",
+   "residual": "bf16",
+   "mlp_chunk": "256",
+   "vlm_down_pc": "mcast2d",
+   "vlm_gateup_pc": "mcast2d",
+   "vlm_attn_pc": "mcast2d",
+   "siglip_pc": "mcast2d",
+   "siglip_batched": "True",
+   "skip_vlm_tail": "True",
+   "sdpa_vlm": "None",
+   "sdpa_expert": "None",
+   "sdpa_siglip": "None",
+   "dit_blocks": "(1, 8, 4, 1, 4, 0, 2)",
+   "euler_dit_blocks": "(1, 8, 1, 1, 1, 0, 2)",
+   "expert_mm": "mcast1d_fp32",
+   "expert_mm_blocks": "(1, 8, 4, 1, 4, 0, 2)",
+   "tp": "1",
+   "ccl_topology": "ring",
+   "env_keys": "()",
+   "kv_dtype": "bf8",
+   "expert_geglu": "True",
+   "expert_attn": "fused",
+   "expert_norm_fold": "True",
+   "megakernel": "whole"
+  },
+  "megakernel_backend": "whole",
+  "megakernel_program": {
+   "kernel_digest": "4aa02cdf21ed0c94",
+   "sources": [
+    "kernels/mk_brisc.cpp",
+    "kernels/mk_defs.hpp",
+    "kernels/mk_dm.hpp",
+    "kernels/mk_ncrisc.cpp",
+    "kernels/mk_trisc.cpp",
+    "kernels_p2/pe_brisc.hpp",
+    "kernels_p2/pe_common.hpp",
+    "kernels_p2/pe_defs.hpp",
+    "kernels_p2/pe_dm.hpp",
+    "kernels_p2/pe_ncrisc.hpp",
+    "kernels_p2/pe_trisc.hpp",
+    "kernels_p2/whole_brisc.cpp",
+    "kernels_p2/whole_ncrisc.cpp",
+    "kernels_p2/whole_trisc.cpp"
+   ]
+  },
+  "env_PI05_MEGAKERNEL": null
+ },
+ "summary": {
+  "mean_pcc_7": 0.9999757970264312,
+  "min_pcc_7": 0.9999553777701807,
+  "min_pcc_all32": 0.9999533838560273,
+  "max_maxabs_env": 0.01105576753616333,
+  "all_deterministic": true,
+  "host_preproc_ok": true,
+  "steady_call_ms_median": 53.5
+ },
+ "rows": [
+  {
+   "tag": "libero_spatial/t0/i0/call0/step10",
+   "n_lang": 20,
+   "tokens_equal": true,
+   "img_maxabs": 1.1920928955078125e-07,
+   "pcc_all32": 0.9999669512727893,
+   "pcc_7": 0.9999736267789927,
+   "maxabs_7_norm": 0.010018706321716309,
+   "pcc_env": 0.9999908238626811,
+   "maxabs_env": 0.006448209285736084,
+   "gripper_sign_agree": 1.0,
+   "call_ms": [
+    25054.9,
+    53.6,
+    53.6
+   ],
+   "deterministic": true
+  },
+  {
+   "tag": "libero_spatial/t0/i0/call12/step70",
+   "n_lang": 20,
+   "tokens_equal": true,
+   "img_maxabs": 1.1920928955078125e-07,
+   "pcc_all32": 0.9999833264340147,
+   "pcc_7": 0.9999827524600465,
+   "maxabs_7_norm": 0.011795133352279663,
+   "pcc_env": 0.9999849132387036,
+   "maxabs_env": 0.01105576753616333,
+   "gripper_sign_agree": 1.0,
+   "call_ms": [
+    53.1,
+    53.5,
+    53.5
+   ],
+   "deterministic": true
+  },
+  {
+   "tag": "libero_spatial/t3/i1/call0/step10",
+   "n_lang": 17,
+   "tokens_equal": true,
+   "img_maxabs": 1.1920928955078125e-07,
+   "pcc_all32": 0.9999701151760163,
+   "pcc_7": 0.9999775230453445,
+   "maxabs_7_norm": 0.011805176734924316,
+   "pcc_env": 0.9999921999590431,
+   "maxabs_env": 0.009942889213562012,
+   "gripper_sign_agree": 1.0,
+   "call_ms": [
+    54.8,
+    53.8,
+    53.6
+   ],
+   "deterministic": true
+  },
+  {
+   "tag": "libero_spatial/t3/i1/call12/step70",
+   "n_lang": 17,
+   "tokens_equal": true,
+   "img_maxabs": 1.1920928955078125e-07,
+   "pcc_all32": 0.9999908646342052,
+   "pcc_7": 0.9999938800525194,
+   "maxabs_7_norm": 0.006943225860595703,
+   "pcc_env": 0.9999947424598422,
+   "maxabs_env": 0.00694197416305542,
+   "gripper_sign_agree": 1.0,
+   "call_ms": [
+    53.7,
+    53.5,
+    53.3
+   ],
+   "deterministic": true
+  },
+  {
+   "tag": "libero_spatial/t6/i2/call0/step10",
+   "n_lang": 18,
+   "tokens_equal": true,
+   "img_maxabs": 1.1920928955078125e-07,
+   "pcc_all32": 0.9999600805773937,
+   "pcc_7": 0.9999705254704542,
+   "maxabs_7_norm": 0.017084330320358276,
+   "pcc_env": 0.9999948577279758,
+   "maxabs_env": 0.008584380149841309,
+   "gripper_sign_agree": 1.0,
+   "call_ms": [
+    54.7,
+    53.8,
+    53.4
+   ],
+   "deterministic": true
+  },
+  {
+   "tag": "libero_spatial/t6/i2/call12/step70",
+   "n_lang": 18,
+   "tokens_equal": true,
+   "img_maxabs": 1.1920928955078125e-07,
+   "pcc_all32": 0.9999752650841468,
+   "pcc_7": 0.999980297273936,
+   "maxabs_7_norm": 0.011965692043304443,
+   "pcc_env": 0.9999923425662596,
+   "maxabs_env": 0.009615063667297363,
+   "gripper_sign_agree": 1.0,
+   "call_ms": [
+    53.3,
+    52.8,
+    53.5
+   ],
+   "deterministic": true
+  },
+  {
+   "tag": "libero_spatial/t9/i3/call0/step10",
+   "n_lang": 17,
+   "tokens_equal": true,
+   "img_maxabs": 1.1920928955078125e-07,
+   "pcc_all32": 0.9999676674956167,
+   "pcc_7": 0.9999723933599758,
+   "maxabs_7_norm": 0.017131894826889038,
+   "pcc_env": 0.9999918898989976,
+   "maxabs_env": 0.006994664669036865,
+   "gripper_sign_agree": 1.0,
+   "call_ms": [
+    53.9,
+    53.1,
+    53.8
+   ],
+   "deterministic": true
+  },
+  {
+   "tag": "libero_spatial/t9/i3/call12/step70",
+   "n_lang": 17,
+   "tokens_equal": true,
+   "img_maxabs": 1.1920928955078125e-07,
+   "pcc_all32": 0.9999533838560273,
+   "pcc_7": 0.9999553777701807,
+   "maxabs_7_norm": 0.019275516271591187,
+   "pcc_env": 0.9999924221083981,
+   "maxabs_env": 0.009223222732543945,
+   "gripper_sign_agree": 1.0,
+   "call_ms": [
+    53.2,
+    53.2,
+    53.3
+   ],
+   "deterministic": true
+  }
+ ]
+}

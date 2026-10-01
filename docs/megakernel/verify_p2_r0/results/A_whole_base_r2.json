@@ -1,0 +1,190 @@
+{
+ "t0": "2026-10-01 11:12:28",
+ "arm_env": "whole",
+ "shape": "base",
+ "open_kwargs": {
+  "device_id": 0,
+  "l1_small_size": 24576,
+  "trace_region_size": 160000000,
+  "worker_l1_size": 1395712
+ },
+ "env": {
+  "PI05_MEGAKERNEL": "whole",
+  "TT_METAL_CACHE": "/tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/vp2r0/ttcache_whole"
+ },
+ "smi_open": {
+  "t": "2026-10-01 11:12:28",
+  "aiclk": " 800",
+  "power": " 23.0",
+  "temp": "55.3"
+ },
+ "stamp": {
+  "backend": "whole",
+  "program": {
+   "kernel_digest": "4aa02cdf21ed0c94",
+   "sources": [
+    "kernels/mk_brisc.cpp",
+    "kernels/mk_defs.hpp",
+    "kernels/mk_dm.hpp",
+    "kernels/mk_ncrisc.cpp",
+    "kernels/mk_trisc.cpp",
+    "kernels_p2/pe_brisc.hpp",
+    "kernels_p2/pe_common.hpp",
+    "kernels_p2/pe_defs.hpp",
+    "kernels_p2/pe_dm.hpp",
+    "kernels_p2/pe_ncrisc.hpp",
+    "kernels_p2/pe_trisc.hpp",
+    "kernels_p2/whole_brisc.cpp",
+    "kernels_p2/whole_ncrisc.cpp",
+    "kernels_p2/whole_trisc.cpp"
+   ]
+  }
+ },
+ "first_call_ms": 23465.627352008596,
+ "traced": true,
+ "prefix_len": 736,
+ "kv_cache_shape": [
+  1,
+  1,
+  800,
+  256
+ ],
+ "kv_cache_dtype": "DataType.BFLOAT8_B",
+ "digests": {
+  "1": "e323d9314a8f6335",
+  "2": "82d97efc0c3fd305"
+ },
+ "distinct_outputs": 2,
+ "ten_calls_eq_first": [
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true
+ ],
+ "ten_raw_replays_eq_first": [
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true
+ ],
+ "poison_readback_all_7": true,
+ "after_poison_eq_obs_j": true,
+ "after_poison_has_7": false,
+ "smi_bench_before": {
+  "t": "2026-10-01 11:13:19",
+  "aiclk": "1350",
+  "power": " 66.0",
+  "temp": "59.8"
+ },
+ "witness_call": {
+  "time_ns_s": 1.681185625,
+  "monotonic_s": 1.681186967,
+  "sum_perf_counter_s": 1.6811547718243673,
+  "wall_start_epoch": 1790820799.3171875
+ },
+ "witness_replay": {
+  "time_ns_s": 1.621552322,
+  "sum_perf_counter_s": 1.6215132692595944
+ },
+ "replays_in_10s_time_time": 185,
+ "smi_bench_after": {
+  "t": "2026-10-01 11:13:32",
+  "aiclk": "1350",
+  "power": " 69.0",
+  "temp": "62.8"
+ },
+ "call_ms": {
+  "median": 56.01563598611392,
+  "min": 55.684096994809806,
+  "max": 56.72846402740106,
+  "all": [
+   56.32896296447143,
+   55.912458046805114,
+   55.7252750149928,
+   56.18916795356199,
+   55.86394597776234,
+   55.834500992204994,
+   56.041470961645246,
+   56.04992696316913,
+   56.09467998147011,
+   56.071156985126436,
+   56.17666500620544,
+   56.073490995913744,
+   56.2213989906013,
+   55.95860304310918,
+   56.08015198959038,
+   55.993318965192884,
+   55.7022700086236,
+   56.00344797130674,
+   55.96006603445858,
+   55.95443496713415,
+   56.21869402239099,
+   55.790195998270065,
+   56.72846402740106,
+   55.729842046275735,
+   56.0278240009211,
+   56.138311978429556,
+   55.9533039922826,
+   55.684096994809806,
+   56.72639998374507,
+   55.92224496649578
+  ]
+ },
+ "replay_ms": {
+  "median": 54.04803252895363,
+  "min": 53.92217601183802,
+  "max": 54.20674098422751,
+  "all": [
+   54.00711600668728,
+   54.07815903890878,
+   54.121981956996024,
+   54.03847503475845,
+   54.02771499939263,
+   54.06652798410505,
+   53.93992899917066,
+   54.07548398943618,
+   54.109388031065464,
+   54.03650103835389,
+   54.090392019134015,
+   53.991076012607664,
+   54.00291702244431,
+   54.06250001396984,
+   53.984362981282175,
+   53.92217601183802,
+   54.06720901373774,
+   54.146929003763944,
+   54.20674098422751,
+   54.14092697901651,
+   54.011544038075954,
+   54.14344201562926,
+   54.03201101580635,
+   53.99839801248163,
+   53.998659015633166,
+   53.99798700818792,
+   54.057590023148805,
+   54.005843005143106,
+   54.07586501678452,
+   54.07542298780754
+  ]
+ },
+ "after_bench_eq_first": true,
+ "megakernel_l1": {
+  "total_per_bank": 1371136,
+  "allocated_per_bank": 117248,
+  "largest_free_per_bank": 1253888,
+  "cb_union": 1156768
+ },
+ "t1": "2026-10-01 11:13:32"
+}

@@ -1,0 +1,12 @@
+Config{cache_path=/home/deepgadget/.cache/ttnn,model_cache_path=/home/deepgadget/.cache/ttnn/models,tmp_dir=/tmp/ttnn,enable_model_cache=false,enable_fast_runtime_mode=true,validate_program_args=false,throw_exception_on_fallback=false,enable_logging=false,enable_graph_report=false,enable_graph_python_stack_traces=false,enable_detailed_buffer_report=false,enable_detailed_tensor_report=false,enable_comparison_mode=false,comparison_mode_should_raise_exception=false,comparison_mode_pcc=0.9999,root_report_path=generated/ttnn/reports,report_name=std::nullopt,std::nullopt}
+2026-10-01 10:04:13 ctrl libero_spatial/t0/i0/call0/step10 {'bit_equal_sample_actions': True, 'pcc': 1.0000000000000004, 'cache_shape': [1, 1, 544, 256], 'n_valid': 532}
+2026-10-01 10:04:13 libero ref libero_spatial/t0/i0/call0/step10
+2026-10-01 10:04:22 ctrl libero_spatial/t0/i0/call12/step70 {'bit_equal_sample_actions': True, 'pcc': 1.0000000000000002, 'cache_shape': [1, 1, 544, 256], 'n_valid': 532}
+2026-10-01 10:04:22 libero ref libero_spatial/t0/i0/call12/step70
+2026-10-01 10:04:26 libero ref libero_spatial/t3/i1/call0/step10
+2026-10-01 10:04:30 libero ref libero_spatial/t3/i1/call12/step70
+2026-10-01 10:04:35 libero ref libero_spatial/t6/i2/call0/step10
+2026-10-01 10:04:39 libero ref libero_spatial/t6/i2/call12/step70
+2026-10-01 10:04:43 libero ref libero_spatial/t9/i3/call0/step10
+2026-10-01 10:04:47 libero ref libero_spatial/t9/i3/call12/step70
+2026-10-01 10:04:47 DONE {"libero_spatial/t0/i0/call0/step10": {"bit_equal_sample_actions": true, "pcc": 1.0000000000000004, "cache_shape": [1, 1, 544, 256], "n_valid": 532}, "libero_spatial/t0/i0/call12/step70": {"bit_equal_sample_actions": true, "pcc": 1.0000000000000002, "cache_shape": [1, 1, 544, 256], "n_valid": 532}}

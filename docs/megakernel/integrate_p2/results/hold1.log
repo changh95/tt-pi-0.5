@@ -1,0 +1,15 @@
+2026-10-01_11:29:29 START arm whole base r1
+2026-10-01_11:30:57 END arm whole base r1 rc=0 "call_median": 55.866346519906074
+2026-10-01_11:30:57 START arm expert base r1
+2026-10-01_11:32:29 END arm expert base r1 rc=0 "call_median": 70.83455001702532
+2026-10-01_11:32:29 START arm off base r1
+2026-10-01_11:33:58 END arm off base r1 rc=0 "call_median": 84.17416902375408
+2026-10-01_11:33:58 START arm whole libero r1
+2026-10-01_11:35:10 END arm whole libero r1 rc=0 "call_median": 53.10037700110115
+2026-10-01_11:35:10 START arm expert libero r1
+2026-10-01_11:36:09 END arm expert libero r1 rc=0 "call_median": 65.72559400228783
+2026-10-01_11:36:09 START arm off libero r1
+2026-10-01_11:37:01 END arm off libero r1 rc=0 "call_median": 76.96707150898874
+2026-10-01_11:37:01 [device-guard pid=1372272] RESET AFTER JOB (WITH_DEVICE_RESET_AFTER=1, rc=0): timeout 1800 /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/ip2/hold1.sh
+2026-10-01_11:37:01 [device-guard pid=1372272] RESET: tt-smi -r 0 (probe hung/failed with no other device users)
+2026-10-01_11:37:42 [device-guard pid=1372272] reset exit=0

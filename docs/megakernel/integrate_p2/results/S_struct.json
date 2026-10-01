@@ -1,0 +1,342 @@
+{
+ "whole_base": {
+  "n_rows_csv": 2182,
+  "n_sessions": 21,
+  "ops_per_session": [
+   1
+  ],
+  "non_session_rows": 2161,
+  "missing_durations": 0,
+  "op_code_counts_first": [
+   [
+    "GenericOpDeviceOperation",
+    1
+   ]
+  ],
+  "op_codes": [
+   "GenericOpDeviceOperation"
+  ],
+  "kernel_sources": [
+   [
+    "['/home/deepgadget/experiments/tt-models/ports/tt-pi-0.5/models/experimental/pi0_5/tt/megakernel/kernels_p2/whole_trisc.cpp']",
+    "['/home/deepgadget/experiments/tt-models/ports/tt-pi-0.5/models/experimental/pi0_5/tt/megakernel/kernels_p2/whole_brisc.cpp'; '/home/deepgadget/experiments/tt-models/ports/tt-pi-0.5/models/experimental/pi0_5/tt/megakernel/kernels_p2/whole_ncrisc.cpp']"
+   ]
+  ],
+  "core_counts": [
+   "110"
+  ],
+  "program_hashes": [
+   "4445036791400648286"
+  ],
+  "device_ms": {
+   "median": 53.935865,
+   "min": 53.799816,
+   "max": 54.081265,
+   "n": 21
+  },
+  "pass": true
+ },
+ "whole_libero": {
+  "n_rows_csv": 2182,
+  "n_sessions": 21,
+  "ops_per_session": [
+   1
+  ],
+  "non_session_rows": 2161,
+  "missing_durations": 0,
+  "op_code_counts_first": [
+   [
+    "GenericOpDeviceOperation",
+    1
+   ]
+  ],
+  "op_codes": [
+   "GenericOpDeviceOperation"
+  ],
+  "kernel_sources": [
+   [
+    "['/home/deepgadget/experiments/tt-models/ports/tt-pi-0.5/models/experimental/pi0_5/tt/megakernel/kernels_p2/whole_trisc.cpp']",
+    "['/home/deepgadget/experiments/tt-models/ports/tt-pi-0.5/models/experimental/pi0_5/tt/megakernel/kernels_p2/whole_brisc.cpp'; '/home/deepgadget/experiments/tt-models/ports/tt-pi-0.5/models/experimental/pi0_5/tt/megakernel/kernels_p2/whole_ncrisc.cpp']"
+   ]
+  ],
+  "core_counts": [
+   "110"
+  ],
+  "program_hashes": [
+   "3959314102331406729"
+  ],
+  "device_ms": {
+   "median": 51.259441,
+   "min": 51.168173,
+   "max": 51.375718,
+   "n": 21
+  },
+  "pass": true
+ },
+ "expert_base": {
+  "n_rows_csv": 7546,
+  "n_sessions": 3,
+  "ops_per_session": [
+   892
+  ],
+  "non_session_rows": 4870,
+  "missing_durations": 0,
+  "op_code_counts_first": [
+   [
+    "MatmulDeviceOperation",
+    298
+   ],
+   [
+    "BinaryNgDeviceOperation",
+    160
+   ],
+   [
+    "LayerNormDeviceOperation",
+    90
+   ],
+   [
+    "SliceDeviceOperation",
+    51
+   ],
+   [
+    "UnaryDeviceOperation",
+    51
+   ],
+   [
+    "NlpCreateHeadsDeviceOperation",
+    45
+   ],
+   [
+    "SDPAOperation",
+    44
+   ],
+   [
+    "NLPConcatHeadsDeviceOperation",
+    44
+   ],
+   [
+    "UpdateKVCacheOperation",
+    36
+   ],
+   [
+    "ConcatDeviceOperation",
+    35
+   ],
+   [
+    "RotaryEmbeddingDeviceOperation",
+    35
+   ],
+   [
+    "TilizeDeviceOperation",
+    1
+   ]
+  ],
+  "n_kv": 36,
+  "n_after_last_kv": 1,
+  "after0_sources": [
+   "['/home/deepgadget/experiments/tt-models/ports/tt-pi-0.5/models/experimental/pi0_5/tt/megakernel/kernels/mk_trisc.cpp']",
+   "['/home/deepgadget/experiments/tt-models/ports/tt-pi-0.5/models/experimental/pi0_5/tt/megakernel/kernels/mk_brisc.cpp'; '/home/deepgadget/experiments/tt-models/ports/tt-pi-0.5/models/experimental/pi0_5/tt/megakernel/kernels/mk_ncrisc.cpp']"
+  ],
+  "session_device_ms_median": 69.488398
+ },
+ "expert_libero": {
+  "n_rows_csv": 7546,
+  "n_sessions": 3,
+  "ops_per_session": [
+   892
+  ],
+  "non_session_rows": 4870,
+  "missing_durations": 0,
+  "op_code_counts_first": [
+   [
+    "MatmulDeviceOperation",
+    298
+   ],
+   [
+    "BinaryNgDeviceOperation",
+    160
+   ],
+   [
+    "LayerNormDeviceOperation",
+    90
+   ],
+   [
+    "SliceDeviceOperation",
+    51
+   ],
+   [
+    "UnaryDeviceOperation",
+    51
+   ],
+   [
+    "NlpCreateHeadsDeviceOperation",
+    45
+   ],
+   [
+    "SDPAOperation",
+    44
+   ],
+   [
+    "NLPConcatHeadsDeviceOperation",
+    44
+   ],
+   [
+    "UpdateKVCacheOperation",
+    36
+   ],
+   [
+    "ConcatDeviceOperation",
+    35
+   ],
+   [
+    "RotaryEmbeddingDeviceOperation",
+    35
+   ],
+   [
+    "TilizeDeviceOperation",
+    1
+   ]
+  ],
+  "n_kv": 36,
+  "n_after_last_kv": 1,
+  "after0_sources": [
+   "['/home/deepgadget/experiments/tt-models/ports/tt-pi-0.5/models/experimental/pi0_5/tt/megakernel/kernels/mk_trisc.cpp']",
+   "['/home/deepgadget/experiments/tt-models/ports/tt-pi-0.5/models/experimental/pi0_5/tt/megakernel/kernels/mk_brisc.cpp'; '/home/deepgadget/experiments/tt-models/ports/tt-pi-0.5/models/experimental/pi0_5/tt/megakernel/kernels/mk_ncrisc.cpp']"
+  ],
+  "session_device_ms_median": 64.336151
+ },
+ "off_base": {
+  "n_rows_csv": 14949,
+  "n_sessions": 2,
+  "ops_per_session": [
+   2551
+  ],
+  "non_session_rows": 9847,
+  "missing_durations": 0,
+  "op_code_counts_first": [
+   [
+    "MatmulDeviceOperation",
+    668
+   ],
+   [
+    "GenericOpDeviceOperation",
+    540
+   ],
+   [
+    "MinimalMatmulDeviceOperation",
+    370
+   ],
+   [
+    "LayerNormDeviceOperation",
+    280
+   ],
+   [
+    "TypecastDeviceOperation",
+    180
+   ],
+   [
+    "BinaryNgDeviceOperation",
+    170
+   ],
+   [
+    "SliceDeviceOperation",
+    51
+   ],
+   [
+    "UnaryDeviceOperation",
+    51
+   ],
+   [
+    "NlpCreateHeadsDeviceOperation",
+    45
+   ],
+   [
+    "SDPAOperation",
+    44
+   ],
+   [
+    "NLPConcatHeadsDeviceOperation",
+    44
+   ],
+   [
+    "UpdateKVCacheOperation",
+    36
+   ]
+  ],
+  "n_kv": 36,
+  "n_after_last_kv": 1660,
+  "after0_sources": [
+   "['ttnn/cpp/ttnn/operations/matmul/device/kernels/compute/bmm_large_block_zm_fused_bias_activation.cpp']",
+   "['ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in1_sender_writer_padding.cpp'; 'ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in0_receiver.cpp'; 'ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in0_sender_padding.cpp']"
+  ],
+  "session_device_ms_median": 82.296764
+ },
+ "off_libero": {
+  "n_rows_csv": 14949,
+  "n_sessions": 2,
+  "ops_per_session": [
+   2551
+  ],
+  "non_session_rows": 9847,
+  "missing_durations": 0,
+  "op_code_counts_first": [
+   [
+    "MatmulDeviceOperation",
+    668
+   ],
+   [
+    "GenericOpDeviceOperation",
+    540
+   ],
+   [
+    "MinimalMatmulDeviceOperation",
+    370
+   ],
+   [
+    "LayerNormDeviceOperation",
+    280
+   ],
+   [
+    "TypecastDeviceOperation",
+    180
+   ],
+   [
+    "BinaryNgDeviceOperation",
+    170
+   ],
+   [
+    "SliceDeviceOperation",
+    51
+   ],
+   [
+    "UnaryDeviceOperation",
+    51
+   ],
+   [
+    "NlpCreateHeadsDeviceOperation",
+    45
+   ],
+   [
+    "SDPAOperation",
+    44
+   ],
+   [
+    "NLPConcatHeadsDeviceOperation",
+    44
+   ],
+   [
+    "UpdateKVCacheOperation",
+    36
+   ]
+  ],
+  "n_kv": 36,
+  "n_after_last_kv": 1660,
+  "after0_sources": [
+   "['ttnn/cpp/ttnn/operations/matmul/device/kernels/compute/bmm_large_block_zm_fused_bias_activation.cpp']",
+   "['ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in1_sender_writer_padding.cpp'; 'ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in0_receiver.cpp'; 'ttnn/cpp/ttnn/operations/matmul/device/kernels/dataflow/reader_bmm_tile_layout_in0_sender_padding.cpp']"
+  ],
+  "session_device_ms_median": 75.095063
+ },
+ "prefix_codes_equal_expert_off_base": true,
+ "prefix_codes_equal_expert_off_libero": true
+}

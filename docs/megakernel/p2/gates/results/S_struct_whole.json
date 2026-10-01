@@ -1,0 +1,62 @@
+{
+ "base": {
+  "n_rows_csv": 2182,
+  "n_sessions": 21,
+  "ops_per_session": [
+   1
+  ],
+  "op_codes": [
+   "GenericOpDeviceOperation"
+  ],
+  "kernel_sources": [
+   [
+    "['/home/deepgadget/experiments/tt-models/ports/tt-pi-0.5/models/experimental/pi0_5/tt/megakernel/kernels_p2/whole_trisc.cpp']",
+    "['/home/deepgadget/experiments/tt-models/ports/tt-pi-0.5/models/experimental/pi0_5/tt/megakernel/kernels_p2/whole_brisc.cpp'; '/home/deepgadget/experiments/tt-models/ports/tt-pi-0.5/models/experimental/pi0_5/tt/megakernel/kernels_p2/whole_ncrisc.cpp']"
+   ]
+  ],
+  "core_counts": [
+   "110"
+  ],
+  "program_hashes": [
+   "4445036791400648286"
+  ],
+  "non_session_rows": 2161,
+  "whole_kernel_ms": {
+   "median": 53.957484,
+   "min": 53.855417,
+   "max": 54.091533,
+   "n": 21
+  },
+  "pass": true
+ },
+ "libero": {
+  "n_rows_csv": 2182,
+  "n_sessions": 21,
+  "ops_per_session": [
+   1
+  ],
+  "op_codes": [
+   "GenericOpDeviceOperation"
+  ],
+  "kernel_sources": [
+   [
+    "['/home/deepgadget/experiments/tt-models/ports/tt-pi-0.5/models/experimental/pi0_5/tt/megakernel/kernels_p2/whole_trisc.cpp']",
+    "['/home/deepgadget/experiments/tt-models/ports/tt-pi-0.5/models/experimental/pi0_5/tt/megakernel/kernels_p2/whole_brisc.cpp'; '/home/deepgadget/experiments/tt-models/ports/tt-pi-0.5/models/experimental/pi0_5/tt/megakernel/kernels_p2/whole_ncrisc.cpp']"
+   ]
+  ],
+  "core_counts": [
+   "110"
+  ],
+  "program_hashes": [
+   "3959314102331406729"
+  ],
+  "non_session_rows": 2161,
+  "whole_kernel_ms": {
+   "median": 51.258472,
+   "min": 51.166154,
+   "max": 51.378956,
+   "n": 21
+  },
+  "pass": true
+ }
+}

@@ -1,0 +1,83 @@
+{
+ "shape": "base 2x224^2, 224 tokens, H 50",
+ "n_real": [
+  40,
+  97,
+  12,
+  150,
+  201,
+  224
+ ],
+ "traced": true,
+ "stamp": {
+  "megakernel_backend": "whole",
+  "megakernel_program": {
+   "kernel_digest": "4aa02cdf21ed0c94",
+   "sources": [
+    "kernels/mk_brisc.cpp",
+    "kernels/mk_defs.hpp",
+    "kernels/mk_dm.hpp",
+    "kernels/mk_ncrisc.cpp",
+    "kernels/mk_trisc.cpp",
+    "kernels_p2/pe_brisc.hpp",
+    "kernels_p2/pe_common.hpp",
+    "kernels_p2/pe_defs.hpp",
+    "kernels_p2/pe_dm.hpp",
+    "kernels_p2/pe_ncrisc.hpp",
+    "kernels_p2/pe_trisc.hpp",
+    "kernels_p2/whole_brisc.cpp",
+    "kernels_p2/whole_ncrisc.cpp",
+    "kernels_p2/whole_trisc.cpp"
+   ]
+  }
+ },
+ "fused_cfg": {
+  "trace": "True",
+  "trace_region_size": "160000000",
+  "residual": "bf16",
+  "mlp_chunk": "256",
+  "vlm_down_pc": "mcast2d",
+  "vlm_gateup_pc": "mcast2d",
+  "vlm_attn_pc": "mcast2d",
+  "siglip_pc": "mcast2d",
+  "siglip_batched": "True",
+  "skip_vlm_tail": "True",
+  "sdpa_vlm": "None",
+  "sdpa_expert": "None",
+  "sdpa_siglip": "None",
+  "dit_blocks": "(1, 8, 4, 1, 4, 0, 2)",
+  "euler_dit_blocks": "(1, 8, 1, 1, 1, 0, 2)",
+  "expert_mm": "mcast1d_fp32",
+  "expert_mm_blocks": "(1, 8, 4, 1, 4, 0, 2)",
+  "tp": "1",
+  "ccl_topology": "ring",
+  "env_keys": "('PI05_MEGAKERNEL',)",
+  "kv_dtype": "bf8",
+  "expert_geglu": "True",
+  "expert_attn": "fused",
+  "expert_norm_fold": "True",
+  "megakernel": "whole"
+ },
+ "pcc_vs_reference": [
+  0.999723182580414,
+  0.9992604916615713,
+  0.988821749546612,
+  0.9995794126592827,
+  0.9950101679978381,
+  0.9998473964515886
+ ],
+ "masked_vs_unmasked_pcc": -0.6558802710318347,
+ "masked_vs_unmasked_maxabs": 1.66015625,
+ "unmasked_pcc_vs_reference": -0.6523151487519997,
+ "pad_ids_invisible_bit_identical": true,
+ "default_mask_bit_identical": true,
+ "ten_replays_bit_identical": true,
+ "latency": {
+  "runs": 60,
+  "call_ms_median": 55.7578599837143,
+  "call_ms_min": 55.38034497294575,
+  "replay_ms_median": 54.05755201354623,
+  "replay_ms_min": 53.930148016661406
+ },
+ "time": "2026-09-30 23:44:56"
+}

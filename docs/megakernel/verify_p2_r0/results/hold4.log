@@ -1,0 +1,23 @@
+2026-10-01_11:06:02 START rebuild rbA
+2026-10-01_11:07:26 END rebuild rbA rc=0
+2026-10-01_11:07:26 START rebuild rbB
+2026-10-01_11:08:51 END rebuild rbB rc=0
+2026-10-01_11:08:51 START layers base
+2026-10-01_11:09:50 END layers base rc=0
+2026-10-01_11:09:50 START layers libero
+2026-10-01_11:10:47 END layers libero rc=0
+2026-10-01_11:10:47 START arm off base r2
+2026-10-01_11:11:29 END arm off base r2 rc=0 "call_median": 84.06407898291945
+2026-10-01_11:11:29 START arm expert base r2
+2026-10-01_11:12:26 END arm expert base r2 rc=0 "call_median": 70.73122897418216
+2026-10-01_11:12:26 START arm whole base r2
+2026-10-01_11:13:34 END arm whole base r2 rc=0 "call_median": 56.01563598611392
+2026-10-01_11:13:34 START arm off libero r2
+2026-10-01_11:14:17 END arm off libero r2 rc=0 "call_median": 76.9617980113253
+2026-10-01_11:14:17 START arm expert libero r2
+2026-10-01_11:15:14 END arm expert libero r2 rc=0 "call_median": 65.79810398397967
+2026-10-01_11:15:14 START arm whole libero r2
+2026-10-01_11:16:25 END arm whole libero r2 rc=0 "call_median": 53.08065048302524
+2026-10-01_11:16:25 [device-guard pid=1354572] RESET AFTER JOB (WITH_DEVICE_RESET_AFTER=1, rc=0): /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/vp2r0/hold4.sh
+2026-10-01_11:16:25 [device-guard pid=1354572] RESET: tt-smi -r 0 (probe hung/failed with no other device users)
+2026-10-01_11:17:06 [device-guard pid=1354572] reset exit=0

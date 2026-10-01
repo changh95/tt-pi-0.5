@@ -35,12 +35,13 @@ stream timeline uses the review's fluid model `docs/megakernel/design/review_str
 | WP-P1-5 integration into `sample_actions_fused` + all gates | DONE except the base per-seed gate (seed 2) | JOURNAL phase-1 exit gate table |
 | WP-P1-6 server integration of phase 1 | DONE (served 70.72 ms) | |
 | integrate-p1: phase 1 as the DEFAULT path (`off` = comparator), server mask plumbing, refusal (d), gate re-run, LIBERO closed loop | DONE 2026-09-30 (gates re-run PASS; served 70.9 vs 84.0 ms; LIBERO 99/100 at 66.4 ms/call) | JOURNAL "integrate-p1"; `integrate_p1/results/` |
-| WP-P2-0 phase-2 binary size + L1 overlay proof (no card) | NOT STARTED | |
-| WP-P2-1 VLM layer prototype (go / no-go on timing) | NOT STARTED | GR00T's fused prefill ended slower than TTNN, so this is gated by measurement |
-| WP-P2-2 SigLIP layer prototype | NOT STARTED | |
-| WP-P2-3 whole prefix in-kernel (SigLIP + projector + embed + VLM -> KV) | NOT STARTED | |
-| WP-P2-4 whole `sample_actions` as one program + all gates | NOT STARTED | phase-2 exit = the deliverable |
-| WP-P2-5 server integration of phase 2 | NOT STARTED | |
+| WP-P2-0 phase-2 binary size + L1 overlay proof (no card) | DONE (2026-09-30) | 128,636 B base / 126,492 B LIBERO <= 131,072 (p2/results/mock36.json; verify_p2_r0 M_size_*.json) |
+| WP-P2-1 VLM layer prototype (go / no-go on timing) | DONE: GO (1.612 ms <= 2.20) | PCC 0.99987 vs the ttnn layer (p2/gates/results/L_layer_vs_ttnn.json, p2/results/b41.json) |
+| WP-P2-2 SigLIP layer prototype | DONE: GO (353.6 us <= 355) | PCC 0.99992 vs the ttnn layer; host-clock 353.1 us (verify_p2_r0 L_base.json) |
+| WP-P2-3 whole prefix in-kernel (SigLIP + projector + embed + VLM -> KV) | DONE on the 2026-10-01 amended clause | stack 37.3 / 35.7 ms; K/V closer to fp32 than the ttnn caches 36 / 36 per shape (P23_*.json), 288 / 288 (verify_p2_r0 G_gates_r1.json) |
+| WP-P2-4 whole `sample_actions` as one program + all gates | DONE 2026-10-01 (accepted on the amended gates) | JOURNAL "PHASE-2 EXIT GATE TABLE" and "verify-p2-r0" |
+| WP-P2-5 server integration of phase 2 | DONE (served 55.7 ms vs expert 70.9) | p2/gates/results/S_*.json |
+| integrate-p2: `whole` as the DEFAULT path (`expert` / `off` = comparators), gate re-run on the final commit, LIBERO closed loop | DONE 2026-10-01 (every gate re-run PASS; served 55.97 / 55.91 vs expert 70.84 / 70.87 ms; LIBERO 99/100 at 53.6 ms/call) | JOURNAL "integrate-p2"; `integrate_p2/results/` |
 
 ## 1. Inputs and hard limits
 
@@ -504,7 +505,10 @@ SigLIP/VLM ops keep their time under the 64 KiB cut (WP-P1-0 measures it).
   integrate-p1 task made `expert` the default (`FusedConfig`, the server, the package serve env) and kept `off` (the
   previous shipped path) only as the comparator. It is always described as "the phase-1 expert megakernel" with the
   prefix labelled as traced stock ops, never as "the megakernel" of the whole model. Phase 2 stays the deliverable;
-  on its exit the default becomes `whole`. The UNSET default resolves to `off` on a multi-chip mesh
+  on its exit the default becomes `whole`. **Amended 2026-10-01 (integrate-p2)**: phase 2 was accepted on the amended
+  gates and the user ruled (2026-10-01, binding) that `PI05_MEGAKERNEL=whole` becomes the DEFAULT (`FusedConfig`, the
+  server, the package serve env); `expert` (phase 1) and `off` (the previous shipped path) stay selectable only as
+  comparator knobs. The UNSET default resolves to `off` on a multi-chip mesh
   (`FusedConfig.resolved`); an explicit `expert` there refuses. Refusal (d) is implemented
   (`PI0ModelTTNN.megakernel_device_refusal`, checked at the start of `__init__`; device evidence
   `integrate_p1/results/NOCUT.json`).
@@ -737,7 +741,7 @@ footprint of the largest kernel group incl. runtime args and CB-id config.
 | P2-0 | phase-2 binary (primitive interpreter) mock-compiled; L1 overlay descriptor built on the host | compute group <= 128 KB; the multi-format aliasing used by the overlay is accepted by the program build and a tiny kernel reads/writes through two aliases correctly; union of CB ids <= 64; L1 plan <= the P1-0-measured free L1 per core | ~10 min |
 | P2-1 | one VLM layer in-kernel (736 rows, real weights) | PCC >= 0.9995 vs the ttnn layer (same run); **time <= 2.20 ms (go); 2.20-2.44 ms: report and ask; > 2.44 ms (slower than TTNN): stop, needs_user** | ~30 min |
 | P2-2 | one SigLIP layer in-kernel | PCC >= 0.9995 and rel-L2 as in P1-3; time <= 355 us (go); > 394.7 us: stop, needs_user | ~30 min |
-| P2-3 | whole prefix in-kernel -> resident KV (rows 0..P-1 only) | per-layer K/V vs the ttnn caches PCC >= 0.999 and rel-L2 recorded; stack time < 52.42 ms base and < 48.72 ms LIBERO | ~30 min |
+| P2-3 | whole prefix in-kernel -> resident KV (rows 0..P-1 only) | ~~per-layer K/V vs the ttnn caches PCC >= 0.999~~ -- REPLACED 2026-10-01 by the user: **per layer, K/V at least as close to the fp32 host decomposition as the ttnn caches, at both shapes** (see the amendment below); rel-L2 recorded; stack time < 52.42 ms base and < 48.72 ms LIBERO | ~30 min |
 | P2-4 | whole `sample_actions` as one program, `PI05_MEGAKERNEL=whole` | **the phase-2 exit gates below** | several holds |
 | P2-5 | server with `PI05_MEGAKERNEL=whole` (the new default) | as P1-6, with served median < the P1-6 served median; /info reports `whole` | ~20 min |
 
@@ -768,6 +772,14 @@ footprint of the largest kernel group incl. runtime args and CB-id config.
   Phase 1 was accepted on this amended gate (option (a)): megakernel closer to the oracle on 20/20 seeds, mean 0.99980 /
   min 0.99942 vs shipped 0.99649 / 0.98784 (verify_p1_r0/results/O_verifier.json). Every other gate in this section
   stands unchanged.
+- **Gate amendment (user decision 2026-10-01, binding).** WP-P2-3's clause "per-layer K/V vs the ttnn (shipped) caches
+  PCC >= 0.999" is REPLACED by: **per layer, K/V at least as close to the fp32 host decomposition as the ttnn caches, at
+  both shapes**. Reason: the old clause measured the shipped path's own error -- the ttnn caches themselves are only
+  0.9656 (base) / 0.9612 (LIBERO) PCC from the fp32 host decomposition, so no more accurate prefix could meet it. Measured
+  by the implementer: the engine is closer on 36 / 36 (layer, K / V) at both shapes, engine min PCC 0.9954 / 0.9945 vs
+  ttnn 0.9656 / 0.9612 (p2/gates/results/P23_{base,libero}.json); re-measured by verify-p2-r0 against the fp32 whole-model
+  reference's own VLM cache on 8 inputs per shape: 288 / 288 per shape (verify_p2_r0/results/G_gates_r1.json). In the
+  same ruling `PI05_MEGAKERNEL=whole` became the default (§4.12). All other phase-2 gates stand.
 - **Speed**: *phase 1* expert-loop device time **< 31.26 ms base and < 27.85 ms LIBERO**, whole-call latency **< 84.2 ms
   base and < 76.77 ms LIBERO**; *phase 2* whole-call latency **< phase 1's at base and at LIBERO** (same shape, arms
   alternated across processes in one session, 30 calls each, difference larger than 2 x the MAD-based standard error of
@@ -861,3 +873,62 @@ RoPE priced +1.75, reduce compute +0.5) are offset by the flat dh-split merge (9
 the 16.5 us a merger-only tree costs when priced per O tile the same way). The base expert-loop prediction (13.91 / 18.92
 / 23.37 ms) and the whole-call prediction (66.7 / 71.7 / 76.2 ms) are therefore within 0.1 ms of v1. LIBERO moves from
 10.05 / 13.66 ms to 11.08 / 15.07 ms, still under today's 27.85 ms with 2.52x of margin.
+
+## 11. Phase-2 implementation design v3 (2026-09-30, session mk2-r0-s0) -- what was built, and the deviations from §5
+
+The whole `sample_actions` is ONE generic_op whose three kernels (`tt/megakernel/kernels_p2/whole_{brisc,ncrisc,trisc}.cpp`)
+run the prefix engine and then call the phase-1 expert kernel (`../kernels/mk_*.cpp`, included byte-identical and renamed
+`mk_expert_kernel_main`). `PE_WHOLE=0` builds the prefix-only program used for bring-up.
+
+### 11.1 Execution model (deviation from §5.3: DRAM-staged ops instead of L1-resident bands)
+- A fixed sequence of 314 ops (`kernels_p2/pe_defs.hpp`, `pe_common.hpp describe`): patch; 27 x [LN1, qkv, attn, o, LN2,
+  fc1, fc2]; post-LN; projector; embedding; 17 x [RMS1, qkv, attn, o, RMS2, gate|up, down]; RMS1 + qkv of layer 17.
+- Every activation lives in DRAM scratch between ops; consecutive ops are separated by ONE global barrier (every core
+  arrives after its writes are acknowledged and its NCRISC is done; the hub (10, 9) multicasts go). Reason: one
+  synchronisation mechanism orders every buffer reuse, and each op can be run and checked alone (bring-up by op range).
+  Cost: 314 barriers (~3 us each) and the DRAM round trips of the activations (priced in §11.4).
+- Matmuls: 8 bands (grid rows 0..7) x 11 columns. Weights are read ONCE per column from a bank-striped arena by a
+  feeder core (x, 8) and multicast down the column; in0 bands are read by a feeder (b, 9) and multicast along row b.
+  Mode R (every op but the VLM down): in0 band resident, N-outer, the whole K accumulated in DST. Mode S (VLM down,
+  K = 512 tiles): in0 streamed in K blocks, K-outer, fp32 partials reloaded (UnpackToDestFp32).
+- Rings: per-page flag = (op << 16 | page + 1); credits are one word PER RECEIVER and the feeder waits on the minimum
+  (a summed credit is wrong for ring depth > 1: device-reproduced on the down op). Data multicast flushed before the
+  flag multicast (Blackhole command-buffer ordering).
+- CB ids 32..62 are declared tiny on the host and re-pointed per op by every RISC into the arena = phase-1 CB region +
+  a tail CB (host descriptor order fixes contiguity; the kernel reports lo / hi in a diagnostics tensor). A CB used
+  with variable page counts is re-pointed to full-capacity cycles (P_SS per attention chunk).
+- The NCRISC computes each op's geometry and hands the TRISCs one descriptor page per op (P_OPD, read_tile_value /
+  mailbox): no geometry code in the TRISC binaries, and a TRISC can never start an op before its barrier.
+### 11.2 Numerics (as §5.7, with these differences; revised 2026-09-30 evening, see §11.4)
+fp32 residual streams (SigLIP and VLM) instead of bf16 / bf8; ~~LN / RMS statistics in exact fp32 on the SFPU~~ (now
+§11.4: FPU statistics, fp32 partials exchanged); bf16 q and normalised activations; K / V bfp8 into the expert caches
+(as today); h of the VLM MLP bfp8 (as today); ~~VLM matmuls LoFi~~ VLM matmuls HiFi2 with fp32 accumulation (LoFi
+failed 4 of 22 seeds of the amended gate), SigLIP HiFi2; q scale folded into the RoPE tables (VLM, exact 1/16) and into
+Wq / bq (SigLIP, before the bfp8 rounding).
+### 11.3 Gates
+§7 with the 2026-09-30 amendment (phase 2: per seed vs the fp32 whole-model reference) and the 2026-10-01 amendment (P2-3 K/V vs fp32, not vs the ttnn caches). WP-P2-1's comparison "vs the ttnn layer (same run)" is run on real
+activations; per-op checks against the host decomposition on the device's own inputs are recorded in addition.
+
+### 11.4 Revisions after the first end-to-end build (2026-09-30 21:30 - 23:40; JOURNAL.md has every number)
+- Norms: items are (row tile, column group) (SigLIP 16 x 6, VLM mt x 4, one item per core). Every item core computes
+  partial (sum x^2, row sum x) over its group on the FPU (accumulating ELWMUL, HiFi4 matmul with ONES), writes the fp32
+  pair into slot g of P_R on the row's item cores (noc_async_write, write barrier, PS_NR increments) and reduces the
+  ncg partials itself: var = E[x^2] - mu^2. The affine parts are FOLDED on the host into the consuming matmul
+  (pe_host.fold_norms: diag(g) W, b + beta W; SigLIP LN1 -> qkv, LN2 -> fc1, post-LN -> projector, VLM (1 + w) ->
+  qkv and gate|up), so the norm applies (x - mu) rstd / x r only.
+- in0 of mode R: distributed. The band's compute core in column q reads K piece q (all rp rows) from DRAM and
+  multicasts it along its row, flag PS_IV0 + q ((op << 16) | 1); the multicast of piece q waits for piece q - 1 (the
+  reads do not). No credits (the arena is free after the op's go). The row-9 feeders only serve mode S (VLM down).
+  Reason: one reader per band capped the 8 bands at ~90 GB/s together (row-9 links).
+- SigLIP attention: one key chunk (8 tiles) per q row tile, 96 items = (image, head, row group {3, 3, 2}), one per
+  core; the 3 item cores of a head each read a third of its K / V and write it into the other two (PS_KVX).
+- VLM K / V for attention: 4 feeders (7..10, 9) read quarters of the L1 caches and multicast to every core.
+- GELU: relu(x) - t q(t), t = min(|x|, 4.25), degree-9 fit of the tanh form (max abs err 4e-5 in fp32); the library
+  gelu_tanh costs ~2,200 cycles per tile serial with the matmul (dst_full_sync). Softmax exp: the library fp32 exp
+  (faster SFPU exps: arm PE_EXP_FAST; they failed seed 707 of the base gate in three builds).
+- VLM qkv weights bf16 (own arena per layer, PA_WV16): bfp8 weights are the largest prefix K / V error term (CPU
+  emulation, p2/results/emu/); other VLM and all SigLIP weights stay bfp8.
+- The BRISC takes the op's (Op, Lay) from the NCRISC (P_SYNC words 48..63, PS_OPK) instead of computing them.
+- Timing / precision arms (PI05_PE_DEFINES): PE_DBG_TRACE=<k> (per-role wall-clock marks of the k-th op, read by
+  tests/megakernel/pe_trace.py), PE_DBG_NO_GELU, PE_DBG_GELU_EMPTY, PE_DBG_IN0_NOREAD / NOMCAST / BIGREAD / ONLY0,
+  PE_IN0_LAG, PE_IN0_READ_STAGGER, PE_MM_HIFI4, PE_GELU_STOCK, PE_EXP_FAST, PE_VLM_LOFI, plus the §11.1 ones.

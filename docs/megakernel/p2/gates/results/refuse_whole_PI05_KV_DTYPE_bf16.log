@@ -1,0 +1,3 @@
+RuntimeError: PI05_MEGAKERNEL=whole refused: PI05_KV_DTYPE=bf16 (the megakernel reads bfp8 K / V caches at the 1088 B bfp8 page stride; use PI05_KV_DTYPE=bf8)
+
+ERROR:    Application startup failed. Exiting.

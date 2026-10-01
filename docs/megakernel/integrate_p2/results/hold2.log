@@ -1,0 +1,24 @@
+2026-10-01_11:37:51 df /dev/nvme0n1p2  1.8T  1.7T   23G  99% /
+2026-10-01_11:37:51 START prof whole base 20
+2026-10-01_11:39:15 END prof whole base rc=0
+2026-10-01_11:39:16 df /dev/nvme0n1p2  1.8T  1.7T   23G  99% /
+2026-10-01_11:39:16 START prof whole libero 20
+2026-10-01_11:40:25 END prof whole libero rc=0
+2026-10-01_11:40:25 df /dev/nvme0n1p2  1.8T  1.7T   23G  99% /
+2026-10-01_11:40:25 START prof expert base 2
+2026-10-01_11:42:24 END prof expert base rc=0
+2026-10-01_11:42:25 df /dev/nvme0n1p2  1.8T  1.7T   22G  99% /
+2026-10-01_11:42:25 START prof expert libero 2
+2026-10-01_11:43:52 END prof expert libero rc=0
+2026-10-01_11:43:53 df /dev/nvme0n1p2  1.8T  1.7T   22G  99% /
+2026-10-01_11:43:53 START prof off base 1
+2026-10-01_11:46:01 END prof off base rc=0
+2026-10-01_11:46:03 df /dev/nvme0n1p2  1.8T  1.7T   22G  99% /
+2026-10-01_11:46:03 START prof off libero 1
+2026-10-01_11:47:34 END prof off libero rc=0
+2026-10-01_11:47:36 START prof3 whole base 9 requests
+2026-10-01_11:48:43 END prof3 rc=0
+2026-10-01_11:48:43 df /dev/nvme0n1p2  1.8T  1.7T   22G  99% /
+2026-10-01_11:48:43 [device-guard pid=1389662] RESET AFTER JOB (WITH_DEVICE_RESET_AFTER=1, rc=0): timeout 1800 /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/ip2/hold2.sh
+2026-10-01_11:48:43 [device-guard pid=1389662] RESET: tt-smi -r 0 (probe hung/failed with no other device users)
+2026-10-01_11:49:24 [device-guard pid=1389662] reset exit=0

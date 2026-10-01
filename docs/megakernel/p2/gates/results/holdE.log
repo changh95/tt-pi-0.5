@@ -1,0 +1,7 @@
+2026-10-01_00:35:33 START prof whole base
+2026-10-01_00:36:57 END prof whole base rc=0
+2026-10-01_00:36:57 START prof whole libero
+2026-10-01_00:38:05 END prof whole libero rc=0
+2026-10-01_00:38:05 [device-guard pid=1191979] RESET AFTER JOB (WITH_DEVICE_RESET_AFTER=1, rc=0): /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/p2/gates/holdE.sh
+2026-10-01_00:38:05 [device-guard pid=1191979] RESET: tt-smi -r 0 (probe hung/failed with no other device users)
+2026-10-01_00:38:46 [device-guard pid=1191979] reset exit=0

@@ -1,0 +1,13 @@
+{
+ "t0": "2026-10-01 11:43:58",
+ "arm": "off",
+ "shape": "base",
+ "replays_equal_first": [
+  true
+ ],
+ "stamp": {
+  "backend": "off",
+  "program": null
+ },
+ "t1": "2026-10-01 11:45:17"
+}

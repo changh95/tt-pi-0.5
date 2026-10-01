@@ -1,0 +1,210 @@
+{
+ "rows": [
+  {
+   "seed": 1,
+   "n_lang": 40,
+   "whole_vs_ref": 0.999274,
+   "off_vs_ref": 0.998426,
+   "margin": 0.000848,
+   "pass": true
+  },
+  {
+   "seed": 2,
+   "n_lang": 97,
+   "whole_vs_ref": 0.995924,
+   "off_vs_ref": 0.983975,
+   "margin": 0.011949,
+   "pass": true
+  },
+  {
+   "seed": 3,
+   "n_lang": 12,
+   "whole_vs_ref": 0.98827,
+   "off_vs_ref": 0.938108,
+   "margin": 0.050162,
+   "pass": true
+  },
+  {
+   "seed": 4,
+   "n_lang": 150,
+   "whole_vs_ref": 0.99965,
+   "off_vs_ref": 0.995486,
+   "margin": 0.004164,
+   "pass": true
+  },
+  {
+   "seed": 5,
+   "n_lang": 201,
+   "whole_vs_ref": 0.994398,
+   "off_vs_ref": 0.980171,
+   "margin": 0.014227,
+   "pass": true
+  },
+  {
+   "seed": 6,
+   "n_lang": 224,
+   "whole_vs_ref": 0.99986,
+   "off_vs_ref": 0.987927,
+   "margin": 0.011933,
+   "pass": true
+  },
+  {
+   "seed": 701,
+   "n_lang": 1,
+   "whole_vs_ref": 0.999268,
+   "off_vs_ref": 0.855837,
+   "margin": 0.143431,
+   "pass": true
+  },
+  {
+   "seed": 702,
+   "n_lang": 2,
+   "whole_vs_ref": 0.995263,
+   "off_vs_ref": 0.966562,
+   "margin": 0.028701,
+   "pass": true
+  },
+  {
+   "seed": 703,
+   "n_lang": 31,
+   "whole_vs_ref": 0.999904,
+   "off_vs_ref": 0.998699,
+   "margin": 0.001205,
+   "pass": true
+  },
+  {
+   "seed": 704,
+   "n_lang": 32,
+   "whole_vs_ref": 0.997698,
+   "off_vs_ref": 0.959904,
+   "margin": 0.037794,
+   "pass": true
+  },
+  {
+   "seed": 705,
+   "n_lang": 33,
+   "whole_vs_ref": 0.999113,
+   "off_vs_ref": 0.991135,
+   "margin": 0.007978,
+   "pass": true
+  },
+  {
+   "seed": 706,
+   "n_lang": 63,
+   "whole_vs_ref": 0.994352,
+   "off_vs_ref": 0.983137,
+   "margin": 0.011215,
+   "pass": true
+  },
+  {
+   "seed": 707,
+   "n_lang": 64,
+   "whole_vs_ref": 0.97805,
+   "off_vs_ref": 0.991753,
+   "margin": -0.013703,
+   "pass": false
+  },
+  {
+   "seed": 708,
+   "n_lang": 65,
+   "whole_vs_ref": 0.999911,
+   "off_vs_ref": 0.996448,
+   "margin": 0.003464,
+   "pass": true
+  },
+  {
+   "seed": 709,
+   "n_lang": 96,
+   "whole_vs_ref": 0.999253,
+   "off_vs_ref": 0.993569,
+   "margin": 0.005684,
+   "pass": true
+  },
+  {
+   "seed": 710,
+   "n_lang": 128,
+   "whole_vs_ref": 0.997044,
+   "off_vs_ref": 0.984076,
+   "margin": 0.012968,
+   "pass": true
+  },
+  {
+   "seed": 711,
+   "n_lang": 129,
+   "whole_vs_ref": 0.999299,
+   "off_vs_ref": 0.9946,
+   "margin": 0.004699,
+   "pass": true
+  },
+  {
+   "seed": 712,
+   "n_lang": 159,
+   "whole_vs_ref": 0.99177,
+   "off_vs_ref": 0.763968,
+   "margin": 0.227802,
+   "pass": true
+  },
+  {
+   "seed": 713,
+   "n_lang": 191,
+   "whole_vs_ref": 0.999097,
+   "off_vs_ref": 0.990547,
+   "margin": 0.008551,
+   "pass": true
+  },
+  {
+   "seed": 714,
+   "n_lang": 192,
+   "whole_vs_ref": 0.998703,
+   "off_vs_ref": 0.993998,
+   "margin": 0.004704,
+   "pass": true
+  },
+  {
+   "seed": 715,
+   "n_lang": 223,
+   "whole_vs_ref": 0.999298,
+   "off_vs_ref": 0.993808,
+   "margin": 0.00549,
+   "pass": true
+  },
+  {
+   "seed": 716,
+   "n_lang": 224,
+   "whole_vs_ref": 0.998035,
+   "off_vs_ref": 0.980507,
+   "margin": 0.017528,
+   "pass": true
+  }
+ ],
+ "summary": {
+  "n": 22,
+  "passes": 21,
+  "whole_mean": 0.9965197272727271,
+  "off_mean": 0.9692109545454545,
+  "min_margin": -0.013703,
+  "backends": [
+   "whole",
+   "off"
+  ]
+ },
+ "program": {
+  "kernel_digest": "d7f2d82b5114bba8",
+  "sources": [
+   "kernels/mk_brisc.cpp",
+   "kernels/mk_defs.hpp",
+   "kernels/mk_dm.hpp",
+   "kernels/mk_ncrisc.cpp",
+   "kernels/mk_trisc.cpp",
+   "kernels_p2/pe_brisc.hpp",
+   "kernels_p2/pe_common.hpp",
+   "kernels_p2/pe_defs.hpp",
+   "kernels_p2/pe_dm.hpp",
+   "kernels_p2/pe_ncrisc.hpp",
+   "kernels_p2/pe_trisc.hpp",
+   "kernels_p2/whole_brisc.cpp",
+   "kernels_p2/whole_ncrisc.cpp",
+   "kernels_p2/whole_trisc.cpp"
+  ]
+ }
+}

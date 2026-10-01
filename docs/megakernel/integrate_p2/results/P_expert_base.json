@@ -1,0 +1,23 @@
+{
+ "t0": "2026-10-01 11:40:30",
+ "arm": "expert",
+ "shape": "base",
+ "replays_equal_first": [
+  true,
+  true
+ ],
+ "stamp": {
+  "backend": "expert",
+  "program": {
+   "kernel_digest": "328761c8a1ce3fd9",
+   "sources": [
+    "mk_brisc.cpp",
+    "mk_defs.hpp",
+    "mk_dm.hpp",
+    "mk_ncrisc.cpp",
+    "mk_trisc.cpp"
+   ]
+  }
+ },
+ "t1": "2026-10-01 11:41:54"
+}

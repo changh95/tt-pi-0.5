@@ -1,0 +1,59 @@
+{
+ "time": "2026-09-30 22:51:12",
+ "rows": [
+  {
+   "binaries": {
+    "brisc": 27728,
+    "ncrisc": 15584,
+    "trisc0": 36080,
+    "trisc1": 30720,
+    "trisc2": 14224
+   },
+   "args_bytes": 2500,
+   "cb_config_bytes": 1008,
+   "total_bytes": 127908,
+   "ring_bytes": 136192,
+   "gate_bytes": 131072,
+   "fits_gate": true,
+   "paths": {
+    "brisc": "/tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/p2/cache_mock/tt-metal-cache9682618234936436297/kernels/whole_brisc/5510233277677116402/brisc/brisc.elf",
+    "ncrisc": "/tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/p2/cache_mock/tt-metal-cache9682618234936436297/kernels/whole_ncrisc/5836064544659294985/ncrisc/ncrisc.elf",
+    "trisc0": "/tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/p2/cache_mock/tt-metal-cache9682618234936436297/kernels/whole_trisc/4520576496296679604/trisc0/trisc0.elf",
+    "trisc1": "/tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/p2/cache_mock/tt-metal-cache9682618234936436297/kernels/whole_trisc/4520576496296679604/trisc1/trisc1.elf",
+    "trisc2": "/tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/p2/cache_mock/tt-metal-cache9682618234936436297/kernels/whole_trisc/4520576496296679604/trisc2/trisc2.elf"
+   },
+   "shape": "base",
+   "compile_s": 1.8,
+   "arena_bytes": 1156192,
+   "need": 955776,
+   "tail": 64
+  },
+  {
+   "binaries": {
+    "brisc": 26928,
+    "ncrisc": 15568,
+    "trisc0": 35328,
+    "trisc1": 30640,
+    "trisc2": 13728
+   },
+   "args_bytes": 2500,
+   "cb_config_bytes": 1008,
+   "total_bytes": 125764,
+   "ring_bytes": 136192,
+   "gate_bytes": 131072,
+   "fits_gate": true,
+   "paths": {
+    "brisc": "/tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/p2/cache_mock/tt-metal-cache9682618234936436297/kernels/whole_brisc/10586104121372470253/brisc/brisc.elf",
+    "ncrisc": "/tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/p2/cache_mock/tt-metal-cache9682618234936436297/kernels/whole_ncrisc/17102472149006382981/ncrisc/ncrisc.elf",
+    "trisc0": "/tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/p2/cache_mock/tt-metal-cache9682618234936436297/kernels/whole_trisc/1679187254153856958/trisc0/trisc0.elf",
+    "trisc1": "/tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/p2/cache_mock/tt-metal-cache9682618234936436297/kernels/whole_trisc/1679187254153856958/trisc1/trisc1.elf",
+    "trisc2": "/tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/p2/cache_mock/tt-metal-cache9682618234936436297/kernels/whole_trisc/1679187254153856958/trisc2/trisc2.elf"
+   },
+   "shape": "libero",
+   "compile_s": 1.8,
+   "arena_bytes": 955776,
+   "need": 955776,
+   "tail": 104800
+  }
+ ]
+}

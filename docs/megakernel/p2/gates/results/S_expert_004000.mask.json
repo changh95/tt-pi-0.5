@@ -1,0 +1,15 @@
+{
+ "time": "2026-10-01 00:40:43",
+ "num_tokens": [
+  2,
+  1
+ ],
+ "X_repeat_identical": true,
+ "X_vs_Y_identical": false,
+ "X_vs_Y_maxabs": 0.852142333984375,
+ "batched_as": [
+  1,
+  1
+ ],
+ "pass": true
+}

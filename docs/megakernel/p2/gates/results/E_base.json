@@ -1,0 +1,64 @@
+{
+ "rows": [
+  {
+   "seed": 11,
+   "n_lang": 1,
+   "arm_vs_ref": 0.998788,
+   "off_vs_ref": 0.996043,
+   "margin": 0.002745,
+   "pass": true
+  },
+  {
+   "seed": 12,
+   "n_lang": 224,
+   "arm_vs_ref": 0.999889,
+   "off_vs_ref": 0.968982,
+   "margin": 0.030907,
+   "pass": true
+  },
+  {
+   "seed": 13,
+   "n_lang": 128,
+   "arm_vs_ref": 0.997643,
+   "off_vs_ref": 0.992893,
+   "margin": 0.00475,
+   "pass": true
+  },
+  {
+   "seed": 14,
+   "n_lang": 150,
+   "arm_vs_ref": 0.999807,
+   "off_vs_ref": 0.996484,
+   "margin": 0.003323,
+   "pass": true
+  }
+ ],
+ "summary": {
+  "shape": "base",
+  "n": 4,
+  "passes": 4,
+  "backends": [
+   "whole",
+   "off"
+  ]
+ },
+ "program": {
+  "kernel_digest": "4aa02cdf21ed0c94",
+  "sources": [
+   "kernels/mk_brisc.cpp",
+   "kernels/mk_defs.hpp",
+   "kernels/mk_dm.hpp",
+   "kernels/mk_ncrisc.cpp",
+   "kernels/mk_trisc.cpp",
+   "kernels_p2/pe_brisc.hpp",
+   "kernels_p2/pe_common.hpp",
+   "kernels_p2/pe_defs.hpp",
+   "kernels_p2/pe_dm.hpp",
+   "kernels_p2/pe_ncrisc.hpp",
+   "kernels_p2/pe_trisc.hpp",
+   "kernels_p2/whole_brisc.cpp",
+   "kernels_p2/whole_ncrisc.cpp",
+   "kernels_p2/whole_trisc.cpp"
+  ]
+ }
+}

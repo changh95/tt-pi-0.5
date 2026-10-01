@@ -1,0 +1,2 @@
+info: num_images=2 token_len=224 tokenizer=True weights={'repo': 'lerobot/pi05_base', 'revision': 'b211f3d44c36b6acfcf7ae94a64e8e96f75a64ba', 'snapshot_dir': '/hf/hub/models--lerobot--pi05_base/snapshots/b211f3d44c36b6acfcf7ae94a64e8e96f75a64ba'} warmup_ms={'first': 13079.2, 'last': 71.1}
+PASS pi05 actions=(50,32) max|a|=0.277 std=0.074 repeat_maxdiff=0.0000 change_maxdiff=0.8174 inference_ms=75.04/71.15 tokens=143/224 truncated=False

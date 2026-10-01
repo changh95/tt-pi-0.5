@@ -1,0 +1,14 @@
+963e21c35c9bfa1500df5e0bee3a3af2  models/experimental/pi0_5/tt/megakernel/kernels_p2/pe_brisc.hpp
+6180e740d002ffcb5c0815282afa5b58  models/experimental/pi0_5/tt/megakernel/kernels_p2/pe_common.hpp
+88ffa1558c0aba452da32db9a715afb7  models/experimental/pi0_5/tt/megakernel/kernels_p2/pe_defs.hpp
+6b0b174107583e181eaffb5daae79854  models/experimental/pi0_5/tt/megakernel/kernels_p2/pe_dm.hpp
+ffe1ba9e7cf864ae4dd9bde5b123b074  models/experimental/pi0_5/tt/megakernel/kernels_p2/pe_ncrisc.hpp
+2df29b51c937db7feb906514dff3d3aa  models/experimental/pi0_5/tt/megakernel/kernels_p2/pe_trisc.hpp
+27ac45a4e5a5d56a12a597fa7b65c11c  models/experimental/pi0_5/tt/megakernel/kernels_p2/whole_brisc.cpp
+0f35fc9525fc869a43ce42c13e6517fd  models/experimental/pi0_5/tt/megakernel/kernels_p2/whole_ncrisc.cpp
+3fc32802567e594b9d802b2324aea81d  models/experimental/pi0_5/tt/megakernel/kernels_p2/whole_trisc.cpp
+75a12064d4c9fdea01ab5597a2a0f501  models/experimental/pi0_5/tt/megakernel/kernels/mk_brisc.cpp
+eda5d1ac2b90dcbc53bf93d341e8a2b3  models/experimental/pi0_5/tt/megakernel/kernels/mk_defs.hpp
+aae284480624f5fd311739f891ae9861  models/experimental/pi0_5/tt/megakernel/kernels/mk_dm.hpp
+e99ea48a92963f7d44c3a304e15c13d2  models/experimental/pi0_5/tt/megakernel/kernels/mk_ncrisc.cpp
+cfa0dab09c321d756a58cbaf71441d43  models/experimental/pi0_5/tt/megakernel/kernels/mk_trisc.cpp

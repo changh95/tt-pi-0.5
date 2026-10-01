@@ -1,0 +1,72 @@
+2026-10-01 11:47:37.213 | INFO     | __main__:main:212 - Setting profiler artifacts folder to /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/ip2/prof3
+2026-10-01 11:47:37.214 | INFO     | __main__:main:364 - Using port 8086
+2026-10-01 11:47:37.214 | INFO     | tracy:run_report_setup:91 - Verifying tracy profiling tools
+2026-10-01 11:47:37.216 | INFO     | tracy:run_report_setup:112 - Capture command: ('/home/deepgadget/experiments/gr00t/tt-metal/build/tools/profiler/bin/tracy-capture -o /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/ip2/prof3/.logs/tracy_profile_log_host.tracy -f -p 8086',)
+Connecting to 127.0.0.1:8086...2026-10-01 11:47:37.225 | INFO     | __main__:run_workload:399 - Test process started
+2026-10-01 11:47:37.876 | INFO     | __main__:main:212 - Setting profiler artifacts folder to /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/ip2/prof3
+2026-10-01 11:47:38.115 | DEBUG    | ttnn:<module>:45 - Initial ttnn.CONFIG:
+Config{cache_path=/home/deepgadget/.cache/ttnn,model_cache_path=/home/deepgadget/.cache/ttnn/models,tmp_dir=/tmp/ttnn,enable_model_cache=false,enable_fast_runtime_mode=true,validate_program_args=false,throw_exception_on_fallback=false,enable_logging=false,enable_graph_report=false,enable_graph_python_stack_traces=false,enable_detailed_buffer_report=false,enable_detailed_tensor_report=false,enable_comparison_mode=false,comparison_mode_should_raise_exception=false,comparison_mode_pcc=0.9999,root_report_path=generated/ttnn/reports,report_name=std::nullopt,std::nullopt}
+2026-10-01 11:47:38.864 | info     |          Device | Opening user mode device driver (tt_cluster.cpp:224)
+2026-10-01 11:47:38.864 | info     |             UMD | Cluster constructor started. (cluster.cpp:408)
+2026-10-01 11:47:38.864 | info     |             UMD | Creating TopologyDiscovery for architecture: blackhole (topology_discovery.cpp:96)
+2026-10-01 11:47:38.864 | info     |             UMD | Starting topology discovery. (topology_discovery.cpp:115)
+2026-10-01 11:47:38.867 | info     |             UMD | Established firmware bundle version: 19.12.0 (topology_discovery.cpp:576)
+2026-10-01 11:47:38.867 | info     |             UMD | Completed topology discovery. (topology_discovery.cpp:119)
+2026-10-01 11:47:39.123 | info     |             UMD | Opening local chip ids/PCIe ids: {0}/[0] and remote chip ids {} (cluster.cpp:175)
+2026-10-01 11:47:39.123 | info     |             UMD | IOMMU: disabled (cluster.cpp:149)
+2026-10-01 11:47:39.123 | info     |             UMD | KMD version: 2.11.0 (cluster.cpp:152)
+2026-10-01 11:47:39.123 | info     |             UMD | Cluster constructor completed. (cluster.cpp:683)
+2026-10-01 11:47:39.123 | info     |             UMD | Starting devices in cluster (cluster.cpp:1289)
+2026-10-01 11:47:39.183 | info     |             UMD | Starting devices in cluster completed. (cluster.cpp:1297)
+2026-10-01 11:47:39.526 | info     |     Distributed | Using auto discovery to generate mesh graph. (metal_env.cpp:422)
+2026-10-01 11:47:39.526 | info     |     Distributed | Constructing control plane using auto-discovery (no mesh graph descriptor). (metal_env.cpp:484)
+2026-10-01 11:47:39.526 | warning  |          Always | Unknown motherboard 'ProArt X870E-CREATOR WIFI' for chip_id=0 (bus_id=0x3) — falling back to bus_id as tray_id. Add this motherboard and its bus IDs to mobo_to_bus_ids in physical_system_discovery.cpp. (physical_system_discovery.cpp:119)
+2026-10-01 11:47:39.526 | info     |          Fabric | Logical multi-mesh adjacency: intermesh degree histogram {0:1}; intra-mesh degree histograms mesh0 {0:1} (topology_mapper_utils.cpp:3190)
+2026-10-01 11:47:39.526 | info     |          Fabric | Physical multi-mesh adjacency: intermesh degree histogram {0:1}; intra-mesh degree histograms mesh0 {0:1} (topology_mapper_utils.cpp:3198)
+2026-10-01 11:47:39.727 | info     |           Metal | Profiler started on device 0 (profiler_initializer.cpp:49)
+2026-10-01 11:47:39.776 | info     |           Metal | Enabling program cache on MeshDevice 1 (mesh_device.cpp:1176)
+[pi0.5] expert adaRMS norms folded into per-step weights in 5.2s
+2026-10-01 11:48:32.482 | info     |           Metal | Device kernel duration perf summary (device=0): count=2170, min=1058ns, avg=304718.8ns, max=54096515ns (profiler_analysis.cpp:727)
+2026-10-01 11:48:32.482 | info     |           Metal | Device kernel duration perf histogram (device=0): (buckets=10, bucket_size=5409600ns, range=[0..54096000), underflow(<0ns)=0, overflow(>=54096000ns)=1) (profiler_analysis.cpp:770)
+2026-10-01 11:48:32.482 | info     |           Metal |   [           0 ..      5409600) |########################################|     2158 (profiler_analysis.cpp:775)
+2026-10-01 11:48:32.482 | info     |           Metal |   [     5409600 ..     10819200) |                                        |        0 (profiler_analysis.cpp:775)
+2026-10-01 11:48:32.482 | info     |           Metal |   [    10819200 ..     16228800) |                                        |        0 (profiler_analysis.cpp:775)
+2026-10-01 11:48:32.482 | info     |           Metal |   [    16228800 ..     21638400) |                                        |        0 (profiler_analysis.cpp:775)
+2026-10-01 11:48:32.482 | info     |           Metal |   [    21638400 ..     27048000) |                                        |        0 (profiler_analysis.cpp:775)
+2026-10-01 11:48:32.482 | info     |           Metal |   [    27048000 ..     32457600) |                                        |        0 (profiler_analysis.cpp:775)
+2026-10-01 11:48:32.482 | info     |           Metal |   [    32457600 ..     37867200) |                                        |        0 (profiler_analysis.cpp:775)
+2026-10-01 11:48:32.482 | info     |           Metal |   [    37867200 ..     43276800) |                                        |        0 (profiler_analysis.cpp:775)
+2026-10-01 11:48:32.482 | info     |           Metal |   [    43276800 ..     48686400) |                                        |        0 (profiler_analysis.cpp:775)
+2026-10-01 11:48:32.482 | info     |           Metal |   [    48686400 ..     54096000) |                                        |       11 (profiler_analysis.cpp:775)
+RESULT {"t0": "2026-10-01 11:47:39", "arm": "whole", "marker_after_first": "2026-10-01 11:48:30", "calls_equal_first_of_prompt": [true, true, true, true, true, true, true, true, true]}
+2026-10-01 11:48:35.448 | info     |    BuildKernels | JIT cache stats: 161/161 hits (100.0%) [161 cached, 24 build-once dedup, 0 merged artifacts, 0 merged genfiles] (build_cache_telemetry.cpp:268)
+2026-10-01 11:48:35.448 | info     |    BuildKernels | JIT telemetry: 33 registered TelemetryTokens (build_cache_telemetry.cpp:325)
+2026-10-01 11:48:35.458 | info     |          Device | Closing user mode device drivers (tt_cluster.cpp:550)
+2026-10-01 11:48:35.458 | info     |             UMD | Closing devices in cluster (cluster.cpp:1302)
+2026-10-01 11:48:35.622 | info     |             UMD | Closing devices in cluster completed. (cluster.cpp:1311)
+2026-10-01 11:48:35.622 | info     |             UMD | Cluster destructor started. (cluster.cpp:1017)
+2026-10-01 11:48:35.622 | info     |             UMD | Cluster destructor completed. (cluster.cpp:1020)
+
+Timer resolution: 0 ns
+
+Frames: 2
+Time span: 1:46.6
+Zones: 2,270,982
+Elapsed time: 57.55 s
+Saving trace... done!
+Trace size 18.5 MB (15.77% ratio)
+2026-10-01 11:48:36.039 | INFO     | __main__:main:436 - Copying /home/deepgadget/experiments/gr00t/tt-metal/generated/profiler/.logs/tracy_profile_log_host.tracy to /home/deepgadget/experiments/gr00t/tt-metal/build/profiler/build_wasm/traces/d_prof3_2026_10_01_11_48_36.tracy
+2026-10-01 11:48:36.040 | WARNING  | __main__:main:441 - Could not copy /home/deepgadget/experiments/gr00t/tt-metal/generated/profiler/.logs/tracy_profile_log_host.tracy to /home/deepgadget/experiments/gr00t/tt-metal/build/profiler/build_wasm/traces/d_prof3_2026_10_01_11_48_36.tracy: [Errno 2] No such file or directory: '/home/deepgadget/experiments/gr00t/tt-metal/generated/profiler/.logs/tracy_profile_log_host.tracy'
+2026-10-01 11:48:36.040 | INFO     | __main__:main:448 - embed.tracy -> traces/d_prof3_2026_10_01_11_48_36.tracy
+2026-10-01 11:48:36.040 | INFO     | tracy.serve_wasm:launch_server_subprocess:284 - Launching tracy web app GUI server subprocess...
+2026-10-01 11:48:36.040 | INFO     | tracy.serve_wasm:launch_server_subprocess:287 - Tracy WASM web UI (open in browser): http://localhost:8080/ (WebSocket for live reload: ws://localhost:8081/)
+2026-10-01 11:48:36.040 | INFO     | tracy.serve_wasm:launch_server_subprocess:294 - Tracy WASM server already serving port 8080; reusing it (live-reload refreshes the browser).
+2026-10-01 11:48:37.211 | INFO     | tracy:generate_report:162 - Host side ops time report generated at /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/ip2/prof3/.logs/tracy_ops_times.csv
+2026-10-01 11:48:37.278 | INFO     | tracy:generate_report:173 - Host side ops data report generated at /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/ip2/prof3/.logs/tracy_ops_data.csv
+2026-10-01 11:48:37.278 | INFO     | tracy.process_ops_logs:import_tracy_op_logs:422 - Importing ops logs
+2026-10-01 11:48:38.626 | INFO     | tracy.perf_counter_analysis:get_device_op_data:2107 - Getting device ops
+2026-10-01 11:48:38.628 | INFO     | tracy.process_ops_logs:append_device_data:1081 - Appending device data
+2026-10-01 11:48:42.103 | INFO     | tracy.process_ops_logs:generate_reports:1412 - OPs' perf analysis is finished! Generating reports ...
+2026-10-01 11:48:42.103 | INFO     | tracy.process_ops_logs:generate_reports:1432 - Copying runtime artifacts
+2026-10-01 11:48:42.296 | INFO     | tracy.process_ops_logs:generate_reports:1441 - Generating OPs CSV
+2026-10-01 11:48:43.349 | INFO     | tracy.process_ops_logs:generate_reports:1897 - OPs csv generated at: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/ip2/prof3/reports/2026_10_01_11_48_42/ops_perf_results_2026_10_01_11_48_42.csv

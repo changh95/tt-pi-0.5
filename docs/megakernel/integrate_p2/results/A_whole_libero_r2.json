@@ -1,0 +1,195 @@
+{
+ "t0": "2026-10-01 12:33:22",
+ "arm_env": "whole",
+ "shape": "libero",
+ "open_kwargs": {
+  "device_id": 0,
+  "l1_small_size": 24576,
+  "trace_region_size": 160000000,
+  "worker_l1_size": 1395712
+ },
+ "env": {
+  "TT_METAL_CACHE": "/tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/ip2/ttcache_whole"
+ },
+ "smi_open": {
+  "t": "2026-10-01 12:33:22",
+  "aiclk": " 800",
+  "power": " 23.0",
+  "temp": "54.9"
+ },
+ "stamp": {
+  "backend": "whole",
+  "program": {
+   "kernel_digest": "4aa02cdf21ed0c94",
+   "sources": [
+    "kernels/mk_brisc.cpp",
+    "kernels/mk_defs.hpp",
+    "kernels/mk_dm.hpp",
+    "kernels/mk_ncrisc.cpp",
+    "kernels/mk_trisc.cpp",
+    "kernels_p2/pe_brisc.hpp",
+    "kernels_p2/pe_common.hpp",
+    "kernels_p2/pe_defs.hpp",
+    "kernels_p2/pe_dm.hpp",
+    "kernels_p2/pe_ncrisc.hpp",
+    "kernels_p2/pe_trisc.hpp",
+    "kernels_p2/whole_brisc.cpp",
+    "kernels_p2/whole_ncrisc.cpp",
+    "kernels_p2/whole_trisc.cpp"
+   ]
+  }
+ },
+ "first_call_ms": 23102.192982973065,
+ "traced": true,
+ "prefix_len": 544,
+ "kv_cache_shape": [
+  1,
+  1,
+  640,
+  256
+ ],
+ "kv_cache_dtype": "DataType.BFLOAT8_B",
+ "digests": {
+  "libero_spatial/t0/i0/call0/step10": "4ec1e89d52a18d29",
+  "libero_spatial/t0/i0/call12/step70": "236cec719dcc6dba"
+ },
+ "distinct_outputs": 2,
+ "pcc7": {
+  "libero_spatial/t0/i0/call0/step10": 0.9999736267789925,
+  "libero_spatial/t0/i0/call12/step70": 0.9999827524600463
+ },
+ "pcc7_mean": 0.9999781896195195,
+ "pcc7_min": 0.9999736267789925,
+ "ten_calls_eq_first": [
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true
+ ],
+ "ten_raw_replays_eq_first": [
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true
+ ],
+ "poison_readback_all_7": true,
+ "after_poison_eq_obs_j": true,
+ "after_poison_has_7": false,
+ "smi_bench_before": {
+  "t": "2026-10-01 12:34:15",
+  "aiclk": "1350",
+  "power": " 67.0",
+  "temp": "60.5"
+ },
+ "witness_call": {
+  "time_ns_s": 1.594695263,
+  "monotonic_s": 1.594697077,
+  "sum_perf_counter_s": 1.5946681950008497,
+  "wall_start_epoch": 1790825655.138643
+ },
+ "witness_replay": {
+  "time_ns_s": 1.536668828,
+  "sum_perf_counter_s": 1.5366376569727436
+ },
+ "replays_in_10s_time_time": 196,
+ "smi_bench_after": {
+  "t": "2026-10-01 12:34:28",
+  "aiclk": "1350",
+  "power": " 69.0",
+  "temp": "63.5"
+ },
+ "call_ms": {
+  "median": 53.11087748850696,
+  "min": 52.66131699318066,
+  "max": 53.94898902159184,
+  "all": [
+   53.52948000654578,
+   53.014481032732874,
+   52.981819957494736,
+   52.919502020813525,
+   52.66131699318066,
+   53.019120008684695,
+   53.331447998061776,
+   53.00386197632179,
+   53.28576097963378,
+   53.07714897207916,
+   53.22802299633622,
+   52.932498045265675,
+   53.09512303210795,
+   52.98998596845195,
+   52.736668032594025,
+   53.1504470272921,
+   53.04784403415397,
+   53.413711953908205,
+   53.3182630315423,
+   53.94898902159184,
+   53.36375895421952,
+   53.138384013436735,
+   52.79630102450028,
+   53.57968504540622,
+   53.12663194490597,
+   53.28601197106764,
+   52.77540197130293,
+   53.41213900828734,
+   53.414474008604884,
+   53.08991397032514
+  ]
+ },
+ "replay_ms": {
+  "median": 51.24200598220341,
+  "min": 51.09178402926773,
+  "max": 51.36253300588578,
+  "all": [
+   51.09178402926773,
+   51.13647895632312,
+   51.30430299323052,
+   51.1674570152536,
+   51.2553010485135,
+   51.099137985147536,
+   51.24692601384595,
+   51.21555697405711,
+   51.285188004840165,
+   51.26223497791216,
+   51.15179700078443,
+   51.201761001721025,
+   51.16094398545101,
+   51.296769990585744,
+   51.20502703357488,
+   51.254168967716396,
+   51.17027199594304,
+   51.28293402958661,
+   51.24207597691566,
+   51.14707798929885,
+   51.36253300588578,
+   51.30036699119955,
+   51.29196000052616,
+   51.1770750163123,
+   51.24193598749116,
+   51.156756991986185,
+   51.2454429990612,
+   51.27556901425123,
+   51.25113402027637,
+   51.1576869757846
+  ]
+ },
+ "after_bench_eq_first": true,
+ "megakernel_l1": {
+  "total_per_bank": 1371136,
+  "allocated_per_bank": 117248,
+  "largest_free_per_bank": 1253888,
+  "cb_union": 851616
+ },
+ "t1": "2026-10-01 12:34:28"
+}
