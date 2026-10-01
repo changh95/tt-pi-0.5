@@ -784,3 +784,58 @@ Holds A-G 23:46-00:45 (holds.log in the scratchpad; private TT_METAL_CACHE per a
 | P2-3 per-layer K/V vs the ttnn caches PCC >= 0.999 | **FAIL**: min 0.9642 base / 0.9607 LIBERO. The ttnn caches themselves are 0.9656 / 0.9612 from the fp32 host decomposition; the engine is 0.9954 / 0.9945, closer on 36 / 36 (layer, K / V) at both shapes (PCC and rel-L2). The bar measures the shipped path's error: no more accurate prefix can meet it. Needs the user's ruling. | P23_base.json, P23_libero.json |
 | P2-5 server | PASS: served inference median 55.74 / 56.13 ms (whole) vs 70.86 / 70.76 (expert, P1-6 was 70.72); smoke PASS x4; /info backend whole + digest; mask probe pass; refusals at startup for PI05_KV_DTYPE=bf16, NUM_STEPS=20, BATCH_SIZES=1,2 (rc 3, no device open) | S_*.json, S_*.smoke.log, refuse_whole_*.log |
 Not done: PI05_MEGAKERNEL default is still expert (P2-5 calls whole "the new default"; left for the ship decision / the P2-3 ruling).
+
+## 2026-10-01 11:23:25 KST -- verify-p2-r0: independent verification of PHASE 2 (verifier session, no code changed)
+
+HEAD 59732a7 (kernel_digest 4aa02cdf21ed0c94), own scripts docs/megakernel/verify_p2_r0/scripts/ (new seed set, own
+fp32 oracle incl. its own VLM K/V, own size accounting, own host-clock layer timing), results ../results/. Holds 1-5
+10:09-11:21 with WITH_DEVICE_RESET_AFTER=1, private caches per arm (ttcache_{whole,expert,off}[_prof], rbA, rbB).
+Source md5 aggregate ALL 505df88a... identical at start (10:03), around every hold, before / after the soak, at the end.
+whole / expert / off measured in the same session; the arm came from PI05_MEGAKERNEL, the device was opened by device_kwargs.
+- Structural (tracy, S_struct.json): whole has 21 / 21 replay sessions per shape = 1 op each. That op is a GenericOp on
+  110 cores with whole_trisc / whole_brisc + whole_ncrisc, one program hash per shape, no missing durations. Device time
+  median 53.95 ms base (53.83-54.08) / 51.27 LIBERO. The request path (d_prof3, 9 sample_actions_fused calls alternating
+  n 1 / 128 / 224) gives 10 sessions x 1 GenericOp and ZERO device ops outside the trace after the capture. Arms differ:
+  expert has 892 ops per replay (1 after the 36th KV write = mk_*), off has 2551 (1660 after the last KV write), and
+  the expert and off prefix op codes are equal. Caches: whole compiled whole_* (no mk_* dir), expert compiled mk_*, off neither.
+- Golden PCC7 (A_whole_libero_r1.json): mean 0.999976, min 0.999955. Same session: expert 0.999884 / 0.999778,
+  off 0.999839 / 0.999712. PASS.
+- Amended per-seed gate vs the fp32 whole-model torch reference (c_refs.py; positive control = my written-out pipeline
+  equals ref.sample_actions bit-exactly on 2 inputs per shape), 32 seeds (the r1 22 + 10 new 801-810, three at n 64):
+  whole closer than off on 32 / 32. Mean 0.99851 vs off 0.97034 (expert 0.97666). Margin vs off: min +0.00121 (seed 703),
+  median +0.0101, max +0.235. Seed 707: whole 0.995222, off 0.991753 (+0.00347), expert 0.997693 (-0.00247; the ONLY
+  seed of 32 where whole is less close than the phase-1 expert path). LIBERO 8 / 8 closer than off and than expert.
+- Seed 707 rebuild sensitivity: two EMPTY caches rbA / rbB compiled the same source. ELF loadable content was identical
+  (objcopy md5), and the outputs of 706 / 707 / 708 / 809 / 810 were bit-identical across rbA, rbB and the main cache
+  (707 = 0.995222 in all three). It does not move between rebuilds; the 0.975-0.997 spread came from source changes only.
+- P2-3 amended layer gate (oracle = the fp32 reference's own VLM cache, valid prefix rows; 8 base seeds + 8 LIBERO
+  records): whole closer than the ttnn caches on 288 / 288 (layer, K/V, input) per shape, in both PCC and rel-L2.
+  Whole min PCC is 0.99171 base / 0.99905 LIBERO, ttnn 0.92868 / 0.99060. The expert K/V equal off bitwise. PASS.
+- Replays: 10 calls after other prompts + 10 raw execute_trace were bit-identical (every arm and shape). The output
+  poison check passed (the trace writes the output). Profiled replays were identical too.
+- Alternating / shape switch (ALT_whole.json): 20 / 20 calls bit-identical to fresh-model refs, and the refs are
+  bit-identical to the d_arm process outputs. Positive control: ref pairs max PCC 0.955. The named repo
+  verify_alternating.py under whole gave OVERALL all_ok=True.
+- Soak (hold3.log): 20 / 20 processes rc 0, 31 calls each, all_equal, finite, one digest 886f7341c1085571 (the
+  implementer's soak digest), 50.9-54.4 s. Source md5s and compiled-ELF md5s identical before / after.
+- Per-layer times from the HOST clock (d_layers.py, prefix-only variant inside the real model, (T_27 - T_1) / (26 x 10 reps)):
+  SigLIP 353.1 us base / 353.2 us LIBERO (go line 355: PASS, 1.9 us margin). VLM 1619 / 1526 us (<= 2200: PASS).
+  Prefix stack 37.9 / 35.8 ms per rep (< 52.42 / 48.72: PASS). The whole-model output is unchanged after these launches.
+- Latency (A_*_r{1,2}.json, two rounds, arms alternated, aiclk 1350 before / after every bench). Call median whole vs
+  expert vs off: base 55.80 / 70.77 / 84.17 (r1) and 56.02 / 70.73 / 84.06 (r2); LIBERO 52.95 / 65.70 / 76.86 and
+  53.08 / 65.80 / 76.96. whole - expert is 14.7-15.0 ms base and 12.7 ms LIBERO, against 2 x MAD-se of 0.10-0.16. Clock witnesses: time_ns,
+  monotonic and the perf_counter sum agree to 1 ms; a 10 s window gave 185 / 144 / 121 replays at base and 196 / 156 / 133 at LIBERO.
+- Size (m_size.py, mock cluster, EMPTY cache, readelf + descriptor-counted args): base 124,992 B binaries + 2,572 args
+  + 1,008 CB + 64 sem = 128,636 B; LIBERO 126,492 B (<= 131,072: PASS). The mock ELFs have the SAME kernel hashes and
+  objcopy md5s as the real-device ELFs of hold 1, so the dummy-weight mock build is the shipped binary.
+- Edge cases: base n 1 / 224 / 128 / 150 are inside the seed gate (margins +0.144, +0.012 / +0.019, +0.235, +0.004).
+  LIBERO n 32 / 1 (EDGE_libero.json, 4 inputs): whole closer than off on 4 / 4.
+- Suites: pytest test_pcc_pi05_fused.py under whole gave 2 passed. CPU (PI05_SLOW_CPU=1): 47 passed, plus server masks 5 passed.
+- Incident (mine): at 10:27 the tracy raw logs of hold 2 (18 GB in total; 5 GB for the off arm alone) filled the SHARED
+  root filesystem (100 %, 55 MB free). The off-base profile failed, and so did the alt tests that came after it (rc 120,
+  no device fault; the guard reset the card). I deleted the raw logs after extracting the CSVs and reran those steps
+  in hold 2b (off profiled with 1 replay). Any other process writing to / around 10:27 may have hit ENOSPC.
+Open (not gates; must be done before shipping): DESIGN.md §7 P2-3 row still has the old "vs the ttnn caches >= 0.999"
+text, and the 2026-10-01 amendment is not recorded. PI05_MEGAKERNEL is not yet "whole" by default
+(fused_config.py still says "whole: phase 2, not built").
+Verdict: phase 2 ACCEPTED on the amended gates (every re-run gate passes).

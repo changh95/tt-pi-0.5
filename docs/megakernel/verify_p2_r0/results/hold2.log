@@ -1,0 +1,22 @@
+2026-10-01_10:17:48 START prof whole base
+2026-10-01_10:19:31 END prof whole base rc=0
+2026-10-01_10:19:31 START prof whole libero
+2026-10-01_10:21:18 END prof whole libero rc=0
+2026-10-01_10:21:18 START prof expert base
+2026-10-01_10:23:36 END prof expert base rc=0
+2026-10-01_10:23:36 START prof expert libero
+2026-10-01_10:25:15 END prof expert libero rc=0
+2026-10-01_10:25:15 START prof off base
+2026-10-01_10:27:43 END prof off base rc=1
+2026-10-01_10:27:43 START prof off libero
+2026-10-01_10:27:45 END prof off libero rc=120
+2026-10-01_10:27:45 START alt whole
+2026-10-01_10:27:46 END alt whole rc=120
+2026-10-01_10:27:46 START named repo alt whole
+2026-10-01_10:27:46 END named repo alt whole rc=120
+./sums.sh: line 4: echo: write error: No space left on device
+md5sum: write error
+sed: couldn't flush stdout: No space left on device
+2026-10-01_10:27:46 [device-guard pid=1318326] RESET AFTER JOB (WITH_DEVICE_RESET_AFTER=1, rc=4): /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/vp2r0/hold2.sh
+2026-10-01_10:27:46 [device-guard pid=1318326] RESET: tt-smi -r 0 (probe hung/failed with no other device users)
+2026-10-01_10:28:28 [device-guard pid=1318326] reset exit=0

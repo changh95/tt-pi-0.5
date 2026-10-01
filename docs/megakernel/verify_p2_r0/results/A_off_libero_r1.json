@@ -1,0 +1,184 @@
+{
+ "t0": "2026-10-01 10:15:41",
+ "arm_env": "off",
+ "shape": "libero",
+ "open_kwargs": {
+  "device_id": 0,
+  "l1_small_size": 24576,
+  "trace_region_size": 160000000
+ },
+ "env": {
+  "PI05_MEGAKERNEL": "off",
+  "TT_METAL_CACHE": "/tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/vp2r0/ttcache_off"
+ },
+ "smi_open": {
+  "t": "2026-10-01 10:15:42",
+  "aiclk": " 800",
+  "power": " 22.0",
+  "temp": "54.8"
+ },
+ "stamp": {
+  "backend": "off",
+  "program": null
+ },
+ "first_call_ms": 9290.520198002923,
+ "traced": true,
+ "prefix_len": 544,
+ "kv_cache_shape": [
+  1,
+  1,
+  640,
+  256
+ ],
+ "kv_cache_dtype": "DataType.BFLOAT8_B",
+ "digests": {
+  "libero_spatial/t0/i0/call0/step10": "06567926fcd19ce9",
+  "libero_spatial/t0/i0/call12/step70": "e08788ffed05b3b3",
+  "libero_spatial/t3/i1/call0/step10": "e34594639247fb0c",
+  "libero_spatial/t3/i1/call12/step70": "084f436124466724",
+  "libero_spatial/t6/i2/call0/step10": "68c6b29d96f1fe66",
+  "libero_spatial/t6/i2/call12/step70": "7405ffc4d0a49fcf",
+  "libero_spatial/t9/i3/call0/step10": "f170af41fbc29cca",
+  "libero_spatial/t9/i3/call12/step70": "4e0c1a0454348af1"
+ },
+ "distinct_outputs": 8,
+ "pcc7": {
+  "libero_spatial/t0/i0/call0/step10": 0.999844992200279,
+  "libero_spatial/t0/i0/call12/step70": 0.9997847897122235,
+  "libero_spatial/t3/i1/call0/step10": 0.9998678648319074,
+  "libero_spatial/t3/i1/call12/step70": 0.9999390987897641,
+  "libero_spatial/t6/i2/call0/step10": 0.9997118086396971,
+  "libero_spatial/t6/i2/call12/step70": 0.9997768346291702,
+  "libero_spatial/t9/i3/call0/step10": 0.9999170195323196,
+  "libero_spatial/t9/i3/call12/step70": 0.9998659931618386
+ },
+ "pcc7_mean": 0.99983855018715,
+ "pcc7_min": 0.9997118086396971,
+ "ten_calls_eq_first": [
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true
+ ],
+ "ten_raw_replays_eq_first": [
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true
+ ],
+ "poison_readback_all_7": true,
+ "after_poison_eq_obs_j": true,
+ "after_poison_has_7": false,
+ "smi_bench_before": {
+  "t": "2026-10-01 10:16:14",
+  "aiclk": "1350",
+  "power": " 67.0",
+  "temp": "59.6"
+ },
+ "witness_call": {
+  "time_ns_s": 2.314462604,
+  "monotonic_s": 2.314464709,
+  "sum_perf_counter_s": 2.3144320368301123,
+  "wall_start_epoch": 1790817374.8395133
+ },
+ "witness_replay": {
+  "time_ns_s": 2.26944284,
+  "sum_perf_counter_s": 2.269402164965868
+ },
+ "replays_in_10s_time_time": 133,
+ "smi_bench_after": {
+  "t": "2026-10-01 10:16:29",
+  "aiclk": "1350",
+  "power": " 67.0",
+  "temp": "61.6"
+ },
+ "call_ms": {
+  "median": 76.86119299614802,
+  "min": 76.581827015616,
+  "max": 80.96128603210673,
+  "all": [
+   77.11890700738877,
+   76.6555150039494,
+   76.69145299587399,
+   76.76588301546872,
+   76.82474300963804,
+   76.62208296824247,
+   76.61794498562813,
+   77.65629899222404,
+   77.1182770258747,
+   77.0694839884527,
+   76.6284849960357,
+   76.67725603096187,
+   80.96128603210673,
+   76.73007599078119,
+   76.959817961324,
+   77.14512600796297,
+   76.94064197130501,
+   76.88100001541898,
+   76.72304299194366,
+   76.7765129567124,
+   76.99401199351996,
+   77.00591499451548,
+   76.84138597687706,
+   76.79160201223567,
+   76.93325798027217,
+   77.01848796568811,
+   76.82387199020013,
+   76.92533294903114,
+   76.581827015616,
+   80.95251000486314
+  ]
+ },
+ "replay_ms": {
+  "median": 75.62844350468367,
+  "min": 75.58864797465503,
+  "max": 75.87857398902997,
+  "all": [
+   75.87857398902997,
+   75.63520601252094,
+   75.6459659896791,
+   75.62552799936384,
+   75.61822404386476,
+   75.65191696630791,
+   75.61091001844034,
+   75.75101300608367,
+   75.62710100319237,
+   75.6408569868654,
+   75.62809297814965,
+   75.63323201611638,
+   75.65350999357179,
+   75.6250669946894,
+   75.61548898229375,
+   75.63371298601851,
+   75.63226000638679,
+   75.61976602301002,
+   75.64067601924762,
+   75.58864797465503,
+   75.62562800012529,
+   75.82589396042749,
+   75.6212699925527,
+   75.63869201112539,
+   75.64156700391322,
+   75.6287940312177,
+   75.62702998984605,
+   75.61841397546232,
+   75.62718098051846,
+   75.59194503119215
+  ]
+ },
+ "after_bench_eq_first": true,
+ "megakernel_l1": null,
+ "t1": "2026-10-01 10:16:29"
+}

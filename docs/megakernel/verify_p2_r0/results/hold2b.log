@@ -1,0 +1,11 @@
+2026-10-01_10:28:54 df /dev/nvme0n1p2  1.8T  1.7T   18G  99% /
+2026-10-01_10:28:54 START prof off base 1
+2026-10-01_10:30:21 END prof off base rc=0
+2026-10-01_10:30:23 df /dev/nvme0n1p2  1.8T  1.7T   18G  99% /
+2026-10-01_10:30:23 START alt whole
+2026-10-01_10:37:36 END alt whole rc=0
+2026-10-01_10:37:36 START named repo alt whole
+2026-10-01_10:44:23 END named repo alt whole rc=0
+2026-10-01_10:44:23 [device-guard pid=1340306] RESET AFTER JOB (WITH_DEVICE_RESET_AFTER=1, rc=0): /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/vp2r0/hold2b.sh
+2026-10-01_10:44:23 [device-guard pid=1340306] RESET: tt-smi -r 0 (probe hung/failed with no other device users)
+2026-10-01_10:45:04 [device-guard pid=1340306] reset exit=0

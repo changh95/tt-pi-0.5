@@ -1,0 +1,36 @@
+Config{cache_path=/home/deepgadget/.cache/ttnn,model_cache_path=/home/deepgadget/.cache/ttnn/models,tmp_dir=/tmp/ttnn,enable_model_cache=false,enable_fast_runtime_mode=true,validate_program_args=false,throw_exception_on_fallback=false,enable_logging=false,enable_graph_report=false,enable_graph_python_stack_traces=false,enable_detailed_buffer_report=false,enable_detailed_tensor_report=false,enable_comparison_mode=false,comparison_mode_should_raise_exception=false,comparison_mode_pcc=0.9999,root_report_path=generated/ttnn/reports,report_name=std::nullopt,std::nullopt}
+2026-10-01 10:05:19 ctrl 1 {'bit_equal_sample_actions': True, 'pcc': 0.9999999999999997, 'cache_shape': [1, 1, 736, 256], 'n_valid': 552}
+2026-10-01 10:05:19 base ref 1
+2026-10-01 10:05:30 ctrl 2 {'bit_equal_sample_actions': True, 'pcc': 0.9999999999999998, 'cache_shape': [1, 1, 736, 256], 'n_valid': 609}
+2026-10-01 10:05:30 base ref 2
+2026-10-01 10:05:36 base ref 3
+2026-10-01 10:05:41 base ref 4
+2026-10-01 10:05:47 base ref 5
+2026-10-01 10:05:52 base ref 6
+2026-10-01 10:05:58 base ref 701
+2026-10-01 10:06:03 base ref 702
+2026-10-01 10:06:09 base ref 703
+2026-10-01 10:06:14 base ref 704
+2026-10-01 10:06:19 base ref 705
+2026-10-01 10:06:25 base ref 706
+2026-10-01 10:06:30 base ref 707
+2026-10-01 10:06:35 base ref 708
+2026-10-01 10:06:41 base ref 709
+2026-10-01 10:06:46 base ref 710
+2026-10-01 10:06:51 base ref 711
+2026-10-01 10:06:56 base ref 712
+2026-10-01 10:07:01 base ref 713
+2026-10-01 10:07:06 base ref 714
+2026-10-01 10:07:11 base ref 715
+2026-10-01 10:07:17 base ref 716
+2026-10-01 10:07:22 base ref 801
+2026-10-01 10:07:28 base ref 802
+2026-10-01 10:07:34 base ref 803
+2026-10-01 10:07:39 base ref 804
+2026-10-01 10:07:44 base ref 805
+2026-10-01 10:07:50 base ref 806
+2026-10-01 10:07:55 base ref 807
+2026-10-01 10:08:00 base ref 808
+2026-10-01 10:08:06 base ref 809
+2026-10-01 10:08:11 base ref 810
+2026-10-01 10:08:11 DONE {"1": {"bit_equal_sample_actions": true, "pcc": 0.9999999999999997, "cache_shape": [1, 1, 736, 256], "n_valid": 552}, "2": {"bit_equal_sample_actions": true, "pcc": 0.9999999999999998, "cache_shape": [1, 1, 736, 256], "n_valid": 609}}

@@ -1,0 +1,9 @@
+2026-10-01_11:17:15 START edge whole
+2026-10-01_11:18:11 END edge whole rc=0 RESULT ok whole
+2026-10-01_11:18:11 START edge off
+2026-10-01_11:18:37 END edge off rc=0 RESULT ok off
+2026-10-01_11:18:37 START pytest test_pcc_pi05_fused (whole)
+2026-10-01_11:20:59 END pytest rc=0 2 passed in 139.30s (0:02:19)
+2026-10-01_11:20:59 [device-guard pid=1363806] RESET AFTER JOB (WITH_DEVICE_RESET_AFTER=1, rc=0): /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/vp2r0/hold5.sh
+2026-10-01_11:20:59 [device-guard pid=1363806] RESET: tt-smi -r 0 (probe hung/failed with no other device users)
+2026-10-01_11:21:40 [device-guard pid=1363806] reset exit=0
