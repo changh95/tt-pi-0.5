@@ -839,3 +839,22 @@ Open (not gates; must be done before shipping): DESIGN.md §7 P2-3 row still has
 text, and the 2026-10-01 amendment is not recorded. PI05_MEGAKERNEL is not yet "whole" by default
 (fused_config.py still says "whole: phase 2, not built").
 Verdict: phase 2 ACCEPTED on the amended gates (every re-run gate passes).
+
+## 2026-10-01 11:29:22 KST -- integrate-p2: the whole-model megakernel becomes the DEFAULT path (session start)
+
+User request relayed with this task: "응, 둘 다 yes. 검증 후 HF 배포까지 진행해" (yes to both [the 2026-10-01 rulings]; verify, then
+ship to HF). This session = integrate-p2 (default switch, docs, gate re-run on the final commit, LIBERO closed loop + demo);
+the HF push is the Ship phase.
+Code commit 0f19387 (kernels unchanged; models/ diff 59732a7..6e752ba empty):
+- FusedConfig.megakernel default "whole" (env unset / empty / dataclass default); resolved(n>1) still turns only the
+  UNSET default off on a mesh. expert (phase 1) and off (previous shipped path) are comparator knobs only.
+- server: docstring; new startup refusal for whole with PI05_NUM_IMAGES != 2 (the kernels are built for 2 cameras).
+- lang_masks: already carried through every server path since integrate-p1 (488fe36): run_inference, _Batcher._loop
+  (batch 1 included), _DPRouter -> _Batcher, the batch / DP warm-ups (grep of every sample_actions_fused call in
+  server/app.py: all pass lang_masks); tests/test_server_masks.py 5 passed. The served mask probe is re-run below.
+- CPU (scratchpad/ip2/out/cpu_suites.txt, PI05_SLOW_CPU=1): test_fused_host + test_cpu_mk + test_cpu_pe +
+  test_reference_vs_openpi + test_server_masks: 52 passed.
+Device gate plan (scratchpad/ip2 = copies of verify_p2_r0/scripts; arm "whole" = PI05_MEGAKERNEL UNSET, files keep the
+resolved name; expert / off explicit; fp32 whole-model references ref_{base,libero}.pt reused from vp2r0: reference/ and
+weights unchanged): hold1 arms x shapes (32 base seeds + 8 LIBERO), hold2 profiles (raw tracy logs deleted per run: disk
+25 GB free), hold3 alternation + edge + pytest, hold4 soak 20, hold5 layer times + latency r2, hold6 served A/B + refusals.

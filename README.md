@@ -6,26 +6,31 @@ end-to-end robot control. This repository is a port of π0.5 to Tenstorrent
 hardware via TTNN, derived from `lerobot/pi05_base`, running on a single
 Blackhole p150a.
 
-The port runs one **traced device graph** per shape (`PI0ModelTTNN.sample_actions_fused`). Since
-2026-09-30 its default (`PI05_MEGAKERNEL=expert`) is **phase 1 of the megakernel**
-([`docs/megakernel/`](docs/megakernel/DESIGN.md)):
+Since 2026-10-01 the default inference path (`PI05_MEGAKERNEL=whole`) is the **whole-model megakernel**:
+every call of `PI0ModelTTNN.sample_actions_fused` runs the model as **one fused op** on the device, a single
+persistent `ttnn.generic_op` (a `ProgramDescriptor` with custom kernels) on all 110 worker cores, captured in a
+Metal trace whose replay holds exactly that one op ([`docs/megakernel/`](docs/megakernel/DESIGN.md), §11):
 
-| Part of one call | How it runs on the device | Ops per trace replay |
+| Part of one call | Where it runs | Device ops per replay |
 |---|---|---:|
-| host im2col, SigLIP (both cameras in one batch), projector, language embedding, Gemma-2B VLM prefill writing 18 bf8 K/V caches | stock TT-NN ops, captured in the Metal trace (**not** a megakernel yet) | 891 |
-| the whole flow-matching loop: action in-projection, 10 Euler steps × 18 Gemma-300M expert layers (adaRMS, GQA attention over the prefix K/V with the padding mask and the offset RoPE, GeGLU MLP, gated residuals), action out-projection | **ONE persistent `ttnn.generic_op`**: custom kernels (`tt/megakernel/kernels/mk_{brisc,ncrisc,trisc}.cpp`) on all 110 worker cores, in-kernel step and layer loops, weights streamed from per-core DRAM arenas (bfp8 matmuls at HiFi2, fp32 residual), activations in L1 | 1 |
+| image resize / normalisation, im2col of the patches, prompt building and tokenisation, the mask / RoPE rows, the initial noise, the host->device copies of these inputs, the readback | host (input / output formatting; no learned parameter, no model arithmetic) | 0 |
+| SigLIP on both cameras (patch embedding + 27 layers + post-LN), the projector, the language embedding, the Gemma-2B VLM prefill (18 layers) writing 18 bf8 K / V caches, the action in-projection, 10 Euler steps x 18 Gemma-300M expert layers (adaRMS, GQA attention over the prefix K/V with the padding mask and the offset RoPE, GeGLU MLP, gated residuals), the action out-projection | **ONE persistent `ttnn.generic_op`**: `tt/megakernel/pe_program.py` (`WholeMegakernel`) with the kernels `tt/megakernel/kernels_p2/whole_{brisc,ncrisc,trisc}.cpp` (the prefix engine `pe_*.hpp` + the expert loop `kernels/mk_*`), weights streamed from per-core DRAM arenas, activations DRAM-staged between the prefix's 314 in-kernel ops and L1-resident in the expert loop | **1** |
 
-A replay is 892 device ops; the previous path (`PI05_MEGAKERNEL=off`) is 2,551, of which 1,660 run the
-expert loop. Phase 2 (SigLIP + VLM inside the same persistent program, one op per replay) is the next
-stage and is not built yet. The megakernel needs the device opened with the 64 KiB worker-L1 cut
-(`common/device_open.py`: `open_pi05_device` / `device_kwargs`; `worker_l1_size=1395712`); the model refuses a
-device without it by name. It serves batch 1, one chip, bf8 K/V caches and 10 steps; any other
-configuration requested together with it refuses at build / server start.
+No part of the default path is a stock TT-NN op on the device. The traced stock-op path still exists only behind
+the comparator knobs:
 
-`PI05_MEGAKERNEL=off` selects the previous shipped path (stock TT-NN expert ops plus three custom
-`generic_op` programs: fused expert attention `tt/ttnn_fused_attn.py`, adaRMS row rsqrt and GeGLU
-`tt/ttnn_fused_norm.py`). It is kept **only as the comparator / oracle** for the megakernel's gates. On a
-multi-chip mesh the unset default resolves to `off` (the megakernel is a single-p150a program).
+| `PI05_MEGAKERNEL` | What runs | Device ops per replay | Role |
+|---|---|---:|---|
+| `whole` (default; also the value when unset) | the whole model as ONE persistent generic_op | 1 | served / shipped path |
+| `expert` | phase 1: SigLIP / VLM prefix as traced stock TT-NN ops (891), the expert loop as ONE persistent generic_op | 892 | comparator only |
+| `off` | the path shipped before 2026-09-30: stock TT-NN ops plus three custom `generic_op` programs (fused expert attention `tt/ttnn_fused_attn.py`, adaRMS row rsqrt and GeGLU `tt/ttnn_fused_norm.py`) | 2,551 | comparator / oracle only |
+
+The megakernels need the device opened with the 64 KiB worker-L1 cut (`common/device_open.py`:
+`open_pi05_device` / `device_kwargs`; `worker_l1_size=1395712`, which leaves the 136,192 B kernel-config ring the
+program needs); the model refuses a device without it by name. `whole` serves batch 1, one chip, 2 cameras, bf8 K/V
+caches and 10 steps; any other configuration requested together with it refuses at build / server start. On a
+multi-chip mesh the UNSET default resolves to `off` (the megakernels are single-p150a programs). The SigLIP / VLM
+TT-NN modules are still constructed under `whole` (their weights are uploaded) but are never enqueued.
 
 Since 2026-09-29 the graph applies openpi's attention semantics: right-padded prompt tokens are
 masked out of every query, and the action tokens are rotated at positions `n_valid_prefix + [0, H)`.
@@ -35,73 +40,82 @@ action tokens at `[0, H)`, so the PCC tests could not see either bug. Details an
 
 ## Results
 
-Measured 2026-09-30 on one Blackhole p150a (AICLK 1350 MHz) with tt-metal `main` @
+Measured 2026-10-01 on one Blackhole p150a (AICLK 1350 MHz before and after every benchmark) with tt-metal `main` @
 [`668c2907575`](https://github.com/tenstorrent/tt-metal/commit/668c290757550588d0ce46b180c344a462a2aaf5)
-(v0.79.0-dev20260914), batch 1, 10 flow-matching steps, branch `megakernel-2026-09-29` (kernel digest
-`328761c8a1ce3fd9`). "default" = `PI05_MEGAKERNEL` unset (the phase-1 expert megakernel); "off" = the previous
-shipped path, measured in the same session as the comparator. Raw files: `docs/megakernel/integrate_p1/results/`
-and the phase-1 record in `docs/megakernel/JOURNAL.md`.
+(v0.79.0-dev20260914), batch 1, 10 flow-matching steps, branch `megakernel-2026-09-29` at the integration commit
+(whole-model kernel digest `4aa02cdf21ed0c94`). "default" = `PI05_MEGAKERNEL` UNSET (resolves to `whole`); `expert`
+and `off` = the comparator knobs, measured in the same session with the arms alternated across processes. Raw files:
+`docs/megakernel/integrate_p2/results/` and the record in `docs/megakernel/JOURNAL.md` ("integrate-p2"); the
+phase-2 exit gates and their independent verification are in the same journal ("PHASE-2 EXIT GATE TABLE",
+"verify-p2-r0").
+
+### What runs on the device
+
+| | default (`whole`) | `expert` | `off` |
+|---|---:|---:|---:|
+| device ops per trace replay (tracy, per replay session) | **1** (GenericOp, 110 cores; 21 / 21 sessions per shape) | 892 (891 stock + 1 GenericOp) | 2,551 |
+| device ops a request issues outside the trace (9 requests, prompt lengths 1 / 128 / 224) | **0** | | |
+| device time per replay, served shape (profiler; `whole`: the op's duration, median of 21 replays; `expert` / `off`: sum of the ops' durations, median of the profiled replay sessions) | **53.94 ms** | 69.49 ms | 82.30 ms |
+| device time per replay, LIBERO shape | **51.26 ms** | 64.34 ms | 75.10 ms |
+
+Inside the one op (host-clock marginals inside the real model, `L_*.json`): a SigLIP layer 354.2 us (served) /
+352.1 us (LIBERO), a VLM layer 1,618 / 1,526 us, the whole prefix (SigLIP x2 + projector + embedding + VLM -> K/V)
+38.1 / 35.7 ms per run. Kernel-config ring footprint (offline mock-cluster compile into an empty cache, readelf +
+descriptor-counted args): 128,636 B served / 126,492 B LIBERO of the 136,192 B ring (gate 131,072 B).
 
 ### Accuracy
 
-| Check | default (phase-1 megakernel) | off (previous path) |
-|---|---:|---:|
-| vs the openpi GPU golden: `lerobot/pi05_libero`, 8 real LIBERO observations, prompt right-padded to 32 tokens, H = 10, PCC over the 7 action dims | mean **0.999884**, min **0.999778** | mean 0.999839, min 0.999712 |
-| Expert vs an fp32 expert-loop oracle fed the device's own prefix K/V and noise, served shape, 22 seeds (prompts with 1-224 real tokens) | mean **0.99974**, min 0.99916; closer than off on **22 / 22** seeds | mean 0.99596, min 0.98575 |
-| Whole call vs the fixed fp32 torch reference, served shape, same 22 seeds | mean 0.97535 (closer than off on 19 / 22) | mean 0.96921 |
-| Fixed torch reference (fp32, CPU) vs the openpi golden, prompt padded to 32 / 224 tokens | 0.999995 / 0.999995 | |
-| Ten trace replays; alternating prompts and a shape switch (20 calls vs fresh-model outputs); output buffer poisoned between calls | bit-identical | bit-identical |
-| 20 consecutive processes × 31 calls (prompt lengths 1 / 128 / 224) | 20 / 20, no hang, one output digest | |
+| Check | default (`whole`) | `expert` | `off` |
+|---|---:|---:|---:|
+| vs the openpi GPU golden: `lerobot/pi05_libero`, 8 real LIBERO observations, prompt right-padded to 32 tokens, H = 10, PCC over the 7 action dims | mean **0.999976**, min **0.999955** | mean 0.999884, min 0.999778 | mean 0.999839, min 0.999712 |
+| Whole call vs the fp32 torch reference of the whole model on the same inputs, served shape, 32 seeds (prompts with 1-224 real tokens) | mean **0.99851**, min 0.98882; closer than `off` on **32 / 32** seeds (smallest margin +0.00121) | mean 0.97666, min 0.80383 | mean 0.97034, min 0.76397 |
+| Same, LIBERO shape, the 8 golden observations | closer than `off` and `expert` on 8 / 8 | | |
+| Per-layer K / V (18 layers x K, V, 8 inputs) vs the fp32 reference's own VLM cache | closer than the TT-NN caches on 288 / 288 per shape; min PCC 0.99171 served / 0.99905 LIBERO | (= `off`, bitwise) | min PCC 0.92868 / 0.99060 |
+| Prompt-length edge cases vs fp32 (served n 1 / 224 / 128 / 150 inside the 32 seeds; LIBERO n 32 / 1, 4 inputs) | closer than `off` on every one | | |
+| Ten calls after other prompts, ten raw trace replays, output buffer poisoned between calls | bit-identical | bit-identical | bit-identical |
+| Alternating prompts and a shape switch (20 calls vs fresh-model outputs; `tests/megakernel/verify_alternating.py`) | 20 / 20 bit-identical; `all_ok` | | |
+| 20 consecutive processes x 31 calls (prompt lengths 1 / 128 / 224) | 20 / 20, no hang, one output digest | | |
 
-The whole-call fp32 comparison on random inputs is dominated by the prefix (SigLIP / VLM in bf16, bf8 K/V
-caches), which the megakernel does not change: the fp32 oracle fed the device's own K/V isolates the expert,
-and that is the phase-1 gate (DESIGN.md §7, amended 2026-09-30). `tests/pcc/test_pcc_pi05_fused.py -k base`
-still fails its own 0.95 whole-call floor on seed 3 in **both** paths (default 0.94833, off 0.93811); this
-was already true on `main`. The LIBERO golden, on real observations, is the meaningful whole-model check.
+`expert` is closer to fp32 than `whole` on one of the 32 seeds (seed 707: 0.99769 vs 0.99522); that seed's PCC is
+sensitive to small numerical changes (DESIGN.md §11.4). The fp32 comparison on random inputs is dominated by the
+prefix, which is why the gate is "at least as close as the shipped path", not a fixed floor (DESIGN.md §7, amended
+2026-09-30 and 2026-10-01).
 
 ### Latency
 
-Host wall time per call (upload + trace replay + readback), median of 60 calls; device time from the
-profiler (median of 21 profiled replays):
+Host wall time per call (upload + trace replay + readback), median of 30 calls per process, two rounds; trace replay
+= `execute_trace` alone (`integrate_p2/results/G_speed.json`):
 
-| Shape | default: per call | default: replay | off: per call | off: replay |
+| Shape | default: per call | default: replay | `expert`: per call | `off`: per call |
 |---|---:|---:|---:|---:|
-| Served shape: 2 × 224² images, 224 tokens, H = 50 | **70.7 ms** | 69.5 ms | 84.3 ms | 82.8 ms |
-| LIBERO shape: 2 × 224² images, 32 tokens, H = 10 | **65.8 ms** | 64.4 ms | 76.7 ms | 75.6 ms |
+| Served shape: 2 x 224² images, 224 tokens, H = 50 | **55.87 / 55.95 ms** | 54.10 / 54.11 ms | 70.84 / 70.77 ms | 84.17 / 84.06 ms |
+| LIBERO shape: 2 x 224² images, 32 tokens, H = 10 | **53.10 / 53.11 ms** | 51.21 / 51.24 ms | 65.73 / 65.78 ms | 76.97 / 76.96 ms |
 
-| Device time of the expert loop | default: ONE generic_op | off: 1,660 stock / custom ops |
-|---|---:|---:|
-| Served shape | **17.49 ms** | 30.31 ms |
-| LIBERO shape | **16.07 ms** | 26.83 ms |
+Every difference is more than 80 times 2 x the MAD-based standard error of the median. 50 actions / 55.9 ms = 894
+actions/s.
 
-The prefix (891 traced stock TT-NN ops, identical in both paths) is the remaining ~52 ms and is phase 2's target.
-Served over HTTP by `server/app.py` (served shape, 30 warm requests per server, arms alternated default / off /
-default / off, `integrate_p1/results/S_*`): `timing_ms.inference` median **70.93 / 70.88 ms** default vs 84.04 / 84.10 ms
-off; `timing_ms.total` 72.3 vs 85.5 ms. 50 actions / 70.7 ms = 707 actions/s.
+SERVED_PLACEHOLDER
 
 ### LIBERO closed loop
 
-`lerobot/pi05_libero` @ `a217bfd3` with openpi's `pi05_libero` norm stats, libero_spatial
-(10 tasks × official init states 0-9), openpi's evaluation loop (5 of each 10-action chunk
-executed), served through openpi's websocket protocol by the default path (2026-09-30):
-
-| Policy | Device | Success |
-|---|---|---:|
-| this port, default (phase-1 expert megakernel) | p150a | **99 / 100** (0 errors, 0 timeouts; t9/i4 hit the step cap) |
-| same, paired subset (init states 0-4) | p150a | 49 / 50 |
-| previous path (`off`, 2026-09-29) | p150a | 98 / 100 (paired 48 / 50) |
-| openpi `PI0Pytorch`, same weights and client (init states 0-4) | RTX 5090 | 50 / 50 |
-
-Server-side policy latency: median **66.4 ms** per call (p10 66.1, p90 66.7; 2,130 calls), vs 77.6 ms for the
-previous path. The LIBERO server wrapper and the client are not part of this repository.
+LIBERO_PLACEHOLDER
 
 ## What the fused graph does
 
-With the default `PI05_MEGAKERNEL=expert`, everything from the VLM's last K/V-cache write to the output
-actions is the one megakernel op (`tt/megakernel/`: `geometry.py` core map and shapes parsed from
-`kernels/mk_defs.hpp`, `arena.py` per-core consumption-ordered weight streams, `host_model.py` the host
-parameters and a CPU model of the kernel's decomposition, `program.py` the `ProgramDescriptor`). The list
-below describes the traced stock-op part (the prefix) and, for `off`, the previous expert.
+With the default `PI05_MEGAKERNEL=whole`, the trace holds ONE op, `WholeMegakernel.run` (`tt/megakernel/`):
+`pe_geometry.py` (shapes and the core map of the prefix engine, parsed from `kernels_p2/pe_common.hpp`),
+`pe_host.py` (the prefix parameters from the checkpoint, norm affines folded into the consuming matmuls, the
+weight arenas and the RoPE / mask tables), `pe_program.py` (the `ProgramDescriptor` of the whole program: the
+prefix engine runs a fixed list of 314 ops -- patch embed, 27 SigLIP layers, post-LN, projector, embedding, 18 VLM
+layers -- with one global barrier per op, then hands the 18 K / V caches to the phase-1 expert loop inside the same
+kernel launch), `pe_size_check.py` (offline mock-cluster compile + kernel-config ring footprint); the expert loop's
+own pieces are `geometry.py`, `arena.py`, `host_model.py` and `program.py` with `kernels/mk_*`. Numerics: bfp8
+weights except the VLM qkv and the expert o / down projections (bf16), SigLIP / VLM matmuls at HiFi2 with fp32
+accumulation, fp32 residual streams, bf16 activations between ops, bfp8 K / V caches; the expert loop keeps phase 1's
+fidelities (DESIGN.md §4.10). DESIGN.md §11.2 / §11.4 list every choice and the arms that measured it.
+
+The rest of this section describes the traced stock-op graph that the comparator knobs (`expert` for its prefix,
+`off` for everything) still run; it is not on the default path.
 
 The knobs are read once when `PI0ModelTTNN` is built (`FusedConfig.from_env()` in
 `common/fused_config.py`; `FusedConfig.resolved()` applies the measured defaults):
@@ -121,11 +135,12 @@ The knobs are read once when `PI0ModelTTNN` is built (`FusedConfig.from_env()` i
   fused biases; expert qkv / up through a 1D-multicast matmul program with fp32 accumulation.
 
 Knobs (the defaults are the validated recipe; each is described in the module docstring of
-`common/fused_config.py`):
+`common/fused_config.py`). Under `whole` only `PI05_MEGAKERNEL`, `PI05_TRACE` and `PI05_TRACE_REGION_SIZE` affect the
+device computation; the others configure the stock-op graph of the comparator knobs:
 
 | Env | Default | Meaning |
 |-----|---------|---------|
-| `PI05_MEGAKERNEL` | `expert` | `expert` = the expert loop as ONE persistent generic_op (phase 1); `off` = the previous stock-op expert (comparator only); `whole` = phase 2, not built (refuses) |
+| `PI05_MEGAKERNEL` | `whole` | `whole` = the whole model as ONE persistent generic_op per call (the served path); `expert` = phase 1, only the expert loop is one generic_op, the prefix is traced stock ops (comparator only); `off` = the previous stock-op path (comparator only) |
 | `PI05_TRACE` | `1` | capture the graph in one Metal trace and replay it; `0` runs the same graph eagerly (debug / A/B) |
 | `PI05_TRACE_REGION_SIZE` | 160 MB | `trace_region_size` passed to `ttnn.open_device` |
 | `PI05_EXPERT_ATTN` | `fused` | `fused` = the generic_op attention; `ttnn` = SDPA ops (one prompt length per batch) |
@@ -164,13 +179,14 @@ tt-pi-0.5/
 │   │   ├── ttnn_fused_norm.py      # adaRMS fold, row rsqrt, fused GeGLU
 │   │   ├── ttnn_ccl.py             # mesh / tensor-parallel helpers (not validated after the fix)
 │   │   ├── kernels/                # fused_attn, geglu_rc, row_rsqrt (reader / compute / writer; the off path)
-│   │   └── megakernel/             # phase-1 expert megakernel: geometry, arena, host_model, program, size_check,
-│   │                               #   kernels/mk_{brisc,ncrisc,trisc}.cpp + mk_defs.hpp / mk_dm.hpp
+│   │   └── megakernel/             # the megakernels: pe_geometry / pe_host / pe_program / pe_size_check (whole model,
+│   │                               #   kernels_p2/whole_{brisc,ncrisc,trisc}.cpp + pe_*.hpp) and geometry / arena /
+│   │                               #   host_model / program / size_check (the expert loop, kernels/mk_*)
 │   ├── server/                     # app.py (FastAPI, served by tt-model-manager), smoke_test.py
 │   └── tests/
 │       ├── test_fused_host.py      # Torch-only proofs of the reformulations and the attention inputs (no device)
 │       ├── test_server_masks.py    # CPU: every server path passes the request's own language mask
-│       ├── megakernel/             # CPU tests of the megakernel host side + device tools (bring-up, oracle, soak)
+│       ├── megakernel/             # CPU tests of the megakernel host side + device tools (bring-up, gates, soak)
 │       ├── pcc/                    # test_pcc_pi05_fused.py, test_reference_vs_openpi.py, golden_openpi.py, LIBERO rollout
 │       ├── perf/                   # test_perf_pi05_fused.py
 │       ├── unit/                   # adaRMS, suffix, time embedding
@@ -225,7 +241,8 @@ python models/experimental/pi0_5/tests/pcc/test_reference_vs_openpi.py
 pytest models/experimental/pi0_5/tests/pcc/test_pcc_pi05_fused.py -v -s -k libero
 pytest models/experimental/pi0_5/tests/pcc/test_pcc_pi05_fused.py -v -s -k base
 
-# Device: the same tests on the comparator path
+# Device: the same tests on the comparator paths
+PI05_MEGAKERNEL=expert pytest models/experimental/pi0_5/tests/pcc/test_pcc_pi05_fused.py -v -s -k libero
 PI05_MEGAKERNEL=off pytest models/experimental/pi0_5/tests/pcc/test_pcc_pi05_fused.py -v -s -k libero
 
 # Device: traced timing (min / median / max over --runs)
@@ -262,10 +279,10 @@ python models/experimental/pi0_5/tests/demo/extract_libero_samples.py   # LIBERO
   `cumsum(valid) - 1` only for right-padded prompts; right-pad the tokens.
 - **`'mul_init' ... was not declared` while compiling `fused_attn/compute.cpp`**: the tt-metal tree is too
   old; use `668c2907575` or a tree re-validated with the tests above.
-- **`PI05_MEGAKERNEL=expert refused: the device was opened without the 64 KiB worker-L1 cut`**: open the device
+- **`PI05_MEGAKERNEL=whole refused: the device was opened without the 64 KiB worker-L1 cut`**: open the device
   with `common/device_open.py` (`open_pi05_device(fused)` or `ttnn.open_device(**device_kwargs(fused))`), or set
   `PI05_MEGAKERNEL=off` for the comparator path. Other `refused:` messages name the knob the kernels do not compile
-  (`PI05_KV_DTYPE=bf16`, `PI05_NUM_STEPS` != 10, batch > 1, a mesh).
+  (`PI05_KV_DTYPE=bf16`, `PI05_NUM_STEPS` != 10, batch > 1, a mesh, `PI05_NUM_IMAGES` != 2 under `whole`).
 - **`Statically allocated circular buffers ... clash with L1 buffers`**: seen with `PI05_DIT_BLOCKS=op`;
   keep the default blocks.
 

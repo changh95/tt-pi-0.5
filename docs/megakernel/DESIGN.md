@@ -35,12 +35,13 @@ stream timeline uses the review's fluid model `docs/megakernel/design/review_str
 | WP-P1-5 integration into `sample_actions_fused` + all gates | DONE except the base per-seed gate (seed 2) | JOURNAL phase-1 exit gate table |
 | WP-P1-6 server integration of phase 1 | DONE (served 70.72 ms) | |
 | integrate-p1: phase 1 as the DEFAULT path (`off` = comparator), server mask plumbing, refusal (d), gate re-run, LIBERO closed loop | DONE 2026-09-30 (gates re-run PASS; served 70.9 vs 84.0 ms; LIBERO 99/100 at 66.4 ms/call) | JOURNAL "integrate-p1"; `integrate_p1/results/` |
-| WP-P2-0 phase-2 binary size + L1 overlay proof (no card) | NOT STARTED | |
-| WP-P2-1 VLM layer prototype (go / no-go on timing) | NOT STARTED | GR00T's fused prefill ended slower than TTNN, so this is gated by measurement |
-| WP-P2-2 SigLIP layer prototype | NOT STARTED | |
-| WP-P2-3 whole prefix in-kernel (SigLIP + projector + embed + VLM -> KV) | NOT STARTED | |
-| WP-P2-4 whole `sample_actions` as one program + all gates | NOT STARTED | phase-2 exit = the deliverable |
-| WP-P2-5 server integration of phase 2 | NOT STARTED | |
+| WP-P2-0 phase-2 binary size + L1 overlay proof (no card) | DONE (2026-09-30) | 128,636 B base / 126,492 B LIBERO <= 131,072 (p2/results/mock36.json; verify_p2_r0 M_size_*.json) |
+| WP-P2-1 VLM layer prototype (go / no-go on timing) | DONE: GO (1.612 ms <= 2.20) | PCC 0.99987 vs the ttnn layer (p2/gates/results/L_layer_vs_ttnn.json, p2/results/b41.json) |
+| WP-P2-2 SigLIP layer prototype | DONE: GO (353.6 us <= 355) | PCC 0.99992 vs the ttnn layer; host-clock 353.1 us (verify_p2_r0 L_base.json) |
+| WP-P2-3 whole prefix in-kernel (SigLIP + projector + embed + VLM -> KV) | DONE on the 2026-10-01 amended clause | stack 37.3 / 35.7 ms; K/V closer to fp32 than the ttnn caches 36 / 36 per shape (P23_*.json), 288 / 288 (verify_p2_r0 G_gates_r1.json) |
+| WP-P2-4 whole `sample_actions` as one program + all gates | DONE 2026-10-01 (accepted on the amended gates) | JOURNAL "PHASE-2 EXIT GATE TABLE" and "verify-p2-r0" |
+| WP-P2-5 server integration of phase 2 | DONE (served 55.7 ms vs expert 70.9) | p2/gates/results/S_*.json |
+| integrate-p2: `whole` as the DEFAULT path (`expert` / `off` = comparators), gate re-run on the final commit, LIBERO closed loop | see JOURNAL "integrate-p2" | `integrate_p2/results/` |
 
 ## 1. Inputs and hard limits
 
@@ -504,7 +505,10 @@ SigLIP/VLM ops keep their time under the 64 KiB cut (WP-P1-0 measures it).
   integrate-p1 task made `expert` the default (`FusedConfig`, the server, the package serve env) and kept `off` (the
   previous shipped path) only as the comparator. It is always described as "the phase-1 expert megakernel" with the
   prefix labelled as traced stock ops, never as "the megakernel" of the whole model. Phase 2 stays the deliverable;
-  on its exit the default becomes `whole`. The UNSET default resolves to `off` on a multi-chip mesh
+  on its exit the default becomes `whole`. **Amended 2026-10-01 (integrate-p2)**: phase 2 was accepted on the amended
+  gates and the user ruled (2026-10-01, binding) that `PI05_MEGAKERNEL=whole` becomes the DEFAULT (`FusedConfig`, the
+  server, the package serve env); `expert` (phase 1) and `off` (the previous shipped path) stay selectable only as
+  comparator knobs. The UNSET default resolves to `off` on a multi-chip mesh
   (`FusedConfig.resolved`); an explicit `expert` there refuses. Refusal (d) is implemented
   (`PI0ModelTTNN.megakernel_device_refusal`, checked at the start of `__init__`; device evidence
   `integrate_p1/results/NOCUT.json`).
@@ -737,7 +741,7 @@ footprint of the largest kernel group incl. runtime args and CB-id config.
 | P2-0 | phase-2 binary (primitive interpreter) mock-compiled; L1 overlay descriptor built on the host | compute group <= 128 KB; the multi-format aliasing used by the overlay is accepted by the program build and a tiny kernel reads/writes through two aliases correctly; union of CB ids <= 64; L1 plan <= the P1-0-measured free L1 per core | ~10 min |
 | P2-1 | one VLM layer in-kernel (736 rows, real weights) | PCC >= 0.9995 vs the ttnn layer (same run); **time <= 2.20 ms (go); 2.20-2.44 ms: report and ask; > 2.44 ms (slower than TTNN): stop, needs_user** | ~30 min |
 | P2-2 | one SigLIP layer in-kernel | PCC >= 0.9995 and rel-L2 as in P1-3; time <= 355 us (go); > 394.7 us: stop, needs_user | ~30 min |
-| P2-3 | whole prefix in-kernel -> resident KV (rows 0..P-1 only) | per-layer K/V vs the ttnn caches PCC >= 0.999 and rel-L2 recorded; stack time < 52.42 ms base and < 48.72 ms LIBERO | ~30 min |
+| P2-3 | whole prefix in-kernel -> resident KV (rows 0..P-1 only) | ~~per-layer K/V vs the ttnn caches PCC >= 0.999~~ -- REPLACED 2026-10-01 by the user: **per layer, K/V at least as close to the fp32 host decomposition as the ttnn caches, at both shapes** (see the amendment below); rel-L2 recorded; stack time < 52.42 ms base and < 48.72 ms LIBERO | ~30 min |
 | P2-4 | whole `sample_actions` as one program, `PI05_MEGAKERNEL=whole` | **the phase-2 exit gates below** | several holds |
 | P2-5 | server with `PI05_MEGAKERNEL=whole` (the new default) | as P1-6, with served median < the P1-6 served median; /info reports `whole` | ~20 min |
 
@@ -768,6 +772,14 @@ footprint of the largest kernel group incl. runtime args and CB-id config.
   Phase 1 was accepted on this amended gate (option (a)): megakernel closer to the oracle on 20/20 seeds, mean 0.99980 /
   min 0.99942 vs shipped 0.99649 / 0.98784 (verify_p1_r0/results/O_verifier.json). Every other gate in this section
   stands unchanged.
+- **Gate amendment (user decision 2026-10-01, binding).** WP-P2-3's clause "per-layer K/V vs the ttnn (shipped) caches
+  PCC >= 0.999" is REPLACED by: **per layer, K/V at least as close to the fp32 host decomposition as the ttnn caches, at
+  both shapes**. Reason: the old clause measured the shipped path's own error -- the ttnn caches themselves are only
+  0.9656 (base) / 0.9612 (LIBERO) PCC from the fp32 host decomposition, so no more accurate prefix could meet it. Measured
+  by the implementer: the engine is closer on 36 / 36 (layer, K / V) at both shapes, engine min PCC 0.9954 / 0.9945 vs
+  ttnn 0.9656 / 0.9612 (p2/gates/results/P23_{base,libero}.json); re-measured by verify-p2-r0 against the fp32 whole-model
+  reference's own VLM cache on 8 inputs per shape: 288 / 288 per shape (verify_p2_r0/results/G_gates_r1.json). In the
+  same ruling `PI05_MEGAKERNEL=whole` became the default (§4.12). All other phase-2 gates stand.
 - **Speed**: *phase 1* expert-loop device time **< 31.26 ms base and < 27.85 ms LIBERO**, whole-call latency **< 84.2 ms
   base and < 76.77 ms LIBERO**; *phase 2* whole-call latency **< phase 1's at base and at LIBERO** (same shape, arms
   alternated across processes in one session, 30 calls each, difference larger than 2 x the MAD-based standard error of
@@ -894,7 +906,7 @@ fp32 residual streams (SigLIP and VLM) instead of bf16 / bf8; ~~LN / RMS statist
 failed 4 of 22 seeds of the amended gate), SigLIP HiFi2; q scale folded into the RoPE tables (VLM, exact 1/16) and into
 Wq / bq (SigLIP, before the bfp8 rounding).
 ### 11.3 Gates
-Unchanged (§7 with the 2026-09-30 amendment). WP-P2-1's comparison "vs the ttnn layer (same run)" is run on real
+§7 with the 2026-09-30 amendment (phase 2: per seed vs the fp32 whole-model reference) and the 2026-10-01 amendment (P2-3 K/V vs fp32, not vs the ttnn caches). WP-P2-1's comparison "vs the ttnn layer (same run)" is run on real
 activations; per-op checks against the host decomposition on the device's own inputs are recorded in addition.
 
 ### 11.4 Revisions after the first end-to-end build (2026-09-30 21:30 - 23:40; JOURNAL.md has every number)
