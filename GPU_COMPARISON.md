@@ -40,13 +40,13 @@ Reading: the p150a (56.0 ms) is faster than every eager GPU row (bf16 weights re
 the stage-wise compiled rows (best 59.97 ms: ratio 0.93); the GPU's single whole-request compiled graph (46.6 ms) is
 1.20x faster than the p150a. p150a power was not measured, so no efficiency comparison is made.
 
-## Update 2026-09-29: the p150a side re-measured (current image)
+## Update 2026-09-29: the p150a side re-measured (image `672900e23919`, superseded)
 
-The p150a now serves the fixed fused graph (openpi padding mask and action-token positions) on tt-metal `main` @ `668c2907575`. Its numbers were re-measured on 2026-09-29 by serving the container `changh95/pi05-base-p150` (image `tt-model/pi05-base-p150`, 100 warm requests of the card's request after 5 warm-ups, served shape 2 × 224² + 224 tokens, H = 50, 10 steps): `timing_ms.inference` median **84.0 ms** (p10 83.8, p90 84.2), `timing_ms.total` **85.3 ms** (p90 85.7), preprocess 1.27 ms, client wall 86.9 ms. The in-process trace replay alone (`execute_trace`, host wall, median of 60) is 82.8 ms. **The GPU numbers are not re-measured**: they are the 2026-09-14 runs below, of the torch reference as it was then (before the mask / RoPE fix; the fix changes the attention mask and the RoPE positions, the tensor shapes are unchanged; the GPU cost of the fixed reference was not measured). Ratio = p150a ms / GPU ms (> 1 means the GPU is faster).
+The p150a now serves the fixed fused graph (openpi padding mask and action-token positions) on tt-metal `main` @ `668c2907575`. Its numbers were re-measured on 2026-09-29 by serving the container `changh95/pi05-base-p150` (image `tt-model/pi05-base-p150`, 100 warm requests of the card's request after 5 warm-ups, served shape 2 × 224² + 224 tokens, H = 50, 10 steps): `timing_ms.inference` median **84.05 ms** (p10 83.88, p90 84.26), `timing_ms.total` **85.30 ms** (p90 85.61), preprocess 1.25 ms, client wall 86.75 ms (cycle 2 of the bench of the shipped image `672900e23919`; until 2026-10-01 this line quoted cycle 1 of the first, unshipped build: 84.0 / 85.3 / 86.9 ms). The in-process trace replay alone (`execute_trace`, host wall, median of 60) is 82.8 ms. **The GPU numbers are not re-measured**: they are the 2026-09-14 runs below, of the torch reference as it was then (before the mask / RoPE fix; the fix changes the attention mask and the RoPE positions, the tensor shapes are unchanged; the GPU cost of the fixed reference was not measured). Ratio = p150a ms / GPU ms (> 1 means the GPU is faster).
 
 | row | p150a ms | GPU setting | GPU ms (2026-09-14) | ratio p150a/GPU |
 |---|---:|---|---:|---:|
-| device forward (p150a `timing_ms.inference` vs GPU incl_h2d) | 84.0 | fp32 strict | 144.066 | **0.58** |
+| device forward (p150a `timing_ms.inference` vs GPU incl_h2d) | 84.05 | fp32 strict | 144.066 | **0.58** |
 |  |  | tf32 | 108.693 | **0.77** |
 |  |  | bf16 autocast (fp32 weights) | 121.476 | **0.69** |
 |  |  | fp16 autocast (fp32 weights) | 123.674 | **0.68** |
@@ -62,12 +62,12 @@ The p150a now serves the fixed fused graph (openpi padding mask and action-token
 |  |  | fp16 autocast | 126.91 | 0.65 |
 |  |  | bf16 weights resident (eager) | 99.78 | 0.83 |
 |  |  | bf16 weights resident + whole-request `torch.compile` default | 46.39 | 1.78 |
-| served e2e (p150a `timing_ms.total` vs GPU served-like) | 85.3 | fp32 strict | 156.514 | **0.54** |
+| served e2e (p150a `timing_ms.total` vs GPU served-like) | 85.30 | fp32 strict | 156.514 | **0.54** |
 |  |  | tf32 | 110.221 | **0.77** |
 |  |  | bf16 autocast (fp32 weights) | 122.868 | **0.69** |
 |  |  | bf16 weights resident (eager) | 101.484 | **0.84** |
 
-Reading: the p150a (84.0 ms) is now faster than every eager GPU row, including bf16 weights resident (99.9 ms, ratio 0.84); with bf16 weights and a compiled whole-request graph the GPU reaches 46.6 ms (1.80x the p150a). p150a power was not measured, so no efficiency comparison is made.
+Reading: the p150a (84.05 ms) was faster than every eager GPU row, including bf16 weights resident (99.9 ms, ratio 0.84); with bf16 weights and a compiled whole-request graph the GPU reaches 46.6 ms (1.80x the p150a). p150a power was not measured, so no efficiency comparison is made.
 
 The rest of this file is the 2026-09-14 pass as recorded, against the previous p150a image (125.84 ms, tt-metal fork `changh95/pi05` @ `4c9fbfcceb9`, before the fix). Its references to `DEVICE_VALIDATION.md` now point at `docs/history/DEVICE_VALIDATION_2026-09-13.md` in the port repo.
 

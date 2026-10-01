@@ -8,7 +8,8 @@ action in / out projections and the Euler updates -- runs as ONE persistent `ttn
 cores, `tt/megakernel/`), captured in a Metal trace whose replay holds exactly that one device op. The host does only
 input / output formatting (image normalisation, im2col, tokenisation, mask / RoPE rows, noise, copies, readback).
 `PI05_MEGAKERNEL=expert` (traced stock-op prefix + the expert loop as one op) and `PI05_MEGAKERNEL=off` (the earlier
-traced stock-op graph) are kept only as comparator knobs.
+traced graph: stock TT-NN ops plus the 3 custom programs fused attention, row_rsqrt and geglu_rc) are kept only
+as comparator knobs.
 
 Attention follows openpi: right-padded prompt tokens are masked out of every query
 (`lang_masks=None` means `tokens != 0`), and the action tokens are rotated at positions

@@ -425,7 +425,8 @@ tt/ + common/ source = ALL 403253dd516ba74bd937e6ac4a329009 at the start and end
   (model_built_without_cut False, error names the cut); with the cut, no refusal.
 - A/B arms differ: the default cache compiled mk_brisc / mk_ncrisc / mk_trisc and not the off path's compute / reader / writer /
   dm_in0_sender / dm_in1_sender_out; the off cache no mk_* (kernels_{default,off}.txt).
-- Structural (tracy, S_struct.json): default 21 replay sessions per shape, 892 ops each, 36 UpdateKVCache, exactly 1 op after
+- Structural (tracy, integrate_p1/results/S_struct.json; until 2026-10-01 misfiled under hold4_serve_invalid/, moved by
+  publish-p2): default 21 replay sessions per shape, 892 ops each, 36 UpdateKVCache, exactly 1 op after
   the last one = GenericOp on 110 cores (mk_trisc / mk_brisc + mk_ncrisc), one program hash per shape, no missing durations.
   Megakernel kernel time median 17.490 ms base (17.448-17.521), 16.071 ms LIBERO (16.046-16.128). Off: 2551 ops, 1660 after the
   last cache write, post-cache device sum 30.31 / 26.83 ms. The 891-op prefix sequence is identical in both arms (both shapes).
@@ -925,3 +926,24 @@ Open (unchanged, not gates): seed 707 is the one of 32 seeds where expert is clo
 0.99522; whole still closer than off); the SigLIP layer's host-clock margin under the 355 us go line is small (354.2 us
 base here, 353.1 in verify-p2-r0); under whole the per-request copies to the unused ttnn prefix inputs (im2col / tokens)
 still happen (host-side, small); the ttnn prefix modules are built and hold device DRAM though never enqueued.
+
+## 2026-10-01 13:05:37 KST -- publish-p2: Ship phase 2, the whole-model megakernel (session start)
+
+Branch HEAD 54da605 (integrate-p2 end). models/ diff 0f19387..54da605: package README only (kernels and Python unchanged
+since the gate re-run; kernel_digest2 4aa02cdf21ed0c94). Plan: GitHub doc fixes of NOTES_FOR_SHIP_P2.md (items 1-5),
+push, PR, merge commit (trailer in the merge body); staging package = git archive of the merge's models/, tt-model.yaml
+serve.env PI05_MEGAKERNEL=whole + PI05_SOURCE_COMMIT = merge sha, verify: lines for kernels_p2 + kernel_digest2 + the 23-source
+include check; package ONCE on publish/tt-metal-668c2907575; boot + smoke + 100-request bench (2 cycles) via with-device.sh;
+ONE HF create_commit (parent pinned cf08fb95); verify (sha256, code/ vs GitHub main, image pull-back, video).
+NOTES items applied to the GitHub docs in this session:
+- 1 (replay "median of 60"): no phase-1/2 occurrence left in the GitHub docs; GPU_COMPARISON's 09-29 "median of 60" is correct
+  (docs/fused_fix_2026-09-29/fix2_base.json latency.runs = 60).
+- 2 (profiler basis): README "device time per replay" row now names the basis per path: whole median of 21 replays,
+  expert / off median of 3 / 2 profiled replay sessions (integrate_p2/results/S_struct.json n_sessions).
+- 3 ("off" = all stock): README (comparator section, knob table) and the package README now say stock TT-NN ops plus the
+  3 custom programs (fused attention, row_rsqrt, geglu_rc).
+- 4: integrate_p1/results/hold4_serve_invalid/S_struct.json moved (git mv) to integrate_p1/results/S_struct.json; the
+  integrate-p1 JOURNAL citation names the new path.
+- 5: GPU_COMPARISON 09-29 section quoted cycle 1 of the FIRST, unshipped build (image ca3d23378236: 84.0 / 85.3 / 86.9 ms,
+  scratchpad pub/logs/bench-c1-r0-*); now cycle 2 of the shipped image 672900e23919 (bench-c2-r1-20260929-165458.json:
+  84.05 / 85.30, p10 83.88, p90 84.26, client 86.75); ratios unchanged at 2 decimals.

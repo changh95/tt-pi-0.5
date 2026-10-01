@@ -16,7 +16,7 @@ Metal trace whose replay holds exactly that one op ([`docs/megakernel/`](docs/me
 | image resize / normalisation, im2col of the patches, prompt building and tokenisation, the mask / RoPE rows, the initial noise, the host->device copies of these inputs, the readback | host (input / output formatting; no learned parameter, no model arithmetic) | 0 |
 | SigLIP on both cameras (patch embedding + 27 layers + post-LN), the projector, the language embedding, the Gemma-2B VLM prefill (18 layers) writing 18 bf8 K / V caches, the action in-projection, 10 Euler steps x 18 Gemma-300M expert layers (adaRMS, GQA attention over the prefix K/V with the padding mask and the offset RoPE, GeGLU MLP, gated residuals), the action out-projection | **ONE persistent `ttnn.generic_op`**: `tt/megakernel/pe_program.py` (`WholeMegakernel`) with the kernels `tt/megakernel/kernels_p2/whole_{brisc,ncrisc,trisc}.cpp` (the prefix engine `pe_*.hpp` + the expert loop `kernels/mk_*`), weights streamed from per-core DRAM arenas, activations DRAM-staged between the prefix's 314 in-kernel ops and L1-resident in the expert loop | **1** |
 
-No part of the default path is a stock TT-NN op on the device. The traced stock-op path still exists only behind
+No part of the default path is a stock TT-NN op on the device. The traced TT-NN paths still exist only behind
 the comparator knobs:
 
 | `PI05_MEGAKERNEL` | What runs | Device ops per replay | Role |
@@ -55,7 +55,7 @@ phase-2 exit gates and their independent verification are in the same journal ("
 |---|---:|---:|---:|
 | device ops per trace replay (tracy, per replay session) | **1** (GenericOp, 110 cores; 21 / 21 sessions per shape) | 892 (891 stock + 1 GenericOp) | 2,551 |
 | device ops a request issues outside the trace (9 requests, prompt lengths 1 / 128 / 224) | **0** | | |
-| device time per replay, served shape (profiler; `whole`: the op's duration, median of 21 replays; `expert` / `off`: sum of the ops' durations, median of the profiled replay sessions) | **53.94 ms** | 69.49 ms | 82.30 ms |
+| device time per replay, served shape (profiler; `whole`: the op's duration, median of 21 replays; `expert` / `off`: sum of the ops' durations, median of 3 / 2 profiled replay sessions) | **53.94 ms** | 69.49 ms | 82.30 ms |
 | device time per replay, LIBERO shape | **51.26 ms** | 64.34 ms | 75.10 ms |
 
 Inside the one op (host-clock marginals inside the real model, `L_*.json`): a SigLIP layer 354.2 us (served) /
@@ -136,7 +136,8 @@ weights except the VLM qkv and the expert o / down projections (bf16), SigLIP / 
 accumulation, fp32 residual streams, bf16 activations between ops, bfp8 K / V caches; the expert loop keeps phase 1's
 fidelities (DESIGN.md §4.10). DESIGN.md §11.2 / §11.4 list every choice and the arms that measured it.
 
-The rest of this section describes the traced stock-op graph that the comparator knobs (`expert` for its prefix,
+The rest of this section describes the traced TT-NN graph (stock TT-NN ops plus the three custom `generic_op` programs
+of `tt/ttnn_fused_attn.py` / `tt/ttnn_fused_norm.py`) that the comparator knobs (`expert` for its stock-op prefix,
 `off` for everything) still run; it is not on the default path.
 
 The knobs are read once when `PI0ModelTTNN` is built (`FusedConfig.from_env()` in
@@ -158,11 +159,11 @@ The knobs are read once when `PI0ModelTTNN` is built (`FusedConfig.from_env()` i
 
 Knobs (the defaults are the validated recipe; each is described in the module docstring of
 `common/fused_config.py`). Under `whole` only `PI05_MEGAKERNEL`, `PI05_TRACE` and `PI05_TRACE_REGION_SIZE` affect the
-device computation; the others configure the stock-op graph of the comparator knobs:
+device computation; the others configure the traced TT-NN graph of the comparator knobs:
 
 | Env | Default | Meaning |
 |-----|---------|---------|
-| `PI05_MEGAKERNEL` | `whole` | `whole` = the whole model as ONE persistent generic_op per call (the served path); `expert` = phase 1, only the expert loop is one generic_op, the prefix is traced stock ops (comparator only); `off` = the previous stock-op path (comparator only) |
+| `PI05_MEGAKERNEL` | `whole` | `whole` = the whole model as ONE persistent generic_op per call (the served path); `expert` = phase 1, only the expert loop is one generic_op, the prefix is traced stock ops (comparator only); `off` = the previous path: stock TT-NN ops plus the 3 custom programs (fused attention, row_rsqrt, geglu_rc), 1,660 ops after the last K/V-cache write (comparator only) |
 | `PI05_TRACE` | `1` | capture the graph in one Metal trace and replay it; `0` runs the same graph eagerly (debug / A/B) |
 | `PI05_TRACE_REGION_SIZE` | 160 MB | `trace_region_size` passed to `ttnn.open_device` |
 | `PI05_EXPERT_ATTN` | `fused` | `fused` = the generic_op attention; `ttnn` = SDPA ops (one prompt length per batch) |
