@@ -1,0 +1,27 @@
+{
+ "n_rows": 2174,
+ "n_replay_sessions": 14,
+ "trace_ids": [
+  "0"
+ ],
+ "programs_per_session": [
+  [
+   1,
+   14
+  ]
+ ],
+ "session_core_counts": [
+  "110"
+ ],
+ "session_global_call_counts": [
+  "2212864"
+ ],
+ "non_session_rows_total": 2160,
+ "non_session_rows_after_first_replay": 0,
+ "device_kernel_ms_per_replay": {
+  "median": 53.960303499999995,
+  "min": 53.900973,
+  "max": 54.067905,
+  "n": 14
+ }
+}

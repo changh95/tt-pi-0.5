@@ -1,0 +1,17 @@
+2026-10-01T04:39:27.962515852Z 2026-10-01 04:39:27,962 INFO pi05.server: Opening device {'device_id': 0, 'l1_small_size': 24576, 'trace_region_size': 160000000, 'worker_l1_size': 1395712} fused={'trac
+2026-10-01T04:40:32.685929543Z /opt/tt-metal/runtime/sfpi/compiler/bin/riscv-tt-elf-g++ -O2 -std=c++17 -ftt-nttp -ftt-constinit -ftt-consteval -ftt-no-dyninit -flto=1 -flto-partition=one -ffast-math -
+2026-10-01T04:40:32.758515107Z /opt/tt-metal/runtime/sfpi/compiler/bin/riscv-tt-elf-g++ -O2 -std=c++17 -ftt-nttp -ftt-constinit -ftt-consteval -ftt-no-dyninit -flto=1 -flto-partition=one -ffast-math -
+2026-10-01T04:40:32.884361238Z /opt/tt-metal/runtime/sfpi/compiler/bin/riscv-tt-elf-g++ -O3 -std=c++17 -ftt-nttp -ftt-constinit -ftt-consteval -ftt-no-dyninit -flto=1 -flto-partition=one -ffast-math -
+2026-10-01T04:40:32.884381506Z                  from /opt/tt-metal/models/experimental/pi0_5/tt/megakernel/kernels_p2/../kernels/mk_trisc.cpp:22,
+2026-10-01T04:40:32.884383019Z                  from /opt/tt-metal/models/experimental/pi0_5/tt/megakernel/kernels_p2/whole_trisc.cpp:9,
+2026-10-01T04:40:32.919565138Z /opt/tt-metal/runtime/sfpi/compiler/bin/riscv-tt-elf-g++ -O3 -std=c++17 -ftt-nttp -ftt-constinit -ftt-consteval -ftt-no-dyninit -flto=1 -flto-partition=one -ffast-math -
+2026-10-01T04:40:32.919579965Z                  from /opt/tt-metal/models/experimental/pi0_5/tt/megakernel/kernels_p2/../kernels/mk_trisc.cpp:22,
+2026-10-01T04:40:32.919581208Z                  from /opt/tt-metal/models/experimental/pi0_5/tt/megakernel/kernels_p2/whole_trisc.cpp:9,
+2026-10-01T04:40:33.161882401Z /opt/tt-metal/runtime/sfpi/compiler/bin/riscv-tt-elf-g++ -O3 -std=c++17 -ftt-nttp -ftt-constinit -ftt-consteval -ftt-no-dyninit -flto=1 -flto-partition=one -ffast-math -
+2026-10-01T04:40:34.339013314Z 2026-10-01 04:40:34,338 INFO pi05.server: Warmup 1/2: 23719.1 ms
+2026-10-01T04:40:34.394871975Z 2026-10-01 04:40:34,394 INFO pi05.server: Warmup 2/2: 55.9 ms
+2026-10-01T04:40:34.394915868Z 2026-10-01 04:40:34,394 INFO pi05.server: Warmup complete (first 23719.1 ms, steady 55.9 ms) -- fused graph traced
+2026-10-01T04:40:37.277794225Z 2026-10-01 04:40:37,277 INFO pi05.server: Closing device
+2026-10-01T04:40:39.495528578Z 2026-10-01 04:40:39.495 | info     |          Device | Closing user mode device drivers (tt_cluster.cpp:550)
+2026-10-01T04:40:39.495556230Z 2026-10-01 04:40:39.495 | info     |             UMD | Closing devices in cluster (cluster.cpp:1302)
+2026-10-01T04:40:39.659156077Z 2026-10-01 04:40:39.659 | info     |             UMD | Closing devices in cluster completed. (cluster.cpp:1311)

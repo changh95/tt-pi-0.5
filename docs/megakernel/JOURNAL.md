@@ -1020,3 +1020,16 @@ Files: docs/megakernel/shipcheck_p2/ (serve_check.sh, serve_check.log, info.json
   stage is called a megakernel. Only "megakernel" tokens in the 09-14 GPU section are historical file paths (reports/megakernel/...,
   logs/publish-megakernel/...) in a section marked "as recorded". Wording note (not a number error): "same benchmark cycle" for the
   previous image means cycle 2 of its own 09-30 validation, not the same session.
+
+## 2026-10-01 13:43:40 KST -- final-critic: completeness check + REPORT.md
+
+Files: docs/megakernel/final_critic/ (prof_hold.sh, mkrun.py, analyze.py, pw_fc.py, hold.log, FC_prof_pulled.json,
+cpp_device_perf_report.csv.gz, requests.json, info_*.json, video_frame.png). Report: docs/megakernel/REPORT.md.
+- Pulled image 6fb244df57ff served unmodified under the device profiler (container spec copied from tt-model serve's
+  container; private TT_METAL_CACHE; one hold 13:38:15-13:41:25, WITH_DEVICE_RESET_AFTER=1, reset exit 0; the guard's
+  "probe hung/failed" wording on the RESET line is its fixed message for the after-job reset, rc=0): 14 replay sessions
+  (2 warm-up + 12 HTTP requests, 3 prompts) x exactly 1 program on 110 cores, one program id, 0 device programs after the
+  first replay outside the trace; device kernel median 53.96 ms (53.90-54.07; S_struct 53.94). Actions identical per prompt.
+- Card numbers, LIBERO (recomputed from tt_spatial.jsonl: 99/100, 49/50, all whole + digest), HF video in headless
+  Chromium (plays, t 16.0 s / 29.13, frame shows the whole-model caption), stale-claim grep, NOTES items 1-5: all hold.
+- No new open problems; the carried list is in REPORT.md.
