@@ -1,0 +1,31 @@
+[13:31:54] serve
+✓ weights lerobot/pi05_base@b211f3d4  
+  ✓ host ready  docker 28.5.2 (rootless) · tt devices · hugepages
+  ✓ image tt-model/pi05-base-p150:6fb244df57ff
+  ✓ container started
+  ✓ server process started  1.6s
+  ✓ pipeline warmed up  52.9s
+  ✓ changh95/pi05-base-p150 ready  56.9s
+[13:32:52] info
+INFO 821e8c528dfffa0d1d6e73ad6abf181a749b39d9 backend whole 4aa02cdf21ed0c94
+/opt/tt-metal/models/__init__.py
+/opt/tt-metal/models/experimental/__init__.py
+PI05_MODEL_NAME=pi05-base-p150
+PI05_MEGAKERNEL=whole
+PI05_NUM_IMAGES=2
+PI05_NUM_STEPS=10
+PI05_TOKENIZER_REQUIRED=1
+PI05_TOKEN_LEN=224
+PI05_SOURCE_COMMIT=821e8c528dfffa0d1d6e73ad6abf181a749b39d9
+[13:32:52] smoke
+info: num_images=2 token_len=224 tokenizer=True weights={'repo': 'lerobot/pi05_base', 'revision': 'b211f3d44c36b6acfcf7ae94a64e8e96f75a64ba', 'snapshot_dir': '/hf/hub/models--lerobot--pi05_base/snapshots/b211f3d44c36b6acfcf7ae94a64e8e96f75a64ba'} warmup_ms={'first': 21581.0, 'last': 55.8}
+PASS pi05 actions=(50,32) max|a|=0.262 std=0.071 repeat_maxdiff=0.0000 change_maxdiff=0.8423 inference_ms=60.34/55.83 tokens=143/224 truncated=False
+[13:32:52] bench
+BENCH n 30 median 55.870000000000005 min 55.61 max 56.39 identical True head [-0.07080078125, -0.1552734375, 0.296875, 0.1005859375]
+[13:32:54] stop
+✓ stopping tt-model-pi05-base-p150-default  clean shutdown  2.7s
+  ✓ stopped 1 container(s)
+[trap] device users: []
+2026-10-01_13:32:57 [device-guard pid=1504614] RESET AFTER JOB (WITH_DEVICE_RESET_AFTER=1, rc=0): timeout 1200 bash /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/shipcheck2/serve_check.sh
+2026-10-01_13:32:57 [device-guard pid=1504614] RESET: tt-smi -r 0 (probe hung/failed with no other device users)
+2026-10-01_13:33:38 [device-guard pid=1504614] reset exit=0

@@ -995,3 +995,28 @@ Files: docs/megakernel/publish_p2/{scripts,results}/ (copies of scratchpad/pub2)
   HF history at 9f6b082b / cf08fb95). build/pi05-base-p150 was overwritten by the new package. 16 GB free after.
 Open (unchanged, not gates): seed 707 (expert closer than whole: 0.99769 vs 0.99522); SigLIP layer host-clock margin under
 355 us is small (354.2 us); the GitHub README quotes the in-process served A/B (55.97 ms), the HF card the image bench (55.84 ms).
+
+## 2026-10-01 13:35:15 KST -- shipcheck-p2: independent check of the p2 release (HF 990e22b5, GitHub main 821e8c5)
+
+Files: docs/megakernel/shipcheck_p2/ (serve_check.sh, serve_check.log, info.json). Result: all checks hold, no discrepancy.
+- GitHub main (fresh clone) = 821e8c5; HF snapshot @ 990e22b5 code/models vs clone models: identical except HF-only
+  models/common/lightweightmodule.py (tt-metal file, expected).
+- Image: removed local tt-model/pi05-base-p150:6fb244df57ff (13:29), tt-model pull re-loaded image id sha256:6fb244df57ff8d20...
+  (= recorded digest). /opt/tt-metal/models/experimental/pi0_5 + models/common copied out of the pulled image: identical to HF code/.
+- Served the pulled package (with-device, WITH_DEVICE_RESET_AFTER=1, timeout 1200, 13:31-13:33, reset exit 0): /info backend
+  whole, kernel_digest 4aa02cdf21ed0c94, source 821e8c5; env PI05_MEGAKERNEL=whole; HF code/ smoke_test PASS; 30 warm requests
+  (after 5) inference median 55.87 ms (55.61-56.39), identical actions, head [-0.0708,-0.1553,0.2969,0.1006] = card example.
+- Card numbers re-read from files: bench-c2 55.84/p90 56.13/57.13/58.52; previous image publish_p1 bench-c2 70.81/72.16; replay
+  A_*_base_r1 54.10/69.56/82.82; S_struct 53.94 (21) / 69.49 (892 ops, 3) / 82.30 (2551, 2); golden A_*_libero_r1 0.999976/0.999955,
+  0.999884/0.999778, 0.999839/0.999712; G_gates_r1 seeds 32/32 vs off, 31/32 vs expert, means/mins match, seed 707 0.99522/0.99769/0.99175;
+  p23 288/288 both shapes, mins 0.99171/0.92868, 0.99905/0.99060; M_size_base 128,636 B (ring 136,192, gate 131,072); padding
+  g1 pad_ids_invisible_bit_identical; ALT_whole 20/20; soak 20/20 digest 886f7341c1085571; GPU ratios recomputed.
+- LIBERO recomputed from tt_spatial.jsonl (= the gr00t/libero_eval copy): 100 unique episodes, 99 success, 0 errors, fail t9/i4 at 230
+  steps; init 0-4 49/50; GPU ref_gpu_spatial.jsonl 50/50; server log 2,189 calls median 53.6 p10 53.3 p90 54.1 max 61.4; every
+  episode stamp megakernel=whole mk_digest 4aa02cdf21ed0c94; history rows (off 98/100 48/50 77.6, expert 99/100 49/50 66.4) match files.
+- Demo: the 5 HF mp4 + poster are byte-identical to libero_eval/pi05/megakernel-p2/demo; all decode fully with cv2 (h264 960x1080
+  30 fps; combined 874 frames = 29.13 s); resolve URLs return 200 (mp4 1,558,428 B). recorded_runs.jsonl: 4 runs, whole, success.
+- Stale-claim grep (card, SERVING, GPU_COMPARISON, demo README, GitHub README / GPU_COMPARISON / package README): no traced stock-op
+  stage is called a megakernel. Only "megakernel" tokens in the 09-14 GPU section are historical file paths (reports/megakernel/...,
+  logs/publish-megakernel/...) in a section marked "as recorded". Wording note (not a number error): "same benchmark cycle" for the
+  previous image means cycle 2 of its own 09-30 validation, not the same session.
