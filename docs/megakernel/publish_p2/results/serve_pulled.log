@@ -1,0 +1,16 @@
+✓ weights lerobot/pi05_base@b211f3d4  
+  ✓ host ready  docker 28.5.2 (rootless) · tt devices · hugepages
+  ✓ image tt-model/pi05-base-p150:6fb244df57ff
+  ✓ container started
+  ✓ server process started  1.7s
+  ✓ pipeline warmed up  51.2s
+  ✓ changh95/pi05-base-p150 ready  55.1s
+info pi05-base-p150 821e8c528dfffa0d1d6e73ad6abf181a749b39d9 b211f3d44c36b6acfcf7ae94a64e8e96f75a64ba megakernel whole 4aa02cdf21ed0c94
+PASS pi05 actions=(50,32) max|a|=0.262 std=0.071 repeat_maxdiff=0.0000 change_maxdiff=0.8423 inference_ms=60.37/56.02 tokens=143/224 truncated=False
+BENCH {"preprocess": {"median": 1.33, "p10": 1.25, "p90": 1.55, "min": 1.24, "max": 2.01}, "inference": {"median": 56.06, "p10": 55.79, "p90": 56.33, "min": 55.62, "max": 56.55}, "total": {"median": 57.41, "p10": 57.12, "p90": 57.75, "min": 56.96, "max": 58.35}, "client_wall": {"median": 58.9, "p10": 58.43, "p90": 59.57, "min": 58.27, "max": 60.25}}
+✓ stopping tt-model-pi05-base-p150-default  clean shutdown  2.8s
+  ✓ stopped 1 container(s)
+[trap] device users: []
+2026-10-01_13:24:48 [device-guard pid=1496976] RESET AFTER JOB (WITH_DEVICE_RESET_AFTER=1, rc=0): timeout 1200 bash /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/pub2/serve_pulled.sh
+2026-10-01_13:24:48 [device-guard pid=1496976] RESET: tt-smi -r 0 (probe hung/failed with no other device users)
+2026-10-01_13:25:29 [device-guard pid=1496976] reset exit=0

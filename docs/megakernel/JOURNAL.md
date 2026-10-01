@@ -947,3 +947,51 @@ NOTES items applied to the GitHub docs in this session:
 - 5: GPU_COMPARISON 09-29 section quoted cycle 1 of the FIRST, unshipped build (image ca3d23378236: 84.0 / 85.3 / 86.9 ms,
   scratchpad pub/logs/bench-c1-r0-*); now cycle 2 of the shipped image 672900e23919 (bench-c2-r1-20260929-165458.json:
   84.05 / 85.30, p10 83.88, p90 84.26, client 86.75); ratios unchanged at 2 decimals.
+
+## 2026-10-01 13:26:33 KST -- publish-p2: SHIPPED (session end)
+
+Files: docs/megakernel/publish_p2/{scripts,results}/ (copies of scratchpad/pub2).
+- GitHub: docs commit 23fc3dd (the NOTES_FOR_SHIP_P2 items, see the session-start entry), branch pushed, PR #3
+  (https://github.com/changh95/tt-pi-0.5/pull/3) merged with a merge commit: main = 821e8c528dfffa0d1d6e73ad6abf181a749b39d9
+  (parents f7f173b + 23fc3dd; the message ends with the Co-Authored-By trailer). The local branch was fast-forwarded to
+  821e8c5 and pushed; work continues on megakernel-2026-09-29.
+- Staging /home/deepgadget/experiments/tt-models/models/pi05-base-p150-fused: code/models = git archive 821e8c5 models (107
+  files, file list identical, no __pycache__). tt-model.yaml (scripts/yaml_edit.py): header comments describe the whole-model
+  op; serve.env PI05_MEGAKERNEL=whole (comment: expert / off are comparators, off = stock ops + 3 custom programs, 2,551
+  ops), PI05_SOURCE_COMMIT=821e8c5...; verify: pe_* imports + WholeMegakernel; FusedConfig default ({} and '') == whole,
+  expert / off selectable; kernels_p2 = exactly the nine files, KERNELS2 exist, 14 KERNEL_SOURCES2, kernel_digest2() ==
+  4aa02cdf21ed0c94 (phase-1 kernels line kept: 328761c8a1ce3fd9); include check over all 23 port C++ sources (69 quoted
+  includes) resolving to a sibling path (incl. ../kernels/mk_*.cpp) or tt_metal/hw/inc. Host-run on a fake /opt layout
+  (scripts/run_verify.py): all pass except the 3 server.app imports (fastapi not in the host venv); negative controls: a bogus
+  include appended to kernels_p2/pe_dm.hpp failed both the digest (f5517f40e1d88012) and the include check; removing
+  whole_ncrisc.cpp failed the file-list and include-count lines.
+- Package (results/pkg-pi05-mkp2.log, buildkit log .gz): rc 0, 13:09-13:14, all verify lines ran in the image (#45 DONE).
+  Image tt-model/pi05-base-p150:6fb244df57ff, digest sha256:6fb244df57ff8d20da139e37a3cf1fb38a4d68d5381240e0dd64052e033b53b4,
+  tt_metal 668c2907 dirty=false, code_sha256 8016f1493a3ee10f...; build code/models == GitHub main models (+ lightweightmodule.py).
+- Boot validation (results/validate.log, one with-device hold 13:14:55-13:18:18, WITH_DEVICE_RESET_AFTER=1, reset exit 0):
+  cycle 1 cold (package cache removed; serve 75.9 s, first warm-up 23.6 s) and cycle 2 warm (57.2 s, 21.7 s). Both: /info
+  megakernel.backend whole, kernel_digest 4aa02cdf21ed0c94, source.commit 821e8c5; smoke_test PASS; 100 warm requests,
+  identical actions. timing_ms.inference median 56.08 (c1) / **55.84 ms (c2)**, p90 56.13; total 57.39 / 57.13; client wall
+  59.23 / 58.52 (results/bench-c{1,2}-mkp2-*.json). Card / GPU_COMPARISON use c2; previous image fe0d2e3d68a7 c2 = 70.81 / 72.16.
+- HF changh95/pi05-base-p150: ONE create_commit **990e22b54012d7a80055d9e9762676b3e49bdbe5**, parent pinned cf08fb95.
+  172 adds (code/ incl. the 24 new kernels_p2 / pe_* / test files, image/ OCI blobs, tt_kernel_manifest.json, README,
+  SERVING, GPU_COMPARISON, tt-model.yaml, requirements.lock (the image's own lock; package versions moved, e.g. fastapi
+  0.141.1 -> 0.142.2), demo/{README.md, libero_eval.json, 4 clips, combined mp4, poster}); 35 deletes (only superseded
+  image blobs); the demo file names are unchanged, so the old demo content was replaced in place. YAML front matter kept
+  (no outdated field). The card says what is the ONE persistent op and what the host does; every number comes from
+  bench-c2, integrate_p2/results (S_struct, A_*_r1, G_gates_r1, M_size_base), p2/gates/results/g1_pcc_whole_base.json
+  (padding), or the megakernel-p2 LIBERO files. NOTES items kept on the card: replay "median of 30", profiler basis per path
+  (21 sessions / 3 / 2), off = stock ops + 3 custom programs, previous-image figures from the same cycle (c2). SERVING.md: boot
+  times re-measured; its misordered tt-metal paragraph fixed.
+- Verify (results/hf_verify.log): 175 files in the tree, none missing / unexpected, deleted blobs gone. sha256: 157 files
+  downloaded + 15 LFS image blobs via lfs.sha256, 0 mismatches. code/: all 107 GitHub-main files (fresh clone at 821e8c5)
+  byte-identical (HF-only = tt-metal's common/lightweightmodule.py). Image pull-back (results/pull.log): removed the local
+  image, tt-model pull docker-loaded sha256:6fb244df57ff8d20da139e37a3cf1fb38a4d68d5381240e0dd64052e033b53b4 (= recorded
+  digest). Served the pulled package by repo id (results/serve_pulled.log, hold 13:2x, reset exit 0): /info whole,
+  4aa02cdf21ed0c94, source 821e8c5; smoke PASS; 30 warm requests inference median 56.06 ms. Headless Chromium
+  (results/pw_video.log): the README video played (readyState 4, t 3.99 s of 29.13 s = the new combined clip, no media
+  error; the replay.mp4 404 comes from the HF page itself, as on 09-30).
+- Disk: deleted the superseded docker image tt-model/pi05-base-p150:fe0d2e3d68a7 (3.02 GB, the 09-30 phase-1 image; still in
+  HF history at 9f6b082b / cf08fb95). build/pi05-base-p150 was overwritten by the new package. 16 GB free after.
+Open (unchanged, not gates): seed 707 (expert closer than whole: 0.99769 vs 0.99522); SigLIP layer host-clock margin under
+355 us is small (354.2 us); the GitHub README quotes the in-process served A/B (55.97 ms), the HF card the image bench (55.84 ms).

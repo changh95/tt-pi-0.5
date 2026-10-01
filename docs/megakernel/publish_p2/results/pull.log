@@ -1,0 +1,13 @@
+[13:21:53] rmi
+Untagged: tt-model/pi05-base-p150:6fb244df57ff
+Deleted: sha256:6fb244df57ff8d20da139e37a3cf1fb38a4d68d5381240e0dd64052e033b53b4
+no pi05 image left
+[13:21:53] pull
+docker load tt-model/pi05-base-p150:6fb244df57ff…
+Loaded image: tt-model/pi05-base-p150:6fb244df57ff
+✓ docker load tt-model/pi05-base-p150:6fb244df57ff  48.3s
+  ✓ pulled changh95/pi05-base-p150
+  → next:  tt-model serve changh95/pi05-base-p150
+rc=0
+tt-model/pi05-base-p150                                           6fb244df57ff   <none>                                                                    6fb244df57ff   9 minutes ago   3.02GB
+sha256:6fb244df57ff8d20da139e37a3cf1fb38a4d68d5381240e0dd64052e033b53b4

@@ -1,0 +1,139 @@
+{
+  "schema_version": "5.1",
+  "name": "pi05-base-p150",
+  "tt_metal_version": "0.65.2.dev10011",
+  "arch": "blackhole",
+  "device_count": 1,
+  "producer": {
+    "tt_kernel_version": "0.1.0",
+    "created_at": "2026-10-01T04:14:18.294058+00:00",
+    "hostname": "deepgadget"
+  },
+  "weights": {
+    "repo_id": "lerobot/pi05_base",
+    "revision": "b211f3d44c36b6acfcf7ae94a64e8e96f75a64ba",
+    "allow_patterns": [
+      "model.safetensors",
+      "config.json",
+      "policy_preprocessor.json",
+      "policy_postprocessor.json"
+    ],
+    "ignore_patterns": null,
+    "repo_type": "model"
+  },
+  "mesh": null,
+  "entrypoint": null,
+  "resources": null,
+  "capabilities": null,
+  "env": {},
+  "bundled": null,
+  "deps": null,
+  "container": {
+    "image": {
+      "registry": "hf",
+      "repository": "pi05-base-p150",
+      "tag": "tt-model/pi05-base-p150:6fb244df57ff",
+      "digest": "sha256:6fb244df57ff8d20da139e37a3cf1fb38a4d68d5381240e0dd64052e033b53b4"
+    },
+    "kind": "tt-dit-server",
+    "runtime": {
+      "app": "models.experimental.pi0_5.server.app:app",
+      "mesh_shape_env": "TT_MESH_SHAPE",
+      "packages": [
+        "numpy>=1.24.4,<2",
+        "safetensors",
+        "huggingface_hub",
+        "transformers==5.12.1",
+        "sentencepiece",
+        "protobuf"
+      ],
+      "lock": "requirements.lock"
+    },
+    "serve": {
+      "hardware": "p150",
+      "mesh_device": "P150",
+      "port": 20000,
+      "max_model_len": null,
+      "max_num_seqs": null,
+      "block_size": null,
+      "server_timeout": null,
+      "capabilities": null,
+      "additional_config": {},
+      "args": [],
+      "env": {
+        "TT_WEIGHTS_REVISION": "b211f3d44c36b6acfcf7ae94a64e8e96f75a64ba",
+        "TT_METAL_VISIBLE_DEVICES": "0",
+        "TT_DEVICE_ID": "0",
+        "PI05_NUM_IMAGES": "2",
+        "PI05_TOKEN_LEN": "224",
+        "PI05_NUM_STEPS": "10",
+        "PI05_TOKENIZER_REQUIRED": "1",
+        "PI05_MEGAKERNEL": "whole",
+        "PI05_MODEL_NAME": "pi05-base-p150",
+        "PI05_SOURCE_COMMIT": "821e8c528dfffa0d1d6e73ad6abf181a749b39d9"
+      }
+    },
+    "serve_profiles": [
+      {
+        "hardware": null,
+        "mesh_device": null,
+        "port": null,
+        "max_model_len": null,
+        "max_num_seqs": null,
+        "block_size": null,
+        "server_timeout": null,
+        "capabilities": null,
+        "additional_config": {},
+        "args": [],
+        "env": {},
+        "name": "default",
+        "description": null
+      }
+    ],
+    "default_profile": null,
+    "code_dir": "code",
+    "verify": [
+      "import models.experimental.pi0_5.server.app as a; assert a.app",
+      "import models.experimental.pi0_5.tt.ttnn_pi0_model as m; assert m.PI0ModelTTNN and hasattr(m.PI0ModelTTNN, 'sample_actions_fused') and not hasattr(m.PI0ModelTTNN, 'sample_actions_traced')",
+      "import models.experimental.pi0_5.common.weight_loader as w; assert w.PI0WeightLoader",
+      "import models.experimental.pi0_5.tt.ttnn_fused_attn, models.experimental.pi0_5.tt.ttnn_fused_norm",
+      "import ttnn; assert hasattr(ttnn, 'generic_op') and hasattr(ttnn, 'KernelDescriptor'), 'the fused kernels need ttnn.generic_op'",
+      "import ttnn; assert hasattr(ttnn.experimental, 'dit_minimal_matmul_addcmul_fused'), 'needs tt-metal main >= 2026-02-17'",
+      "import ttnn; assert hasattr(ttnn, 'MatmulMultiCoreReuseMultiCastProgramConfig') and hasattr(ttnn, 'MinimalMatmulConfig')",
+      "import tt_lib.fallback_ops",
+      "import safetensors, huggingface_hub, sentencepiece, google.protobuf",
+      "import transformers; assert transformers.__version__ == '5.12.1', transformers.__version__",
+      "import numpy; assert numpy.__version__.startswith('1.'), numpy.__version__",
+      "from models.experimental.pi0_5.server.app import parse_mesh_shape as p; assert p('1x1') == p('(1, 1)') == p('1,1') == (1, 1)",
+      "from models.experimental.pi0_5.server.app import build_prompt; import numpy as np; assert build_prompt('pick_up', np.zeros(32)).startswith('Task: pick up, State: 128 128')",
+      "from pathlib import Path; assert Path('/opt/tt-metal/models/experimental/pi0_5/server/smoke_test.py').is_file()",
+      "from models.experimental.pi0_5.common.fused_config import FusedConfig; c = FusedConfig.from_env({}); assert c.trace and c.residual == 'bf16', c",
+      "from models.experimental.pi0_5.common.fused_config import FusedConfig as F\ntry:\n    F.from_env({'TT_FUSED': '0'})\n    raise SystemExit('TT_FUSED=0 must be refused')\nexcept ValueError:\n    pass",
+      "import re; from pathlib import Path; ks = sorted(Path('/opt/tt-metal/models/experimental/pi0_5/tt/kernels').glob('*/*.cpp')); incs = {i for k in ks for i in re.findall(r'#include \"([^\"]+)\"', k.read_text())}; assert len(ks) == 9, ks; assert incs and all(Path('/opt/tt-metal/tt_metal/hw/inc', i).is_file() for i in incs), sorted(i for i in incs if not Path('/opt/tt-metal/tt_metal/hw/inc', i).is_file())",
+      "import models.experimental.pi0_5.tt.megakernel.program as p, models.experimental.pi0_5.tt.megakernel.geometry, models.experimental.pi0_5.tt.megakernel.host_model",
+      "import models.experimental.pi0_5.tt.megakernel.pe_program as pp, models.experimental.pi0_5.tt.megakernel.pe_geometry, models.experimental.pi0_5.tt.megakernel.pe_host, models.experimental.pi0_5.tt.megakernel.pe_size_check; assert pp.WholeMegakernel",
+      "from models.experimental.pi0_5.common.fused_config import FusedConfig as F; assert F.from_env({}).megakernel == F.from_env({'PI05_MEGAKERNEL': ''}).megakernel == F.from_env({'PI05_MEGAKERNEL': 'whole'}).megakernel == 'whole' and F.from_env({'PI05_MEGAKERNEL': 'expert'}).megakernel == 'expert' and F.from_env({'PI05_MEGAKERNEL': 'off'}).megakernel == 'off'",
+      "import os; from pathlib import Path; import models.experimental.pi0_5.tt.megakernel.program as p; d = Path('/opt/tt-metal/models/experimental/pi0_5/tt/megakernel/kernels'); fs = sorted(x.name for x in d.iterdir()); assert fs == ['mk_brisc.cpp', 'mk_defs.hpp', 'mk_dm.hpp', 'mk_ncrisc.cpp', 'mk_trisc.cpp'], fs; assert all(os.path.isfile(k) for k in p.KERNELS.values()), p.KERNELS; assert p.kernel_digest() == '328761c8a1ce3fd9', p.kernel_digest()",
+      "import os; from pathlib import Path; import models.experimental.pi0_5.tt.megakernel.pe_program as pp; d = Path('/opt/tt-metal/models/experimental/pi0_5/tt/megakernel/kernels_p2'); fs = sorted(x.name for x in d.iterdir()); assert fs == ['pe_brisc.hpp', 'pe_common.hpp', 'pe_defs.hpp', 'pe_dm.hpp', 'pe_ncrisc.hpp', 'pe_trisc.hpp', 'whole_brisc.cpp', 'whole_ncrisc.cpp', 'whole_trisc.cpp'], fs; assert all(os.path.isfile(k) for k in pp.KERNELS2.values()), pp.KERNELS2; assert len(pp.KERNEL_SOURCES2) == 14, pp.KERNEL_SOURCES2; assert pp.kernel_digest2() == '4aa02cdf21ed0c94', pp.kernel_digest2()",
+      "import re; from pathlib import Path; R = Path('/opt/tt-metal/models/experimental/pi0_5'); inc = Path('/opt/tt-metal/tt_metal/hw/inc'); ks = sorted(k for k in R.rglob('*') if k.suffix in ('.cpp', '.hpp', '.h')); assert len(ks) == 23, ks; pairs = [(k, i) for k in ks for i in re.findall(r'#include\\s+\"([^\"]+)\"', k.read_text())]; assert len(pairs) >= 69, len(pairs); bad = [(str(k), i) for k, i in pairs if not ((k.parent / i).is_file() or (inc / i).is_file())]; assert not bad, bad"
+    ],
+    "built": {
+      "image": "tt-model/pi05-base-p150:6fb244df57ff",
+      "repo": "changh95/pi05-base-p150",
+      "tt_model_version": "0.1.0",
+      "created_at": "2026-10-01T04:09:32+00:00",
+      "tt_metal": {
+        "sha": "668c290757550588d0ce46b180c344a462a2aaf5",
+        "describe": "v0.79.0-dev20260914-1-g668c290757",
+        "dirty": false,
+        "scm_version": "0.65.2.dev10011",
+        "mode": "local",
+        "remote": "https://github.com/tenstorrent/tt-metal.git",
+        "branch": "HEAD",
+        "pushed": true
+      },
+      "code_sha256": "8016f1493a3ee10f3c750a33fbb7e50bdda1e26980e33eb6b06e2a66b2e1d7b5",
+      "image_digest": "sha256:6fb244df57ff8d20da139e37a3cf1fb38a4d68d5381240e0dd64052e033b53b4"
+    }
+  }
+}

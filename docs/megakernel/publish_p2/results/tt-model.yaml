@@ -1,0 +1,225 @@
+# SPDX-License-Identifier: Apache-2.0
+# tt-model-manager container manifest (schema 5.1) for pi-0.5 (lerobot/pi05_base) on Blackhole.
+# Served path: sample_actions_fused, one Metal trace whose replay holds exactly ONE device op: the whole model (SigLIP on
+# both cameras, projector, language embedding, VLM prefill -> K/V, the 10-step x 18-layer action-expert loop, action in /
+# out, Euler) is ONE persistent generic_op on 110 cores (phase-2 whole-model megakernel,
+# code/models/experimental/pi0_5/tt/megakernel/pe_program.py + kernels_p2/, PI05_MEGAKERNEL=whole).
+#
+# Run every tt-model command FROM THIS DIRECTORY: `root: code` below resolves against the
+# process CWD. Rootless Docker on this host needs `source $ROOT/bin/docker-env.sh` first.
+#
+#   tt-model package --container tt-model.yaml --out $ROOT/build       # minutes with the ccache mount, ~2 h cold
+#   tt-model serve   $ROOT/build/pi05-base-p150/tt_kernel_manifest.json   # needs the card
+#   python code/models/experimental/pi0_5/server/smoke_test.py --url http://127.0.0.1:20000
+#   tt-model stop    $ROOT/build/pi05-base-p150/tt_kernel_manifest.json
+#
+# The tt-metal tree is a clean clone of tenstorrent/tt-metal main @ 668c2907575 (v0.79.0-dev20260914), the tree
+# the fused code was validated on. The port's generic_op kernels (tt/kernels/*, tt/megakernel/kernels/*, tt/megakernel/kernels_p2/*) use the compute API of that tree
+# and do not build on the older changh95/pi05 fork (4c9fbfcceb9); the fork-only rotary_embedding_to_cache op is
+# no longer used on the served path.
+schema: "5.1"
+
+repo: changh95/pi05-base-p150
+name: pi05-base-p150
+
+# A POINTER. Weights are never baked into the image; `tt-model serve` pre-downloads this
+# pinned snapshot into the host HF cache (mounted at /hf). The server resolves the same
+# files with hf_hub_download(revision=TT_WEIGHTS_REVISION) -- see serve.env.
+weights:
+  repo: lerobot/pi05_base
+  revision: b211f3d44c36b6acfcf7ae94a64e8e96f75a64ba
+  allow_patterns:
+    - model.safetensors
+    - config.json
+    - policy_preprocessor.json
+    - policy_postprocessor.json
+
+kind: tt-dit-server
+arch: blackhole
+
+source:
+  # Clean clone of tenstorrent/tt-metal main @ 668c290757550588d0ce46b180c344a462a2aaf5 (shared with the GR00T
+  # p150 packages; `git status --porcelain` empty). torch pin 2.11.0, transformers pin 5.12.1.
+  tt_metal: /home/deepgadget/experiments/gr00t/publish/tt-metal-668c2907575
+
+  # Relative to the tt-metal tree. The schema needs at least one entry; this port imports
+  # NOTHING from tt-metal's models/ at serve time, so ship the smallest real file. The port's
+  # C++ kernels (code/models/experimental/pi0_5/tt/kernels/*/*.cpp, tt/megakernel/kernels/mk_*.{cpp,hpp},
+  # tt/megakernel/kernels_p2/{pe_*.hpp,whole_*.cpp}) include only tt_metal/hw/inc headers (`api/compute/*`,
+  # `api/dataflow/*`, `api/debug/*`, `internal/circular_buffer_interface.h`) and their own port files (kernels_p2 includes
+  # ../kernels/mk_*.cpp), all of which are in the image (verify: below).
+  code:
+    - models/common/lightweightmodule.py
+
+  # The port itself (github.com/changh95/tt-pi-0.5, models/), laid out as in a tt-metal tree
+  # (models/experimental/pi0_5/{common,reference,tt,tests,server}) so its absolute
+  # `models.experimental.pi0_5.*` imports work unchanged under PYTHONPATH=/opt/tt-metal.
+  extra_code:
+    - root: code
+      paths:
+        - models
+
+  ubuntu: "22.04"
+  python: "3.12"
+
+runtime:
+  app: models.experimental.pi0_5.server.app:app
+  mesh_shape_env: TT_MESH_SHAPE
+  # On top of the kind's defaults (fastapi, uvicorn, pydantic>=2, pillow) and the auto
+  # torch==<tree pin>+cpu. numpy stays <2 (ttnn). transformers/sentencepiece/protobuf are
+  # for the PaliGemma tokenizer (5.12.1 = the tree's pin, the version the fused code and the
+  # LIBERO evaluation ran with).
+  packages:
+    - "numpy>=1.24.4,<2"
+    - safetensors
+    - huggingface_hub
+    - transformers==5.12.1
+    - sentencepiece
+    - protobuf
+
+serve:
+  port: 20000
+  hardware: p150
+  mesh_device: P150
+  env:
+    TT_WEIGHTS_REVISION: "b211f3d44c36b6acfcf7ae94a64e8e96f75a64ba"
+    TT_METAL_VISIBLE_DEVICES: "0"
+    TT_DEVICE_ID: "0"
+    # Validated serving shape: 2 cameras x 256 patches + 224 language tokens, right-padded; the
+    # pad tokens are masked out of attention (openpi semantics). The full pi0.5 prompt with 32
+    # state bins is ~143 tokens.
+    PI05_NUM_IMAGES: "2"
+    PI05_TOKEN_LEN: "224"
+    PI05_NUM_STEPS: "10"
+    PI05_TOKENIZER_REQUIRED: "1"
+    # The whole-model megakernel (also the default when unset). Comparators only: "expert" = phase 1 (traced stock-op
+    # prefix + the expert loop as one generic_op, 892 ops); "off" = stock TT-NN ops plus the 3 custom programs (fused
+    # attention, row_rsqrt, geglu_rc; 2,551 ops).
+    PI05_MEGAKERNEL: "whole"
+    # Reported by GET /info. PI05_SOURCE_COMMIT = the github.com/changh95/tt-pi-0.5 commit code/ was taken from.
+    PI05_MODEL_NAME: "pi05-base-p150"
+    PI05_SOURCE_COMMIT: "821e8c528dfffa0d1d6e73ad6abf181a749b39d9"
+
+# Build-time assertions run INSIDE the finished image (uid 1000, no device, no weights).
+verify:
+  - "import models.experimental.pi0_5.server.app as a; assert a.app"
+  - "import models.experimental.pi0_5.tt.ttnn_pi0_model as m; assert m.PI0ModelTTNN and hasattr(m.PI0ModelTTNN, 'sample_actions_fused') and not hasattr(m.PI0ModelTTNN, 'sample_actions_traced')"
+  - "import models.experimental.pi0_5.common.weight_loader as w; assert w.PI0WeightLoader"
+  - "import models.experimental.pi0_5.tt.ttnn_fused_attn, models.experimental.pi0_5.tt.ttnn_fused_norm"
+  - "import ttnn; assert hasattr(ttnn, 'generic_op') and hasattr(ttnn, 'KernelDescriptor'), 'the fused kernels need ttnn.generic_op'"
+  - "import ttnn; assert hasattr(ttnn.experimental, 'dit_minimal_matmul_addcmul_fused'), 'needs tt-metal main >= 2026-02-17'"
+  - "import ttnn; assert hasattr(ttnn, 'MatmulMultiCoreReuseMultiCastProgramConfig') and hasattr(ttnn, 'MinimalMatmulConfig')"
+  - "import tt_lib.fallback_ops"
+  - "import safetensors, huggingface_hub, sentencepiece, google.protobuf"
+  - "import transformers; assert transformers.__version__ == '5.12.1', transformers.__version__"
+  - "import numpy; assert numpy.__version__.startswith('1.'), numpy.__version__"
+  - "from models.experimental.pi0_5.server.app import parse_mesh_shape as p; assert p('1x1') == p('(1, 1)') == p('1,1') == (1, 1)"
+  - "from models.experimental.pi0_5.server.app import build_prompt; import numpy as np; assert build_prompt('pick_up', np.zeros(32)).startswith('Task: pick up, State: 128 128')"
+  - "from pathlib import Path; assert Path('/opt/tt-metal/models/experimental/pi0_5/server/smoke_test.py').is_file()"
+  - "from models.experimental.pi0_5.common.fused_config import FusedConfig; c = FusedConfig.from_env({}); assert c.trace and c.residual == 'bf16', c"
+  - "from models.experimental.pi0_5.common.fused_config import FusedConfig as F\ntry:\n    F.from_env({'TT_FUSED': '0'})\n    raise SystemExit('TT_FUSED=0 must be refused')\nexcept ValueError:\n    pass"
+  - "import re; from pathlib import Path; ks = sorted(Path('/opt/tt-metal/models/experimental/pi0_5/tt/kernels').glob('*/*.cpp')); incs = {i for k in ks for i in re.findall(r'#include \"([^\"]+)\"', k.read_text())}; assert len(ks) == 9, ks; assert incs and all(Path('/opt/tt-metal/tt_metal/hw/inc', i).is_file() for i in incs), sorted(i for i in incs if not Path('/opt/tt-metal/tt_metal/hw/inc', i).is_file())"
+  - "import models.experimental.pi0_5.tt.megakernel.program as p, models.experimental.pi0_5.tt.megakernel.geometry, models.experimental.pi0_5.tt.megakernel.host_model"
+  - "import models.experimental.pi0_5.tt.megakernel.pe_program as pp, models.experimental.pi0_5.tt.megakernel.pe_geometry, models.experimental.pi0_5.tt.megakernel.pe_host, models.experimental.pi0_5.tt.megakernel.pe_size_check; assert pp.WholeMegakernel"
+  - "from models.experimental.pi0_5.common.fused_config import FusedConfig as F; assert F.from_env({}).megakernel == F.from_env({'PI05_MEGAKERNEL': ''}).megakernel == F.from_env({'PI05_MEGAKERNEL': 'whole'}).megakernel == 'whole' and F.from_env({'PI05_MEGAKERNEL': 'expert'}).megakernel == 'expert' and F.from_env({'PI05_MEGAKERNEL': 'off'}).megakernel == 'off'"
+  # The expert-loop megakernel sources ship complete (phase 2 includes them): the five files, the three entry points, the digest.
+  - "import os; from pathlib import Path; import models.experimental.pi0_5.tt.megakernel.program as p; d = Path('/opt/tt-metal/models/experimental/pi0_5/tt/megakernel/kernels'); fs = sorted(x.name for x in d.iterdir()); assert fs == ['mk_brisc.cpp', 'mk_defs.hpp', 'mk_dm.hpp', 'mk_ncrisc.cpp', 'mk_trisc.cpp'], fs; assert all(os.path.isfile(k) for k in p.KERNELS.values()), p.KERNELS; assert p.kernel_digest() == '328761c8a1ce3fd9', p.kernel_digest()"
+  # Build-time include check over EVERY C++ source of the port: each quoted #include resolves to a sibling file or to tt_metal/hw/inc in this image.
+  # The whole-model megakernel ships complete: the nine kernels_p2 files, its three entry points, and kernel_digest2 = the digest every phase-2 device gate ran on.
+  - "import os; from pathlib import Path; import models.experimental.pi0_5.tt.megakernel.pe_program as pp; d = Path('/opt/tt-metal/models/experimental/pi0_5/tt/megakernel/kernels_p2'); fs = sorted(x.name for x in d.iterdir()); assert fs == ['pe_brisc.hpp', 'pe_common.hpp', 'pe_defs.hpp', 'pe_dm.hpp', 'pe_ncrisc.hpp', 'pe_trisc.hpp', 'whole_brisc.cpp', 'whole_ncrisc.cpp', 'whole_trisc.cpp'], fs; assert all(os.path.isfile(k) for k in pp.KERNELS2.values()), pp.KERNELS2; assert len(pp.KERNEL_SOURCES2) == 14, pp.KERNEL_SOURCES2; assert pp.kernel_digest2() == '4aa02cdf21ed0c94', pp.kernel_digest2()"
+  - "import re; from pathlib import Path; R = Path('/opt/tt-metal/models/experimental/pi0_5'); inc = Path('/opt/tt-metal/tt_metal/hw/inc'); ks = sorted(k for k in R.rglob('*') if k.suffix in ('.cpp', '.hpp', '.h')); assert len(ks) == 23, ks; pairs = [(k, i) for k in ks for i in re.findall(r'#include\\s+\"([^\"]+)\"', k.read_text())]; assert len(pairs) >= 69, len(pairs); bad = [(str(k), i) for k, i in pairs if not ((k.parent / i).is_file() or (inc / i).is_file())]; assert not bad, bad"
+
+card:
+  description: |
+    Physical Intelligence's pi-0.5 vision-language-action policy (lerobot/pi05_base: SigLIP + Gemma-2B VLM + Gemma-300M flow-matching action expert) running entirely on one Tenstorrent Blackhole p150a: two camera images + a task prompt in, a 50-step chunk of normalised actions out, in 55.8 ms per request (`timing_ms.inference`). The whole model runs as ONE fused op per request: a single persistent custom-kernel program (`ttnn.generic_op` megakernel on 110 Tensix cores) that executes SigLIP on both cameras, the projector, the language embedding, the VLM prefill writing the K / V caches, the whole 10-step flow-matching loop of the action expert (18 layers per step), the action in / out projections and the Euler updates. It is captured in a Metal trace whose replay holds exactly that one device op; the host only formats inputs and outputs.
+
+    Weights: [lerobot/pi05_base](https://huggingface.co/lerobot/pi05_base) ·
+    Paper: [arXiv:2504.16054](https://arxiv.org/abs/2504.16054) ·
+    Upstream code: [Physical-Intelligence/openpi](https://github.com/Physical-Intelligence/openpi) ·
+    Port: [changh95/tt-pi-0.5](https://github.com/changh95/tt-pi-0.5)
+  quickstart: |
+    ### Run with tt-cli
+
+    ```bash
+    tt serve changh95/pi05-base-p150
+    printf '{"images":["%s","%s"],"prompt":"pick up the cube","state":[0.1,-0.2,0.3,0,0,0,0.5,-0.5]}' \
+      "$(base64 -w0 media/sample_base.png)" "$(base64 -w0 media/sample_wrist.png)" > req.json
+    curl -s localhost:20000/predict -H 'Content-Type: application/json' -d @req.json
+    tt model stop changh95/pi05-base-p150
+    ```
+
+    - `POST /predict` takes:
+      - `images`: 1-2 base64 PNG/JPEG, ordered `[base/exterior, wrist]`;
+      - `prompt` (task text) or `tokens` (pre-tokenised PaliGemma ids, ≤224);
+      - optional `state`: ≤32 floats already normalised to [-1, 1] (default zeros);
+      - optional `seed`: the initial flow-matching noise (the default is fixed, so the output is deterministic).
+    - `GET /health`, `GET /info` (`/info` names the megakernel backend and its kernel digest).
+
+    ### Response
+
+    ```json
+    {"actions": [[-0.0708, -0.1553, 0.2969, 0.1006, -0.0427, 0.0884, 0.4102, -0.4961, ...], ...],
+     "action_horizon": 50, "action_dim": 32, "normalized": true, "denoising_steps": 10,
+     "prompt": "Task: pick up the cube, State: ...;\nAction: ", "num_tokens": 142, "token_len": 224, "prompt_truncated": false,
+     "images_used": 2, "images_padded": 0, "original_sizes": [[224, 224], [224, 224]], "image_size": [224, 224], "seed": null,
+     "timing_ms": {"preprocess": 1.77, "inference": 56.03, "total": 57.79}}
+    ```
+
+    - `actions` is 50 × 32 in lerobot's **normalised** QUANTILES action space, zero-padded to 32 dims. Denormalise with `(a+1)*(q99-q01)/2+q01` using your own dataset's stats, then slice to your action dim (e.g. the first 7 for LIBERO).
+    - Images are squash-resized to 224×224. `state` is discretised into 256 bins inside the prompt (`Task: <prompt>, State: b0 … b31;\nAction: `), and the prompt is right-padded to 224 tokens. The pad tokens are masked out of attention (openpi semantics), so the output does not depend on the padding.
+
+    ### Demo
+
+    | Base camera (`media/sample_base.png`, synthetic) | Wrist camera (`media/sample_wrist.png`, synthetic) |
+    |:---:|:---:|
+    | ![](media/sample_base.png) | ![](media/sample_wrist.png) |
+
+    The end of this card has a LIBERO closed-loop demo of the same code path, with the LIBERO fine-tune swapped in.
+
+    ### What runs where
+
+    | Part of one request | Where it runs | Device ops per trace replay |
+    |---|---|---:|
+    | image resize / normalisation, im2col of the patches, prompt building and tokenisation, the attention-mask and RoPE rows, the initial noise, the host-to-device copies, the readback | host (input / output formatting only) | 0 |
+    | SigLIP on both cameras (patch embedding + 27 layers + post-LN), projector, language embedding, Gemma-2B VLM prefill (18 layers, writing 18 bf8 K / V caches), action in-projection, 10 Euler steps × 18 Gemma-300M expert layers, action out-projection | **ONE persistent `ttnn.generic_op`** on 110 cores (`code/.../tt/megakernel/pe_program.py`, kernels `tt/megakernel/kernels_p2/whole_{brisc,ncrisc,trisc}.cpp`, which include the expert-loop kernels `tt/megakernel/kernels/mk_*`) | **1** |
+
+    The image's build checks that every C++ header the kernels include is in the image and that the kernel digest is the one the device gates ran on (`4aa02cdf21ed0c94`). Kernel-config ring footprint of the program: 128,636 B of the 136,192 B ring (offline mock-cluster compile). The two earlier paths stay in the code only as comparators: `PI05_MEGAKERNEL=expert` (the previous image: SigLIP / VLM prefix as traced stock TT-NN ops, the expert loop as one generic_op; 892 ops per replay) and `PI05_MEGAKERNEL=off` (stock TT-NN ops plus 3 custom generic_op programs; 2,551 ops per replay).
+
+    ### Accuracy and speed
+
+    Measured 2026-10-01 on one p150a (AICLK 1350 MHz), tt-metal `668c2907575`, batch 1, 10 flow-matching steps. "Previous" is the 2026-09-30 image (`fe0d2e3d68a7`), the phase-1 path that is still in the code as `PI05_MEGAKERNEL=expert`. The two served rows (and the 100 repeated requests) come from this image's own benchmark. The replay, device-time, accuracy and determinism rows were measured in-process on the same code, with the paths alternated in the same session ([`docs/megakernel/integrate_p2/results/`](https://github.com/changh95/tt-pi-0.5/tree/main/docs/megakernel/integrate_p2/results); the padding check in `docs/megakernel/p2/gates/results/`). The LIBERO row is the closed-loop run at the end of this card; the GPU rows are in [`GPU_COMPARISON.md`](GPU_COMPARISON.md).
+
+    | Metric | Value |
+    |---|---:|
+    | Inference, served over HTTP by this image (2×224×224, 224 tokens, H = 50; median of 100 warm requests) | **55.84 ms** device (`timing_ms.inference`, p90 56.13) · 57.13 ms end-to-end (`timing_ms.total`) · 58.52 ms client wall per 50-step chunk |
+    | Previous image (`fe0d2e3d68a7`), same request, same benchmark cycle | 70.81 ms device · 72.16 ms end-to-end |
+    | In-process trace replay (host wall, median of 30) | 54.1 ms (previous path 69.6 ms; `off` 82.8 ms) |
+    | Device time per replay (device profiler) | **53.94 ms as one op** (median of 21 profiled replay sessions); previous path 69.49 ms over 892 ops, `off` 82.30 ms over 2,551 ops (sum of the op durations, median of 3 / 2 profiled sessions) |
+    | PCC vs the openpi GPU golden (8 real LIBERO observations, same code with `lerobot/pi05_libero`, prompt right-padded to 32 tokens, H = 10, 7 action dims) | mean **0.999976**, min **0.999955** (previous path 0.999884 / 0.999778; `off` 0.999839 / 0.999712) |
+    | Whole call vs the fp32 torch reference of the whole model on the same inputs (served shape, `pi05_base`, 32 random inputs with 1-224 real tokens) | mean **0.99851**, min 0.98882; closer than `off` on **32 / 32** (`off` mean 0.97034, min 0.76397) and than the previous path on 31 / 32 (previous mean 0.97666, min 0.80383) |
+    | Per-layer VLM K / V (18 layers × K, V × 8 inputs) vs the fp32 reference's own cache | closer than the TT-NN caches on **288 / 288** at both shapes (min PCC 0.99171 served / 0.99905 LIBERO vs TT-NN 0.92868 / 0.99060) |
+    | Padding is exact | random ids in the padded slots under the same mask give a bit-identical output |
+    | Determinism | ten trace replays are bit-identical. Alternating prompts and a shape switch reproduce fresh-model outputs bit-for-bit (20 / 20). 20 consecutive processes ran with no hang and gave one output digest. 100 repeated served requests returned identical actions |
+    | LIBERO-spatial closed loop (`lerobot/pi05_libero`, 10 tasks × 10 init states, same code) | **99 / 100**. Paired init states 0-4: 49 / 50 vs openpi on an RTX 5090 50 / 50. 53.6 ms per policy call (previous path 99 / 100 at 66.4 ms) |
+    | Same forward on an RTX 5090 (same host, the port's torch reference, eager PyTorch, batch 1, incl. H2D/D2H; measured 2026-09-14) | fp32 strict 144.1 ms; bf16 / fp16 autocast 121.5 / 123.7 ms; bf16 weights resident 99.9 ms. The p150a is 1.79-2.58× faster than every eager row. The best whole-request `torch.compile` run is 46.6 ms (the GPU is 1.20× faster) |
+
+    ### Caveats
+
+    - Fixed geometry:
+      - 1-2 images squashed to 224×224; a missing wrist camera is padded with a black image, which is still attended;
+      - prompt ≤224 tokens, right-padded, pads masked;
+      - `state` ≤32 floats;
+      - batch 1;
+      - `num_steps` is baked in at 10, and a per-request value is rejected.
+    - The megakernel is a single-p150a, batch-1 program built for 2 cameras. It needs the 64 KiB worker-L1 cut, which the server applies when it opens the device. It refuses by name at startup on a mesh, with batch sizes > 1, with bf16 K/V caches, with step counts ≠ 10, or with `PI05_NUM_IMAGES` ≠ 2. On a mesh an unset `PI05_MEGAKERNEL` falls back to `off`.
+    - Accuracy against fp32 on random inputs is limited by the bf16 / bfp8 arithmetic of the vision / language prefix, so the release gate is "per input at least as close to fp32 as the `off` path", not a fixed floor. One of the 32 seeds (707) is closer under the previous path (0.99769 vs 0.99522; both closer than `off`, 0.99175).
+    - The prompt tokenizer `google/paligemma-3b-pt-224` is **gated** (Gemma terms). Accept the terms on huggingface.co and run `hf auth login` on the host before `tt serve`, or send pre-tokenised `tokens`. The weights themselves are ungated but under the same Gemma terms.
+    - Outputs are normalised actions of the **base** checkpoint, which is not fine-tuned for any task. `pi05_base` ships no per-feature stats, so its outputs are not usable on an arbitrary robot without fine-tuning. The real-input rows (openpi golden, LIBERO) use the fine-tuned `lerobot/pi05_libero` through the same code, not `pi05_base`.
+    - Not an OpenAI-compatible API. `GET /v1/models` is a stub so the tt-model ready card does not 404.
+    - Validated on tt-metal `main` @ `668c2907575` (v0.79.0-dev20260914), single p150a only. The mesh / tensor-parallel path, `PI05_EXPERT_ATTN=ttnn` and batch > 1 exist only on the `PI05_MEGAKERNEL=off` path, and none of them was re-validated after the mask / RoPE fix.
+    - GPU comparison: the RTX 5090 rows are the 2026-09-14 runs of the torch reference before the mask / RoPE fix. The shapes are the same; the rows were not re-measured. They use fp32 weights + autocast unless stated, no TensorRT, medians of 50 iterations after warm-up, H2D/D2H included. p150a power was not measured, so no efficiency comparison is made. Full table: [`GPU_COMPARISON.md`](GPU_COMPARISON.md).
+
+    ### Licensing
+
+    - Weights: [lerobot/pi05_base](https://huggingface.co/lerobot/pi05_base), [Gemma Terms of Use](https://ai.google.dev/gemma/terms). They are not redistributed here but fetched into your HF cache. The tokenizer [google/paligemma-3b-pt-224](https://huggingface.co/google/paligemma-3b-pt-224) is gated under the same terms.
+    - Port and serving code (`code/`): Apache-2.0 headers, distributed under the same Gemma terms, from [changh95/tt-pi-0.5](https://github.com/changh95/tt-pi-0.5) @ [`821e8c5`](https://github.com/changh95/tt-pi-0.5/commit/821e8c528dfffa0d1d6e73ad6abf181a749b39d9) (`main`, merge of PR #3).

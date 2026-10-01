@@ -1,0 +1,129 @@
+[13:14:58] start; manifest /home/deepgadget/experiments/tt-models/build/pi05-base-p150/tt_kernel_manifest.json; image {'registry': 'hf', 'repository': 'pi05-base-p150', 'tag': 'tt-model/pi05-base-p150:6fb244df57ff', 'digest': 'sha256:6fb244df57ff8d20da139e37a3cf1fb38a4d68d5381240e0dd64052e033b53b4'}
+removing ~/.cache/tt-model/pi05-base-p150 (326M) for a cold boot
+device users before: []
+=== cycle 1/2 [13:14:58] ===
+[13:16:14] serve exit=0 wall=75.9s
+✓ weights lerobot/pi05_base@b211f3d4  
+/home/deepgadget/.cache/huggingface/hub/models--lerobot--pi05_base/snapshots/b21
+1f3d44c36b6acfcf7ae94a64e8e96f75a64ba
+  ✓ host ready  docker 28.5.2 (rootless) · tt devices · hugepages
+  ✓ image tt-model/pi05-base-p150:6fb244df57ff
+  ✓ container started
+  ✓ server process started  1.7s
+  ✓ pipeline warmed up  1m 11s
+  ✓
+  /home/deepgadget/experiments/tt-models/build/pi05-base-p150/tt_kernel_manife
+  st.json ready  1m 15s
+╭─ tt-model-pi05-base-p150-default ──────────────────────────────────────────╮
+│                                                                            │
+│  endpoint  http://127.0.0.1:20000                                          │
+│  models    curl http://127.0.0.1:20000/v1/models                           │
+│  try       tt-model curl                                                   │
+│            /home/deepgadget/experiments/tt-models/build/pi05-base-p150/t…  │
+│            "hello"                                                         │
+│                                                                            │
+│  tt-model logs                                                             │
+│  /home/deepgadget/experiments/tt-models/build/pi05-base-p150/tt_kernel_m…  │
+│  -f   ·   tt-model stop                                                    │
+│  /home/deepgadget/experiments/tt-models/build/pi05-base-p150/tt_kernel_m…  │
+│                                                                            │
+╰────────────────────────────────────────────────────────────────────────────╯
+endpoint http://127.0.0.1:20000
+    2026-10-01T04:15:01.290633431Z INFO:     Waiting for application startup.
+    2026-10-01T04:15:02.676015949Z Config{cache_path=/home/tt/.cache/ttnn,model_cache_path=/home/tt/.cache/ttnn/models,tmp_dir=/tmp/ttnn,enable_model_cache=false,enable_fast_runtime_mode=true,validate_program_args=false,throw_exception_on_fallback=false,enable_logging=false,enable_graph_report=false,ena
+    2026-10-01T04:15:02.944257778Z 2026-10-01 04:15:02,944 INFO pi05.server: config: {'weights_repo': 'lerobot/pi05_base', 'weights_revision': 'b211f3d44c36b6acfcf7ae94a64e8e96f75a64ba', 'weights_dir': None, 'tokenizer_repo': 'google/paligemma-3b-pt-224', 'tokenizer_dir': None, 'tokenizer_required': Tru
+    2026-10-01T04:15:03.108447231Z 2026-10-01 04:15:03,108 INFO pi05.server: Loading weights: lerobot/pi05_base @ b211f3d44c36b6acfcf7ae94a64e8e96f75a64ba (model.safetensors, config.json)
+    2026-10-01T04:15:03.117662041Z 2026-10-01 04:15:03,117 INFO pi05.server: Loading weights done: 812 tensors in 0.0 s
+    2026-10-01T04:15:05.640657147Z 2026-10-01 04:15:05,640 INFO pi05.server: Loading tokenizer google/paligemma-3b-pt-224
+    2026-10-01T04:15:07.459054727Z 2026-10-01 04:15:07,458 INFO pi05.server: Opening device {'device_id': 0, 'l1_small_size': 24576, 'trace_region_size': 160000000, 'worker_l1_size': 1395712} fused={'trace': True, 'trace_region_size': 160000000, 'residual': 'bf16', 'mlp_chunk': 256, 'vlm_down_pc': 'mcas
+    2026-10-01T04:15:07.459221891Z 2026-10-01 04:15:07.459 | info     |          Device | Opening user mode device driver (tt_cluster.cpp:224)
+    2026-10-01T04:15:07.965269314Z 2026-10-01 04:15:07.965 | info     |             UMD | Opening local chip ids/PCIe ids: {0}/[0] and remote chip ids {} (cluster.cpp:175)
+    2026-10-01T04:15:09.777464356Z 2026-10-01 04:15:09,777 INFO pi05.server: Loading pipeline: converting 812 tensors to device (PI0ModelTTNN, pi05=True) ...
+    2026-10-01T04:15:50.714493873Z 2026-10-01 04:15:50,714 INFO pi05.server: Model built in 40.9 s (fused graph; the first warm-up call compiles and captures the trace)
+    2026-10-01T04:15:50.861947499Z 2026-10-01 04:15:50,861 INFO pi05.server: Warming up: 2 x sample_actions on 2 black image(s), L=224 tokens, 10 steps ...
+    2026-10-01T04:16:14.486864419Z 2026-10-01 04:16:14,486 INFO pi05.server: Warmup 1/2: 23622.5 ms
+    2026-10-01T04:16:14.543153662Z 2026-10-01 04:16:14,543 INFO pi05.server: Warmup 2/2: 56.4 ms
+    2026-10-01T04:16:14.543389014Z 2026-10-01 04:16:14,543 INFO pi05.server: Warmup complete (first 23622.5 ms, steady 56.4 ms) -- fused graph traced
+    2026-10-01T04:16:14.543539577Z INFO:     Application startup complete.
+info: {"name": "pi05-base-p150", "hardware": "Tenstorrent Blackhole, single chip (mesh 1x1) via tt-nn; whole-model megakernel: the entire sample_actions (SigLIP x2, projector, language embedding, VLM prefill -> K / V caches, the 10-step expert loop) as ONE persistent generic_op, one Metal trace", "megakernel": {"backend": "whole", "program": {"kernel_digest": "4aa02cdf21ed0c94", "sources": ["kernels/mk_brisc.cpp", "kernels/mk_defs.hpp", "kernels/mk_dm.hpp", "kernels/mk_ncrisc.cpp", "kernels/mk_trisc.cpp", "kernels_p2/pe_brisc.hpp", "kernels_p2/pe_common.hpp", "kernels_p2/pe_defs.hpp", "kernels_p2/pe_dm.hpp", "kernels_p2/pe_ncrisc.hpp", "kernels_p2/pe_trisc.hpp", "kernels_p2/whole_brisc.cpp", "kernels_p2/whole_ncrisc.cpp", "kernels_p2/whole_trisc.cpp"]}}, "weights": {"repo": "lerobot/pi05_base", "revision": "b211f3d44c36b6acfcf7ae94a64e8e96f75a64ba", "snapshot_dir": "/hf/hub/models--lerobot--pi05_base/snapshots/b211f3d44c36b6acfcf7ae94a64e8e96f75a64ba"}, "source": {"repo": "https://github.com/changh95/tt-pi-0.5", "commit": "821e8c528dfffa0d1d6e73ad6abf181a749b39d9", "path": "models/experimental/pi0_5", "tt_metal": "see the package's tt_kernel_manifest.json (container.built.tt_metal)"}, "warmup_latency_ms": {"first": 23622.5, "last": 56.4}}
+info megakernel backend: whole source commit: 821e8c528dfffa0d1d6e73ad6abf181a749b39d9
+kernel_digest 4aa02cdf21ed0c94
+info: num_images=2 token_len=224 tokenizer=True weights={'repo': 'lerobot/pi05_base', 'revision': 'b211f3d44c36b6acfcf7ae94a64e8e96f75a64ba', 'snapshot_dir': '/hf/hub/models--lerobot--pi05_base/snapshots/b211f3d44c36b6acfcf7ae94a64e8e96f75a64ba'} warmup_ms={'first': 23622.5, 'last': 56.4}
+PASS pi05 actions=(50,32) max|a|=0.262 std=0.071 repeat_maxdiff=0.0000 change_maxdiff=0.8423 inference_ms=60.33/55.83 tokens=143/224 truncated=False
+[13:16:14] smoke rc=0
+BENCH {"preprocess": {"median": 1.37, "p10": 1.26, "p90": 1.83, "min": 1.22, "max": 2.9}, "inference": {"median": 56.08, "p10": 55.68, "p90": 56.39, "min": 55.52, "max": 57.22}, "total": {"median": 57.39, "p10": 57.04, "p90": 58.12, "min": 56.84, "max": 59.25}, "client_wall": {"median": 59.23, "p10": 58.52, "p90": 60.08, "min": 58.13, "max": 61.62}}
+stopping tt-model-pi05-base-p150-default…
+✓ stopping tt-model-pi05-base-p150-default  clean shutdown  2.9s
+  ✓ stopped 1 container(s)
+[13:16:24] stop wall=3.0s; caches:
+159M	/home/deepgadget/.cache/tt-model/pi05-base-p150/cache
+4.0K	/home/deepgadget/.cache/tt-model/pi05-base-p150/tensors
+4.0K	/home/deepgadget/.cache/tt-model/pi05-base-p150/weights
+device users after stop: []
+=== cycle 2/2 [13:16:24] ===
+[13:17:21] serve exit=0 wall=57.2s
+✓ weights lerobot/pi05_base@b211f3d4  
+/home/deepgadget/.cache/huggingface/hub/models--lerobot--pi05_base/snapshots/b21
+1f3d44c36b6acfcf7ae94a64e8e96f75a64ba
+  ✓ host ready  docker 28.5.2 (rootless) · tt devices · hugepages
+  ✓ image tt-model/pi05-base-p150:6fb244df57ff
+  ✓ container started
+  ✓ server process started  1.7s
+  ✓ pipeline warmed up  53.1s
+  ✓
+  /home/deepgadget/experiments/tt-models/build/pi05-base-p150/tt_kernel_manife
+  st.json ready  56.8s
+╭─ tt-model-pi05-base-p150-default ──────────────────────────────────────────╮
+│                                                                            │
+│  endpoint  http://127.0.0.1:20000                                          │
+│  models    curl http://127.0.0.1:20000/v1/models                           │
+│  try       tt-model curl                                                   │
+│            /home/deepgadget/experiments/tt-models/build/pi05-base-p150/t…  │
+│            "hello"                                                         │
+│                                                                            │
+│  tt-model logs                                                             │
+│  /home/deepgadget/experiments/tt-models/build/pi05-base-p150/tt_kernel_m…  │
+│  -f   ·   tt-model stop                                                    │
+│  /home/deepgadget/experiments/tt-models/build/pi05-base-p150/tt_kernel_m…  │
+│                                                                            │
+╰────────────────────────────────────────────────────────────────────────────╯
+endpoint http://127.0.0.1:20000
+    2026-10-01T04:16:26.638034386Z INFO:     Waiting for application startup.
+    2026-10-01T04:16:28.061608851Z Config{cache_path=/home/tt/.cache/ttnn,model_cache_path=/home/tt/.cache/ttnn/models,tmp_dir=/tmp/ttnn,enable_model_cache=false,enable_fast_runtime_mode=true,validate_program_args=false,throw_exception_on_fallback=false,enable_logging=false,enable_graph_report=false,ena
+    2026-10-01T04:16:28.336581697Z 2026-10-01 04:16:28,336 INFO pi05.server: config: {'weights_repo': 'lerobot/pi05_base', 'weights_revision': 'b211f3d44c36b6acfcf7ae94a64e8e96f75a64ba', 'weights_dir': None, 'tokenizer_repo': 'google/paligemma-3b-pt-224', 'tokenizer_dir': None, 'tokenizer_required': Tru
+    2026-10-01T04:16:28.504755351Z 2026-10-01 04:16:28,504 INFO pi05.server: Loading weights: lerobot/pi05_base @ b211f3d44c36b6acfcf7ae94a64e8e96f75a64ba (model.safetensors, config.json)
+    2026-10-01T04:16:28.514404868Z 2026-10-01 04:16:28,514 INFO pi05.server: Loading weights done: 812 tensors in 0.0 s
+    2026-10-01T04:16:31.078929293Z 2026-10-01 04:16:31,078 INFO pi05.server: Loading tokenizer google/paligemma-3b-pt-224
+    2026-10-01T04:16:32.815070330Z 2026-10-01 04:16:32,814 INFO pi05.server: Opening device {'device_id': 0, 'l1_small_size': 24576, 'trace_region_size': 160000000, 'worker_l1_size': 1395712} fused={'trace': True, 'trace_region_size': 160000000, 'residual': 'bf16', 'mlp_chunk': 256, 'vlm_down_pc': 'mcas
+    2026-10-01T04:16:32.815178353Z 2026-10-01 04:16:32.815 | info     |          Device | Opening user mode device driver (tt_cluster.cpp:224)
+    2026-10-01T04:16:33.199817592Z 2026-10-01 04:16:33.199 | info     |             UMD | Opening local chip ids/PCIe ids: {0}/[0] and remote chip ids {} (cluster.cpp:175)
+    2026-10-01T04:16:33.706559236Z 2026-10-01 04:16:33,706 INFO pi05.server: Loading pipeline: converting 812 tensors to device (PI0ModelTTNN, pi05=True) ...
+    2026-10-01T04:16:59.535146880Z 2026-10-01 04:16:59,534 INFO pi05.server: Model built in 25.8 s (fused graph; the first warm-up call compiles and captures the trace)
+    2026-10-01T04:16:59.682644280Z 2026-10-01 04:16:59,682 INFO pi05.server: Warming up: 2 x sample_actions on 2 black image(s), L=224 tokens, 10 steps ...
+    2026-10-01T04:17:21.375622548Z 2026-10-01 04:17:21,375 INFO pi05.server: Warmup 1/2: 21690.0 ms
+    2026-10-01T04:17:21.431064940Z 2026-10-01 04:17:21,430 INFO pi05.server: Warmup 2/2: 55.7 ms
+    2026-10-01T04:17:21.431200465Z 2026-10-01 04:17:21,431 INFO pi05.server: Warmup complete (first 21690.0 ms, steady 55.7 ms) -- fused graph traced
+    2026-10-01T04:17:21.431281086Z INFO:     Application startup complete.
+info: {"name": "pi05-base-p150", "hardware": "Tenstorrent Blackhole, single chip (mesh 1x1) via tt-nn; whole-model megakernel: the entire sample_actions (SigLIP x2, projector, language embedding, VLM prefill -> K / V caches, the 10-step expert loop) as ONE persistent generic_op, one Metal trace", "megakernel": {"backend": "whole", "program": {"kernel_digest": "4aa02cdf21ed0c94", "sources": ["kernels/mk_brisc.cpp", "kernels/mk_defs.hpp", "kernels/mk_dm.hpp", "kernels/mk_ncrisc.cpp", "kernels/mk_trisc.cpp", "kernels_p2/pe_brisc.hpp", "kernels_p2/pe_common.hpp", "kernels_p2/pe_defs.hpp", "kernels_p2/pe_dm.hpp", "kernels_p2/pe_ncrisc.hpp", "kernels_p2/pe_trisc.hpp", "kernels_p2/whole_brisc.cpp", "kernels_p2/whole_ncrisc.cpp", "kernels_p2/whole_trisc.cpp"]}}, "weights": {"repo": "lerobot/pi05_base", "revision": "b211f3d44c36b6acfcf7ae94a64e8e96f75a64ba", "snapshot_dir": "/hf/hub/models--lerobot--pi05_base/snapshots/b211f3d44c36b6acfcf7ae94a64e8e96f75a64ba"}, "source": {"repo": "https://github.com/changh95/tt-pi-0.5", "commit": "821e8c528dfffa0d1d6e73ad6abf181a749b39d9", "path": "models/experimental/pi0_5", "tt_metal": "see the package's tt_kernel_manifest.json (container.built.tt_metal)"}, "warmup_latency_ms": {"first": 21690.0, "last": 55.7}}
+info megakernel backend: whole source commit: 821e8c528dfffa0d1d6e73ad6abf181a749b39d9
+kernel_digest 4aa02cdf21ed0c94
+info: num_images=2 token_len=224 tokenizer=True weights={'repo': 'lerobot/pi05_base', 'revision': 'b211f3d44c36b6acfcf7ae94a64e8e96f75a64ba', 'snapshot_dir': '/hf/hub/models--lerobot--pi05_base/snapshots/b211f3d44c36b6acfcf7ae94a64e8e96f75a64ba'} warmup_ms={'first': 21690.0, 'last': 55.7}
+PASS pi05 actions=(50,32) max|a|=0.262 std=0.071 repeat_maxdiff=0.0000 change_maxdiff=0.8423 inference_ms=60.38/55.85 tokens=143/224 truncated=False
+[13:17:21] smoke rc=0
+BENCH {"preprocess": {"median": 1.27, "p10": 1.21, "p90": 1.36, "min": 1.13, "max": 1.63}, "inference": {"median": 55.84, "p10": 55.62, "p90": 56.13, "min": 55.51, "max": 56.28}, "total": {"median": 57.13, "p10": 56.89, "p90": 57.44, "min": 56.82, "max": 57.59}, "client_wall": {"median": 58.52, "p10": 58.19, "p90": 58.9, "min": 58.02, "max": 59.77}}
+stopping tt-model-pi05-base-p150-default…
+✓ stopping tt-model-pi05-base-p150-default  clean shutdown  2.7s
+  ✓ stopped 1 container(s)
+[13:17:30] stop wall=2.8s; caches:
+159M	/home/deepgadget/.cache/tt-model/pi05-base-p150/cache
+4.0K	/home/deepgadget/.cache/tt-model/pi05-base-p150/tensors
+4.0K	/home/deepgadget/.cache/tt-model/pi05-base-p150/weights
+device users after stop: []
+[13:17:30] done rc=0
+[trap] stop
+  ○ nothing running
+[trap] docker ps -a (tt-model): []
+[trap] device users after stop: []
+2026-10-01_13:17:31 [device-guard pid=1488076] RESET AFTER JOB (WITH_DEVICE_RESET_AFTER=1, rc=0): timeout --signal=TERM --kill-after=120 1740 /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/pub2/run_container_pi05.sh 2
+2026-10-01_13:17:31 [device-guard pid=1488076] RESET: tt-smi -r 0 (probe hung/failed with no other device users)
+2026-10-01_13:18:12 [device-guard pid=1488076] reset exit=0
