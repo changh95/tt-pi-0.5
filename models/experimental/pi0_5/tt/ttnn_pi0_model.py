@@ -138,9 +138,11 @@ class PI0ModelTTNN:
         self._init_megakernel()
 
     def _init_megakernel(self):
-        """PI05_MEGAKERNEL (docs/megakernel/DESIGN.md §4.12): ``expert`` runs the whole 10 x 18 expert loop, the action
-        in / out projections and the Euler steps as ONE generic_op (tt/megakernel/) after the ttnn prefix. The stamp
-        (``megakernel_backend`` / ``megakernel_program``) is what tests assert; refusals raise, never fall back."""
+        """PI05_MEGAKERNEL (docs/megakernel/DESIGN.md §4.12, §11): ``whole`` (the default) runs the ENTIRE sample_actions
+        (SigLIP x2, projector, embedding, VLM prefill, the 10 x 18 expert loop, action in / out, Euler) as ONE
+        generic_op (tt/megakernel/pe_program.py); the comparator ``expert`` runs only the expert loop + action in / out
+        + Euler as one generic_op (tt/megakernel/program.py) after the traced ttnn prefix; ``off`` builds neither. The
+        stamp (``megakernel_backend`` / ``megakernel_program``) is what tests assert; refusals raise, never fall back."""
         self.megakernel_backend = self.fused_cfg.megakernel
         self.megakernel_program = None
         self._mk: Dict[str, object] = {}

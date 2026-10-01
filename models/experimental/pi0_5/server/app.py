@@ -18,7 +18,7 @@ Recipe (the one the port validated -- ``tests/pcc/test_pcc_pi05_fused.py`` and t
 closed-loop harness ``tests/pcc/test_rollout_libero.py``):
 
 * ``device = ttnn.open_device(**common.device_open.device_kwargs(...))`` (single chip: l1_small_size=24576,
-  trace_region_size=..., and the 64 KiB worker-L1 cut the default ``PI05_MEGAKERNEL=expert`` needs) or a
+  trace_region_size=..., and the 64 KiB worker-L1 cut the default ``PI05_MEGAKERNEL=whole`` needs) or a
   MeshDevice (``TT_MESH_SHAPE``); ``PI0ModelTTNN.sample_actions_fused``.
 * ``PI0ModelConfig(action_dim=32, action_horizon=50, state_dim=32, pi05=True)`` with the
   default ``SigLIPConfig`` (224 px, patch 14 -> 256 tokens per image).
@@ -58,18 +58,21 @@ Configuration is read from the environment inside the lifespan (never at import)
 
 Fused / traced device graph (the only inference path; knobs read once by ``FusedConfig.from_env()``):
 the whole device graph (host im2col -> SigLIP batched over the cameras -> VLM prefill writing the
-backbone-owned KV caches -> 10 fused expert steps) reads three persistent device inputs and is captured
-into ONE Metal trace on the first warm-up call, i.e. before READY; every request then does 3 small
-host->device copies, ``execute_trace`` and one readback. The device is opened with ``trace_region_size``.
+KV caches -> 10 expert steps) reads persistent device inputs and is captured into ONE Metal trace on the
+first warm-up call, i.e. before READY; every request then does small host->device input copies,
+``execute_trace`` and one readback. With the default ``PI05_MEGAKERNEL=whole`` that trace holds exactly one
+device op, the whole-model megakernel. The device is opened with ``trace_region_size``.
 
-``PI05_MEGAKERNEL``        ``expert`` (default): the 10-step action-expert loop + action in / out + Euler is ONE
-                           persistent generic_op (tt/megakernel/) at the end of the trace; the device is opened with
-                           the 64 KiB worker-L1 cut (common/device_open.py). Single chip, batch 1, bf8 K/V, 10 steps:
-                           any other configuration refuses at startup with a log line. ``off``: the previous path
-                           (stock ttnn expert ops), kept only as the comparator. ``whole``: the ENTIRE sample_actions
-                           (SigLIP, projector, embedding, VLM prefill, expert loop) is ONE generic_op (phase 2,
-                           docs/megakernel/DESIGN.md §11), same refusals. On a multi-chip mesh the UNSET default
-                           is ``off`` (the megakernel is a single-p150a program).
+``PI05_MEGAKERNEL``        ``whole`` (default since 2026-10-01): the ENTIRE sample_actions (SigLIP x2, projector,
+                           language embedding, VLM prefill -> K / V caches, the 10-step expert loop, action in / out,
+                           Euler) is ONE persistent generic_op (tt/megakernel/pe_program.py, docs/megakernel/DESIGN.md
+                           §11); the trace replays that one device op. The device is opened with the 64 KiB worker-L1
+                           cut (common/device_open.py). Single chip, batch 1, 2 cameras (PI05_NUM_IMAGES=2), bf8 K/V,
+                           10 steps: any other configuration refuses at startup with a log line.
+                           Comparator knobs only: ``expert`` (phase 1: the expert loop is one generic_op, the SigLIP /
+                           VLM prefix is traced stock ttnn ops) and ``off`` (the previous path: stock ttnn ops + 3
+                           custom generic_ops). On a multi-chip mesh the UNSET default is ``off`` (the megakernels are
+                           single-p150a programs).
 ``TT_FUSED``               unset or ``1``; ``0`` / ``false`` / ``off`` fails startup (the unfused path was removed)
 ``PI05_TRACE``             ``0`` runs the fused graph eagerly (no trace; debug / A/B). Default ``1``.
 ``PI05_TRACE_REGION_SIZE`` bytes for the trace region (default 160000000, an estimate).
@@ -721,6 +724,8 @@ async def lifespan(_app: FastAPI):
             why = f"PI05_LAYOUT={cfg.layout} (single-chip megakernel: use mesh on a 1x1 device)"
         elif why is None and cfg.batch_sizes != (1,):
             why = f"PI05_BATCH_SIZES={','.join(map(str, cfg.batch_sizes))} (the megakernel serves batch 1 only)"
+        elif why is None and fused_cfg.megakernel == "whole" and cfg.num_images != 2:
+            why = f"PI05_NUM_IMAGES={cfg.num_images} (the whole-model megakernel is built for 2 camera slots)"
         if why is not None:
             LOG.error("PI05_MEGAKERNEL=%s refused at startup: %s", fused_cfg.megakernel, why)
             raise RuntimeError(f"PI05_MEGAKERNEL={fused_cfg.megakernel} refused: {why}")

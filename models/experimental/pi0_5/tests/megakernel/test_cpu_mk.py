@@ -99,18 +99,22 @@ def test_cpu_share_orders_match_trisc_loops():
 
 
 def test_cpu_knob_and_refusals():
-    # the phase-1 megakernel is the DEFAULT since 2026-09-30; ``off`` (the previous path) is the comparator knob
-    assert FusedConfig.from_env({}).megakernel == "expert"
-    assert FusedConfig().megakernel == "expert"
+    # the whole-model megakernel is the DEFAULT since 2026-10-01; ``expert`` (phase 1) and ``off`` (the previous
+    # path) are the comparator knobs
+    assert FusedConfig.from_env({}).megakernel == "whole"
+    assert FusedConfig().megakernel == "whole"
     assert not FusedConfig.from_env({}).megakernel_explicit
+    assert FusedConfig.from_env({"PI05_MEGAKERNEL": "whole"}).megakernel == "whole"
     assert FusedConfig.from_env({"PI05_MEGAKERNEL": "expert"}).megakernel == "expert"
     assert FusedConfig.from_env({"PI05_MEGAKERNEL": "off"}).megakernel == "off"
-    assert FusedConfig.from_env({"PI05_MEGAKERNEL": ""}).megakernel == "expert"
-    # the resolved default: single chip keeps expert; on a mesh the UNSET default is off, an explicit expert stays
+    assert FusedConfig.from_env({"PI05_MEGAKERNEL": ""}).megakernel == "whole"
+    # the resolved default: single chip keeps whole; on a mesh the UNSET default is off, an explicit choice stays
     # (and the model refuses it on a mesh)
-    assert FusedConfig.from_env({}).resolved(1).megakernel == "expert"
+    assert FusedConfig.from_env({}).resolved(1).megakernel == "whole"
     assert FusedConfig.from_env({}).resolved(4).megakernel == "off"
+    assert FusedConfig.from_env({"PI05_MEGAKERNEL": "whole"}).resolved(4).megakernel == "whole"
     assert FusedConfig.from_env({"PI05_MEGAKERNEL": "expert"}).resolved(4).megakernel == "expert"
+    assert FusedConfig.from_env({"PI05_MEGAKERNEL": "expert"}).resolved(1).megakernel == "expert"
     assert FusedConfig.from_env({"PI05_MEGAKERNEL": "off"}).resolved(1).megakernel == "off"
     assert FusedConfig.from_env({}).resolved(1).resolved(1) == FusedConfig.from_env({}).resolved(1)
     with pytest.raises(ValueError):
@@ -121,6 +125,7 @@ def test_cpu_knob_and_refusals():
     from models.experimental.pi0_5.common.device_open import device_kwargs
 
     assert device_kwargs(FusedConfig.from_env({"PI05_MEGAKERNEL": "expert"}))["worker_l1_size"] == 1_395_712
+    assert device_kwargs(FusedConfig.from_env({"PI05_MEGAKERNEL": "whole"}))["worker_l1_size"] == 1_395_712
     assert device_kwargs(FusedConfig.from_env({}))["worker_l1_size"] == 1_395_712  # the default path needs the cut
     assert "worker_l1_size" not in device_kwargs(FusedConfig.from_env({"PI05_MEGAKERNEL": "off"}))
 
