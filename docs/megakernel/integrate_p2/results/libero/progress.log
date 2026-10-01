@@ -1,0 +1,17 @@
+[2026. 10. 01. (목) 12:36:51 KST] integrate-p2 LIBERO run_all submitted (queues on the device lock behind ip2 hold6)
+[2026. 10. 01. (목) 12:36:51 KST] start open-loop PCC (default path, PI05_MEGAKERNEL unset)
+[2026. 10. 01. (목) 12:42:18 KST] open-loop rc=0 [2026-10-01 12:41:29] SUMMARY {"mean_pcc_7": 0.9999757970264312, "min_pcc_7": 0.9999553777701807, "min_pcc_all32": 0.9999533838560273, "max_maxabs_env": 0.01105576753616333, "all_deterministic": true, "host_preproc_ok": true, "steady_call_ms_median": 53.5}
+[2026. 10. 01. (목) 12:42:18 KST] launching server
+[2026. 10. 01. (목) 12:43:15 KST] client start
+[2026. 10. 01. (목) 12:49:07 KST] client rc=0
+[2026. 10. 01. (목) 12:55:00 KST] server rc=0
+[2026. 10. 01. (목) 12:55:00 KST] eval rc=0
+[2026. 10. 01. (목) 12:55:00 KST] summary rc=0 "successes": 99
+[2026. 10. 01. (목) 12:55:31 KST] record: launching server
+[2026. 10. 01. (목) 12:56:28 KST] record: client start 3:0,7:0,0:0,5:0
+[2026. 10. 01. (목) 12:57:06 KST] record: client rc=0
+[2026. 10. 01. (목) 12:59:27 KST] record: server rc=0
+[2026. 10. 01. (목) 12:59:39 KST] rendered captions + combined
+[2026. 10. 01. (목) 13:00:09 KST] rendered captions + combined
+[2026. 10. 01. (목) 13:00:31 KST] demo + manifest done
+[2026. 10. 01. (목) 13:00:46 KST] demo + manifest done

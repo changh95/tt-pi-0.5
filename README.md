@@ -104,7 +104,23 @@ fire before the device is opened.
 
 ### LIBERO closed loop
 
-LIBERO_PLACEHOLDER
+`lerobot/pi05_libero` @ `a217bfd3` with openpi's `pi05_libero` norm stats, libero_spatial
+(10 tasks x official init states 0-9), openpi's evaluation loop (5 of each 10-action chunk
+executed), served through openpi's websocket protocol by the default path (2026-10-01; every episode is stamped
+`megakernel=whole`, kernel digest `4aa02cdf21ed0c94`, code `7f32fcc`):
+
+| Policy | Device | Success |
+|---|---|---:|
+| this port, default (`whole`: one fused op per call) | p150a | **99 / 100** (0 errors, 0 timeouts; t9/i4 hit the step cap) |
+| same, paired subset (init states 0-4) | p150a | 49 / 50 |
+| phase-1 expert megakernel (`expert`, 2026-09-30) | p150a | 99 / 100 (paired 49 / 50) |
+| previous path (`off`, 2026-09-29) | p150a | 98 / 100 (paired 48 / 50) |
+| openpi `PI0Pytorch`, same weights and client (init states 0-4) | RTX 5090 | 50 / 50 |
+
+Server-side policy latency: median **53.6 ms** per call (p10 53.3, p90 54.1; 2,189 calls), vs 66.4 ms for `expert`
+and 77.6 ms for `off`. The open-loop golden check through the same LIBERO wrapper gave PCC7 mean 0.999976, min
+0.999955, deterministic. The LIBERO server wrapper and the client are not part of this repository; the summaries are
+in `docs/megakernel/integrate_p2/results/libero/`.
 
 ## What the fused graph does
 

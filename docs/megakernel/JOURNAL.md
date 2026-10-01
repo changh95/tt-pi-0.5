@@ -883,3 +883,45 @@ verify_p2_r0's with the arm runner of env.sh, plus c_prof3.py, c_lat.py, hold6.s
 | Size | PASS 128,636 B base / 126,492 B LIBERO (empty mock cache; identical to verify-p2-r0) | M_size_*.json |
 | Served A/B (P2-5) | PASS: inference median whole 55.97 / 55.91 vs expert 70.84 / 70.87 ms (P1-6 70.72); total 57.57 / 57.42 vs 72.29 / 72.37; smoke PASS x4; /info backend = arm on every server; mask probe pass x4 (batcher, batch 1: [2, 0] vs [2] differ by 0.837, repeat identical); no uvicorn left after each stop | S_*.json, S_*.smoke.log |
 | Startup refusals of the default | PI05_NUM_IMAGES=1 (new), PI05_BATCH_SIZES=1,2, PI05_KV_DTYPE=bf16: rc 3, "PI05_MEGAKERNEL=whole refused at startup: ...", no "Opening device" line | refuse_default_*.log |
+
+## 2026-10-01 13:01:24 KST -- integrate-p2: LIBERO closed loop, demo, docs (session end)
+
+- LIBERO with the default (/home/deepgadget/experiments/gr00t/libero_eval/pi05/megakernel-p2/; tools/ = copies of
+  ../megakernel-p1/tools (themselves ../fused/tools + device_kwargs + stamp), paths / captions changed, run_fused.sh unsets
+  PI05_MEGAKERNEL, run_all.sh adds WITH_DEVICE_RESET_AFTER=1; make_manifest.py new; copies in integrate_p2/results/libero/):
+  - Open-loop golden through the wrapper (openloop_pcc_mkp2.json): PCC7 mean 0.999976, min 0.999955, deterministic,
+    host preprocessing ok, steady call 53.5 ms; stamp megakernel=whole.
+  - libero_spatial 10 tasks x inits 0-9 (tt_spatial_summary.json): **99/100**, 0 errors, 0 timeouts, 0 missing; the one
+    failure is t9/i4 at the step cap (230 steps; also the only failure of the phase-1 run). Paired inits 0-4: 49/50 vs GPU
+    50/50 (only_gpu [9, 4]); inits 5-9: 50/50. ACCEPTED (>= 80 and paired >= GPU - 10 pts). Server policy latency median
+    53.6 ms (p10 53.3, p90 54.1, max 61.4, 2,189 calls) vs 66.4 (expert, 09-30) and 77.6 (off, 09-29). All 100 episodes
+    stamped backend=whole, mk_digest=4aa02cdf21ed0c94, code=7f32fccbe6b4 (clean tree). 20 episodes have the same steps and
+    outcome as the phase-1 run.
+  - Demo (demo/, manifest.json): 4 on-screen viewer recordings t3/i0 96 steps, t7/i0 134, t0/i0 116, t5/i0 114, all
+    SUCCESS, each equal to its eval episode's steps; median 54.0-54.1 ms per call. Captioned clips + combined
+    pi05_libero_spatial.mp4 (29.13 s) + poster. I LOOKED at the poster (t3 SUCCESS frame, the bowl on the plate, caption
+    "Blackhole p150a — the whole-model megakernel (one fused op per call)"), the title card (99/100, 53.6 ms, "SigLIP +
+    VLM + expert loop = ONE persistent generic_op per call"), a t7 running frame (12 s) and the end card (27.5 s). Correct.
+    Note: render needs /usr/bin/python3 (the tt-metal venv's imageio has no ffmpeg plugin); this host has no ffprobe
+    (the manifest probes with ffmpeg -i).
+- Docs: README (intro table: what is the ONE persistent op, what stays on the host, the comparator knobs and their op
+  counts; Results rewritten from integrate_p2/results + the LIBERO files; GPU ratios recomputed against served 55.97 ms;
+  architecture, knob table, tree, troubleshooting), the package README, GPU_COMPARISON.md (2026-10-01 section), DESIGN
+  §0 status rows, §4.12 and §7 / §11.3 amendments (2026-10-01).
+Ship-phase handoff (NOT done here: the staging package /home/deepgadget/experiments/tt-models/models/pi05-base-p150-fused
+is outside the pi0.5 repo):
+- tt-model.yaml serve.env: PI05_MEGAKERNEL "expert" -> "whole" (an unset value now resolves to whole as well; keep it
+  explicit); PI05_SOURCE_COMMIT = the new main merge sha; header comments (lines 4-5, 46, 93) and the card text (70.8 ms,
+  "the SigLIP tower and the VLM prefill run as traced TT-NN ops", 17.49 ms expert device time, the 22-seed expert-oracle
+  rows) describe phase 1 and must be rewritten from integrate_p2/results (+ the image's own bench).
+- verify: lines: FusedConfig default assert -> 'whole' (expert / off still selectable); the kernels-dir assert lists only
+  mk_* (still true for tt/megakernel/kernels) but nothing checks tt/megakernel/kernels_p2/ (9 files: pe_{brisc,common,defs,
+  dm,ncrisc,trisc}.hpp, whole_{brisc,ncrisc,trisc}.cpp) or pe_program.kernel_digest2() == '4aa02cdf21ed0c94'; the
+  all-sources include check asserts len(ks) == 14, now 23 (checked on the repo tree at 7f32fcc: 23 sources, 69 quoted
+  includes, all resolve to a sibling or to tt_metal/hw/inc; kernels_p2 includes ../kernels/mk_*.cpp and
+  internal/circular_buffer_interface.h). The image's smoke must read /info megakernel.backend == whole.
+- Apply NOTES_FOR_SHIP_P2.md items 1-5 when the card is rewritten.
+Open (unchanged, not gates): seed 707 is the one of 32 seeds where expert is closer to fp32 than whole (0.99769 vs
+0.99522; whole still closer than off); the SigLIP layer's host-clock margin under the 355 us go line is small (354.2 us
+base here, 353.1 in verify-p2-r0); under whole the per-request copies to the unused ttnn prefix inputs (im2col / tokens)
+still happen (host-side, small); the ttnn prefix modules are built and hold device DRAM though never enqueued.

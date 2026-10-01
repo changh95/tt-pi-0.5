@@ -41,7 +41,7 @@ stream timeline uses the review's fluid model `docs/megakernel/design/review_str
 | WP-P2-3 whole prefix in-kernel (SigLIP + projector + embed + VLM -> KV) | DONE on the 2026-10-01 amended clause | stack 37.3 / 35.7 ms; K/V closer to fp32 than the ttnn caches 36 / 36 per shape (P23_*.json), 288 / 288 (verify_p2_r0 G_gates_r1.json) |
 | WP-P2-4 whole `sample_actions` as one program + all gates | DONE 2026-10-01 (accepted on the amended gates) | JOURNAL "PHASE-2 EXIT GATE TABLE" and "verify-p2-r0" |
 | WP-P2-5 server integration of phase 2 | DONE (served 55.7 ms vs expert 70.9) | p2/gates/results/S_*.json |
-| integrate-p2: `whole` as the DEFAULT path (`expert` / `off` = comparators), gate re-run on the final commit, LIBERO closed loop | see JOURNAL "integrate-p2" | `integrate_p2/results/` |
+| integrate-p2: `whole` as the DEFAULT path (`expert` / `off` = comparators), gate re-run on the final commit, LIBERO closed loop | DONE 2026-10-01 (every gate re-run PASS; served 55.97 / 55.91 vs expert 70.84 / 70.87 ms; LIBERO 99/100 at 53.6 ms/call) | JOURNAL "integrate-p2"; `integrate_p2/results/` |
 
 ## 1. Inputs and hard limits
 

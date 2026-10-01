@@ -22,7 +22,7 @@ Validated on tt-metal `main` @ `668c2907575` (v0.79.0-dev20260914), one p150a, 2
 | LIBERO shape (2 × 224², 32 tokens, H = 10), per call / trace replay | 53.1 / 51.2 ms |
 | device ops per trace replay | 1 |
 | PCC vs the openpi GPU golden (`pi05_libero`, 8 LIBERO observations, 7 action dims) | mean 0.999976, min 0.999955 |
-| LIBERO-spatial closed loop (`pi05_libero`, 10 tasks × 10 init states) | LIBERO_PKG_PLACEHOLDER |
+| LIBERO-spatial closed loop (`pi05_libero`, 10 tasks × 10 init states) | 99 / 100 |
 
 Layout: `common/` (configs, `FusedConfig` knobs, torch-side graph inputs, weight loader),
 `reference/` (the torch oracle), `tt/` (the megakernels under `tt/megakernel/`, the comparator TT-NN graph and its
