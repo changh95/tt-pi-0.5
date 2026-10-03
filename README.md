@@ -6,7 +6,42 @@ end-to-end robot control. This repository is a port of π0.5 to Tenstorrent
 hardware via TTNN, derived from `lerobot/pi05_base`, running on a single
 Blackhole p150a.
 
-Since 2026-10-01 the default inference path (`PI05_MEGAKERNEL=whole`) is the **whole-model megakernel**:
+## Since 2026-10-03: the multi-config megakernel (default)
+
+The served default (`PI05_MEGAKERNEL` unset or `mc` on one chip) is the **multi-config pi0.5 megakernel** in
+[`models/experimental/pi0`](models/experimental/pi0/README.md) (`tt/ttnn_pi05_model.py`, `PI05MegakernelTTNN`),
+vendored unchanged from the tenstorrent/tt-metal pull-request branch `changh95/pi05-megakernel-mc` @ `fae9cd03fa4`
+and validated on tt-metal `main` @ `f856a38a361`. Every call runs the whole `sample_actions` as three persistent
+`ttnn.generic_op` programs on 110 cores (four with 3-4 cameras: one vision program per group of <= 2 cameras),
+replayed from one Metal trace per prompt bucket:
+
+| Program | What it runs |
+|---|---|
+| VISION | SigLIP (patch embedding + 27 layers + post-LN) and the projector on the cameras |
+| PREFIX | the language embedding and the Gemma-2B prefill writing the 18 bfp8 K / V caches |
+| EXPERT | the time MLP / adaRMS conditioning, the action in-projection, N Euler steps x 18 Gemma-300M expert layers, the action out-projection |
+
+A model is built for one configuration: cameras 1-4, action horizon H 1..64 (suffix buckets of 32 / 64 rows) and
+flow-matching steps N 1..10; each request runs in the smallest of the 32 / 64 / 128 / 224-token prompt buckets that
+holds its prompt (`prompt_bucket=` overrides it). Batch 1, 224 x 224 images, masked cameras refused, one live model
+per device, the device opened with `PI05_DEVICE_PARAMS` (the 64 KiB worker-L1 cut). The server
+(`models/experimental/pi0_5/server/app.py`, backend in `server/mc_backend.py`) takes the configuration from
+`PI05_NUM_IMAGES`, `PI05_ACTION_HORIZON` and `PI05_NUM_STEPS` and refuses anything out of range at start; a request
+must send exactly `PI05_NUM_IMAGES` images. Images are normalised as openpi does (`x * float32(1/255) * 2 - 1`).
+`server/serve_pi05_libero.py` serves the same model over openpi's websocket protocol for the LIBERO client.
+
+Accuracy, the full 320-set matrix and its two documented limitations are in
+[`models/experimental/pi0/README.md`](models/experimental/pi0/README.md); the release validation (image build,
+bit-identity against the tt-metal-pr build, served latency, LIBERO TT vs GPU) is in
+[`docs/megakernel/publish_mc/JOURNAL.md`](docs/megakernel/publish_mc/JOURNAL.md).
+
+The rest of this README describes the single-config paths of the earlier releases. They remain selectable as
+comparators (`PI05_MEGAKERNEL=whole` / `expert` / `off`) and were validated on tt-metal `668c2907575`, not on
+`f856a38a361`.
+
+## 2026-10-01 to 2026-10-03: the whole-model megakernel
+
+From 2026-10-01 the default inference path (`PI05_MEGAKERNEL=whole`, now a comparator) was the **whole-model megakernel**:
 every call of `PI0ModelTTNN.sample_actions_fused` runs the model as **one fused op** on the device, a single
 persistent `ttnn.generic_op` (a `ProgramDescriptor` with custom kernels) on all 110 worker cores, captured in a
 Metal trace whose replay holds exactly that one op ([`docs/megakernel/`](docs/megakernel/DESIGN.md), §11):

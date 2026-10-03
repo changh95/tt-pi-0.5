@@ -12,7 +12,7 @@ kind as ``media/sample_base.png`` / ``media/sample_wrist.png``). The test:
 1. waits for ``GET /health`` to report ``ok`` (the server is warm),
 2. reads ``GET /info`` for the contract (number of camera slots, token budget),
 3. ``POST /predict`` with the prompt and a zero state -> asserts HTTP 200, ``actions`` of
-   shape (50, 32), all finite, ``max|a| <= --max-abs`` (normalised action space is ~[-1, 1]),
+   shape (H, 32) (H from ``/info`` ``outputs.actions``, default 50), all finite, ``max|a| <= --max-abs`` (normalised action space is ~[-1, 1]),
    not constant, ``normalized: true``,
 4. ``POST /predict`` again with the same inputs -> the policy is deterministic (fixed
    initial noise), so the two chunks must match closely,
@@ -88,7 +88,7 @@ def b64_png(im: Image.Image) -> str:
 def load_images(paths: Optional[List[str]], n: int) -> List[str]:
     if paths:
         return [base64.b64encode(open(p, "rb").read()).decode() for p in paths[:n]]
-    kinds = ["base", "wrist", "wrist"]
+    kinds = ["base", "wrist", "wrist", "base"]
     return [b64_png(synthetic_image(kinds[i])) for i in range(n)]
 
 
@@ -107,10 +107,10 @@ def wait_ready(url: str, timeout: float) -> dict:
     raise SystemExit(f"FAIL server at {url} not ready after {timeout:.0f}s (last: {last})")
 
 
-def check_actions(resp: dict, max_abs: float) -> dict:
+def check_actions(resp: dict, max_abs: float, horizon: int = ACTION_HORIZON) -> dict:
     acts = resp.get("actions")
-    if not isinstance(acts, list) or len(acts) != ACTION_HORIZON or any(len(r) != ACTION_DIM for r in acts):
-        raise AssertionError(f"actions shape != ({ACTION_HORIZON}, {ACTION_DIM})")
+    if not isinstance(acts, list) or len(acts) != horizon or any(len(r) != ACTION_DIM for r in acts):
+        raise AssertionError(f"actions shape != ({horizon}, {ACTION_DIM})")
     flat = [float(v) for r in acts for v in r]
     if not all(math.isfinite(v) for v in flat):
         raise AssertionError("non-finite action values")
@@ -123,7 +123,7 @@ def check_actions(resp: dict, max_abs: float) -> dict:
         raise AssertionError("actions are constant")
     if resp.get("normalized") is not True:
         raise AssertionError("response must say normalized: true")
-    if resp.get("action_horizon") != ACTION_HORIZON or resp.get("action_dim") != ACTION_DIM:
+    if resp.get("action_horizon") != horizon or resp.get("action_dim") != ACTION_DIM:
         raise AssertionError("action_horizon/action_dim mismatch")
     return {"max_abs": amax, "mean": mean, "std": std, "flat": flat}
 
@@ -151,6 +151,7 @@ def main() -> int:
         n_images = int(info.get("inputs", {}).get("num_images", 2))
         token_len = int(info.get("inputs", {}).get("token_len", 224))
         tokenizer_ok = bool(info.get("tokenizer", {}).get("available", False))
+        horizon = int((info.get("outputs", {}).get("actions") or [ACTION_HORIZON])[0])
         print(
             f"info: num_images={n_images} token_len={token_len} tokenizer={tokenizer_ok} "
             f"weights={info.get('weights')} warmup_ms={info.get('warmup_latency_ms')}"
@@ -165,13 +166,13 @@ def main() -> int:
         status, r1 = _post(f"{url}/predict", payload)
         if status != 200:
             raise AssertionError(f"/predict -> HTTP {status}: {r1}")
-        s1 = check_actions(r1, args.max_abs)
+        s1 = check_actions(r1, args.max_abs, horizon)
         lat1 = r1.get("timing_ms", {}).get("inference")
 
         status, r2 = _post(f"{url}/predict", payload)
         if status != 200:
             raise AssertionError(f"/predict (repeat) -> HTTP {status}: {r2}")
-        s2 = check_actions(r2, args.max_abs)
+        s2 = check_actions(r2, args.max_abs, horizon)
         repeat_diff = max_diff(s1["flat"], s2["flat"])
         if repeat_diff > 0.05:
             raise AssertionError(f"repeat call differs by {repeat_diff:.4f} (> 0.05): policy should be deterministic")
@@ -179,7 +180,7 @@ def main() -> int:
         change_diff = None
         if not args.skip_change_check:
             other = {
-                "images": [b64_png(synthetic_image("wrist")), b64_png(synthetic_image("base"))][:n_images],
+                "images": [b64_png(synthetic_image(k)) for k in ["wrist", "base", "base", "wrist"][:n_images]],
                 "state": [0.5] * 8,
             }
             if tokenizer_ok:
@@ -201,14 +202,14 @@ def main() -> int:
             status, r3 = _post(f"{url}/predict", other)
             if status != 200:
                 raise AssertionError(f"/predict (other observation) -> HTTP {status}: {r3}")
-            s3 = check_actions(r3, args.max_abs)
+            s3 = check_actions(r3, args.max_abs, horizon)
             change_diff = max_diff(s1["flat"], s3["flat"])
             if change_diff < 1e-3:
                 raise AssertionError("a different observation produced the same actions (stale prefix KV?)")
 
         lat2 = r2.get("timing_ms", {}).get("inference")
         print(
-            f"PASS pi05 actions=(50,32) max|a|={s1['max_abs']:.3f} std={s1['std']:.3f} "
+            f"PASS pi05 actions=({horizon},32) max|a|={s1['max_abs']:.3f} std={s1['std']:.3f} "
             f"repeat_maxdiff={repeat_diff:.4f} change_maxdiff={change_diff if change_diff is None else round(change_diff, 4)} "
             f"inference_ms={lat1}/{lat2} tokens={r1.get('num_tokens')}/{token_len} truncated={r1.get('prompt_truncated')}"
         )

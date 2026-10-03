@@ -1,0 +1,96 @@
+{
+ "n_rows": 126,
+ "n_replay_sessions": 12,
+ "programs_per_session": [
+  [
+   3,
+   6
+  ],
+  [
+   4,
+   6
+  ]
+ ],
+ "per_trace": {
+  "0": {
+   "sessions": 2,
+   "programs": [
+    3
+   ],
+   "op_codes": [
+    ""
+   ],
+   "cores": [
+    "110"
+   ],
+   "device_ms_median": 53.504568500000005
+  },
+  "1": {
+   "sessions": 2,
+   "programs": [
+    3
+   ],
+   "op_codes": [
+    ""
+   ],
+   "cores": [
+    "110"
+   ],
+   "device_ms_median": 53.5885305
+  },
+  "3": {
+   "sessions": 2,
+   "programs": [
+    3
+   ],
+   "op_codes": [
+    ""
+   ],
+   "cores": [
+    "110"
+   ],
+   "device_ms_median": 55.1772465
+  },
+  "4": {
+   "sessions": 2,
+   "programs": [
+    4
+   ],
+   "op_codes": [
+    ""
+   ],
+   "cores": [
+    "110"
+   ],
+   "device_ms_median": 60.7564515
+  },
+  "5": {
+   "sessions": 2,
+   "programs": [
+    4
+   ],
+   "op_codes": [
+    ""
+   ],
+   "cores": [
+    "110"
+   ],
+   "device_ms_median": 61.0019405
+  },
+  "7": {
+   "sessions": 2,
+   "programs": [
+    4
+   ],
+   "op_codes": [
+    ""
+   ],
+   "cores": [
+    "110"
+   ],
+   "device_ms_median": 62.559052
+  }
+ },
+ "non_session_rows_total": 84,
+ "non_session_rows_after_first_replay": 55
+}

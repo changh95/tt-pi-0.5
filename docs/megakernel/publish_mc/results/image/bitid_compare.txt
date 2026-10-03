@@ -1,0 +1,9 @@
+host model /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/pubmc/ref/models/experimental/pi0/tt/ttnn_pi05_model.py ttnn /home/deepgadget/experiments/tt-metal-main/tt-metal/ttnn/ttnn/__init__.py
+image model /opt/tt-metal/models/experimental/pi0/tt/ttnn_pi05_model.py ttnn /opt/tt-metal/ttnn/ttnn/__init__.py
+c1 preset [1, 32, 32] H 10 N 10 torch.equal True sha equal True 2e91855b9fa71da1 ops 3 kv_dram False call ms host/img 39.79/39.78
+c2 preset [2, 224, 64] H 50 N 10 torch.equal True sha equal True 63d5c2b66833644d ops 3 kv_dram False call ms host/img 56.74/56.60
+c3 preset [3, 64, 32] H 32 N 5 torch.equal True sha equal True d9f8d48c5ecdf039 ops 4 kv_dram False call ms host/img 62.95/62.75
+c4 preset [4, 128, 64] H 64 N 10 torch.equal True sha equal True cc8090acd8b1027c ops 4 kv_dram True call ms host/img 95.84/95.28
+golden: 8 outputs identical host vs image: True 8
+golden image PCC7 mean 0.999981 min 0.999958 inputs_equal True policy /opt/tt-metal/models/experimental/pi0_5/server/serve_pi05_libero.py
+refusals all ok: True 10

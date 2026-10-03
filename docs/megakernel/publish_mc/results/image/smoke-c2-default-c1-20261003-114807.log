@@ -1,0 +1,1 @@
+PASS pi05 actions=(50,32) max|a|=0.260 std=0.070 repeat_maxdiff=0.0000 change_maxdiff=0.8413 inference_ms=57.67/56.63 tokens=143/224 truncated=False

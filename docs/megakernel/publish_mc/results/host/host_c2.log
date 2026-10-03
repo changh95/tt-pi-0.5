@@ -1,0 +1,24 @@
+[11:29:30] start c2 env: 
+2026-10-03 11:29:32,589 INFO pi05.server: config: {'weights_repo': 'lerobot/pi05_base', 'weights_revision': 'b211f3d44c36b6acfcf7ae94a64e8e96f75a64ba', 'weights_dir': None, 'tokenizer_repo': 'google/paligemma-3b-pt-224', 'tokenizer_dir': None, 'token
+2026-10-03 11:29:35.863 | info     |          Device | Opening user mode device driver (tt_cluster.cpp:223)
+2026-10-03 11:29:36.123 | info     |             UMD | Opening local chip ids/PCIe ids: {0}/[0] and remote chip ids {} (cluster.cpp:172)
+2026-10-03 11:29:38,618 INFO pi05.server: Opening device {'device_id': 0, 'l1_small_size': 24576, 'worker_l1_size': 1395712, 'trace_region_size': 10000000} (multi-config megakernel)
+2026-10-03 11:30:14,312 INFO pi05.server: Model built in 35.7 s
+2026-10-03 11:30:14,895 INFO pi05.server: Warming up: compiling and capturing the 32 / 64 / 128 / 224-token prompt buckets ...
+2026-10-03 11:30:26,964 INFO pi05.server: Warmup traces captured in 12.1 s
+2026-10-03 11:30:27,028 INFO pi05.server: Warmup 1/2: 62.0 ms
+2026-10-03 11:30:27,085 INFO pi05.server: Warmup 2/2: 56.9 ms
+2026-10-03 11:30:27,085 INFO pi05.server: Warmup complete (first 62.0 ms, steady 56.9 ms) -- 3 device ops per call, one trace per prompt bucket
+info megakernel {"backend": "mc", "program": {"kernel_digest": "1429d5bea05c31ad", "cameras": 2, "action_horizon": 50, "suffix_rows": 64, "num_steps": 10, "prompt_buckets": [32, 64, 128, 224], "kv_dram": false, "device_ops_per_call": 3, "class": "models.experimental.pi0.tt.ttnn_pi05_model.PI05MegakernelTTNN"}} outputs [50, 32]
+PASS pi05 actions=(50,32) max|a|=0.260 std=0.070 repeat_maxdiff=0.0000 change_maxdiff=0.8413 inference_ms=58.19/56.73 tokens=143/224 truncated=False
+one image too few: HTTP 400: {"detail":"1 images given; this server's model is built for exactly 2 camera(s) (PI05_NUM_IMAGES). Masked or padded camera slots are not served: send only the real cameras to a server started with PI05_NUM_IMAGES = that count"}
+one image too many: HTTP 400: {"detail":"3 images given; this server's model is built for exactly 2 camera(s) (PI05_NUM_IMAGES). Masked or padded camera slots are not served: send only the real cameras to a server started with PI05_NUM_IMAGES = that count"}
+num_steps mismatch: HTTP 400: {"detail":"num_steps=3 cannot be changed per request: the port precomputes the per-step conditioning at build time (server runs 10; set PI05_NUM_STEPS to change it)"}
+prompt_bucket 48: HTTP 400: {"detail":"pi0.5 megakernel: prompt_bucket=48 (compiled: 32 / 64 / 128 / 224)"}
+prompt_bucket 32 too small: HTTP 400: {"detail":"pi0.5 megakernel: prompt_bucket=32 cannot hold 41 real tokens"}
+prompt_bucket 224 explicit (ok): HTTP 200: bucket=224 H=50 inf=57.72
+auto bucket 32 (ok): HTTP 200: bucket=32 H=50 inf=55.42
+BENCH {"preprocess": {"median": 1.42, "p10": 1.2, "p90": 1.67, "min": 1.17, "max": 1.81}, "inference": {"median": 56.44, "p10": 56.27, "p90": 56.57, "min": 56.24, "max": 56.88}, "total": {"median": 57.88, "p10": 57.52, "p90": 58.13, "min": 57.45, "max": 58.55}, "client_wall": {"median": 59.17, "p10": 58.73, "p90": 59.71, "min": 58.62, "max": 60.45}}
+[11:30:30] done c2
+[11:30:31] server stopped; device users []
+rc=0
