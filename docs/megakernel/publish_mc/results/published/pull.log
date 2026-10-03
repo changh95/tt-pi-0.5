@@ -1,0 +1,6 @@
+docker load tt-model/pi05-base-p150:36f651704bf1…
+Loaded image: tt-model/pi05-base-p150:36f651704bf1
+✓ docker load tt-model/pi05-base-p150:36f651704bf1  52.2s
+  ✓ pulled changh95/pi05-base-p150
+  → next:  tt-model serve changh95/pi05-base-p150
+sha256:36f651704bf123ebed106991303c3b077ff94e96b77d5c8c684d3f6772432477

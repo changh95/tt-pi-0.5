@@ -195,3 +195,23 @@ Follow-ups (next release):
   tests/pcc/golden_openpi.py): take paths from env vars / CLI args, skip when absent.
 - Per-preset expert fidelity (HiFi4 where it is not slower) for the A4 one-action-row residual; ETH 12x10 dispatch.
 - The c2 L224 S64 H64 seed-5 input-sensitive trajectory (A2) stays documented.
+
+## 2026-10-03 13:26:26 KST -- PUBLISHED (user approval relayed by the lead)
+- GitHub: branch multiconfig-2026-10-03 pushed; PR #4 (https://github.com/changh95/tt-pi-0.5/pull/4) merged with a
+  merge commit: main = ec6d00b15754f89af2dfb9c6a4a9761f8a60ad6e (parents eb6f4e7 + 8830cd7; body ends with the
+  Co-Authored-By trailer). main models/ == 5edf139 models/ (git diff empty), 5edf139 is an ancestor of main, so
+  PI05_SOURCE_COMMIT = 5edf139 stays valid without a rebuild. Fresh clone of main: models/ == HF code/models except the
+  HF-only tt-metal file models/common/lightweightmodule.py. The local branch was fast-forwarded to ec6d00b.
+- HF changh95/pi05-base-p150: ONE create_commit **ab447b79a73f7bf2d0b372beba4c8df7cc640076**, parent 990e22b5 (13:20:36-
+  13:21:10; 137 adds / replaces, 44 deletes = 43 image blobs + demo/libero_eval.json).
+- Verify (results/published/): tree 249 files = expected 249, none missing / unexpected, deleted paths gone; 137 adds /
+  replaces: 20 LFS by Hub sha256, 117 git blobs by sha1 + local sha256, 0 mismatches; history ab447b79 <- 990e22b5.
+  Image pull-back: docker rmi the local image, tt-model pull changh95/pi05-base-p150 docker-loaded
+  tt-model/pi05-base-p150:36f651704bf1, Id sha256:36f651704bf123ebed106991303c3b077ff94e96b77d5c8c684d3f6772432477 (=
+  manifest digest). One hold 13:23:55-13:25:19 (reset exit 0): served by repo id, READY 41.0 s; /info mc /
+  1429d5bea05c31ad / 3 ops / source 5edf139; smoke PASS (smoke_test.py from the fresh GitHub clone); 30 warm requests
+  inference median 56.31 ms (p90 56.46), total 57.47; golden PCC7 in the pulled image (served container's spec) mean
+  0.999981 min 0.999958, 8/8 inputs torch.equal, outputs bit-identical to the host reference.
+Facts to remember: HF ab447b79 (parent 990e22b5), image 36f651704bf1, GitHub PR #4 merge ec6d00b, source 5edf139,
+tt-metal pin f856a38a361 (clean clone gr00t/publish/tt-metal-f856a38a361), staging models/pi05-base-p150-mc, build dir
+build/pi05-base-p150 (= the 36f651704bf1 package), scripts + results in docs/megakernel/publish_mc/.

@@ -1,0 +1,5 @@
+rev ab447b79a73f7bf2d0b372beba4c8df7cc640076 | files 249 | expected 249
+missing [] | unexpected []
+deleted still present []
+adds/replaces checked: 20 LFS by sha256, 117 git blobs by sha1; mismatches []
+commits: [('ab447b79', 'pi0.5 multi-config megakernel (cameras 1-4, H 1..64, N 1..10, prompt buckets 32-'), ('990e22b5', 'pi0.5 phase-2 whole-model megakernel (the whole model = ONE persistent generic_o')]
