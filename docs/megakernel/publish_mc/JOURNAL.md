@@ -131,3 +131,8 @@ results/image/ (validate.log, info / smoke / bench per profile, img_check_image.
   pi0_5 app.py / smoke_test.py / README.md, demo/* same names), 109 unchanged, 43 superseded image blobs deleted;
   .gitattributes and media/ kept. Staging manifest with sha256 per file:
   /home/deepgadget/experiments/tt-models/models/pi05-base-p150-mc.STAGING_MANIFEST.json (outside the staging dir).
+
+## 2026-10-03 12:06:25 KST -- handoff (session end; nothing outward-facing done)
+Branch multiconfig-2026-10-03 (local, not pushed): 5edf139 (code; = PI05_SOURCE_COMMIT and HF code/), 4188a8f (docs),
+this entry. Publish commands for the lead are in the final report (push + PR + merge commit; one HF create_commit with
+parent 990e22b5 via scripts/hf_commit_mc.py; then pull-back check docker inspect Id == sha256:36f651704bf1...).
