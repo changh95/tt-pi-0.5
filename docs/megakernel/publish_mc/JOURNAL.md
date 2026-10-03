@@ -150,3 +150,12 @@ Lead: write the OCI export to a new path (build/pi05-base-p150-mc), not over bui
 export had already been written over build/pi05-base-p150 (approved (b) at that time). Asked the lead before moving
 anything. Lead rule recorded: when an approved command does not do what was approved, stop and ask; never substitute
 a broader one.
+
+## 2026-10-03 12:09:46 KST -- lead: export (i) leave; demo README references fixed
+- Export: left as is (build/pi05-base-p150 = the 36f651704bf1 package).
+- Staged demo/README.md edited (source copy in tt_mc_matrix/demo untouched): every reference now resolves on the Hub
+  (code/models/experimental/pi0/tt/ttnn_pi05_model.py, code/.../pi0, code/.../pi0_5/server/serve_pi05_libero.py with
+  its sha256 prefix, manifest.json) or is marked *not published* (raw/, tools/, the run logs / jsonl, the golden file,
+  the device lock, the c2_n10 per-episode log and summary); "Nothing has been uploaded" replaced; first-person check
+  sentence reworded. Every number unchanged (number tokens of source vs staged diff: empty). Staging manifest sha
+  refreshed; HF dry run unchanged in counts.
