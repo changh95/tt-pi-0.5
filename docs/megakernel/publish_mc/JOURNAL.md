@@ -159,3 +159,16 @@ a broader one.
   the device lock, the c2_n10 per-episode log and summary); "Nothing has been uploaded" replaced; first-person check
   sentence reworded. Every number unchanged (number tokens of source vs staged diff: empty). Staging manifest sha
   refreshed; HF dry run unchanged in counts.
+
+## 2026-10-03 12:12:08 KST -- lead card fixes 1-2
+1. LIBERO table (card, via card_mc.py): the RTX 5090 latency column removed; the p150a column is now "p150a policy
+   call (server side, incl. host inputs; mean)"; one sentence says the GPU latency is not reported because it was
+   measured differently (openpi model time only, shared loaded host). The same fix applied to the 2026-10-03 section of
+   GPU_COMPARISON.md (it had the same column).
+2. A2 limitation "other five prompts >= 0.9983": the gate files (wp6/out/an/c2_S64_N{5..10}.gates.json,
+   a2.L224_H64) hold only min / mean per cell (the min is seed 5). The per-seed values were recomputed with the gate's
+   own comparand (wp6/out/outs/c2_S64_N{1..10}.pt vs .val/matrix/refs/c2_L224_S64_H64_s{0..5}.pt, wp_inputs.pcc; per N
+   the min equals the gates.json min to 1e-9): results/a2_cell_seeds.{json,txt}. Seeds 0-4 at N 5-10: min 0.998327
+   (N5 seed 3); at every N 1-10: min 0.997821 (N3 seed 3) -- the implementer's ">= 0.9978" was over all N. Card now:
+   ">= 0.9983 at N = 5-10 (>= 0.9978 at every N from 1 to 10)", read from that json by card_mc.py.
+Staging manifest + HF dry run refreshed (counts unchanged).

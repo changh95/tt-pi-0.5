@@ -1,0 +1,13 @@
+Config{cache_path=/home/deepgadget/.cache/ttnn,model_cache_path=/home/deepgadget/.cache/ttnn/models,tmp_dir=/tmp/ttnn,enable_model_cache=false,enable_fast_runtime_mode=true,validate_program_args=false,throw_exception_on_fallback=false,enable_logging=false,enable_graph_report=false,enable_graph_python_stack_traces=false,enable_detailed_buffer_report=false,enable_detailed_tensor_report=false,enable_comparison_mode=false,comparison_mode_should_raise_exception=false,comparison_mode_pcc=0.9999,root_report_path=generated/ttnn/reports,report_name=std::nullopt,std::nullopt}
+N1 gates.json min 0.998261 mean 0.999001 | per seed s0=0.999345 s1=0.999097 s2=0.998261 s3=0.998587 s4=0.999149 s5=0.999567 | min over s0-4 0.998261
+N2 gates.json min 0.998460 mean 0.999191 | per seed s0=0.999541 s1=0.999807 s2=0.999578 s3=0.998460 s4=0.998545 s5=0.999216 | min over s0-4 0.998460
+N3 gates.json min 0.994043 mean 0.998215 | per seed s0=0.999788 s1=0.999908 s2=0.999893 s3=0.997821 s4=0.997838 s5=0.994043 | min over s0-4 0.997821
+N4 gates.json min 0.970954 mean 0.994443 | per seed s0=0.999809 s1=0.999942 s2=0.999913 s3=0.998007 s4=0.998035 s5=0.970954 | min over s0-4 0.998007
+N5 gates.json min 0.928093 mean 0.987421 | per seed s0=0.999691 s1=0.999939 s2=0.999941 s3=0.998327 s4=0.998531 s5=0.928093 | min over s0-4 0.998327
+N6 gates.json min 0.869980 mean 0.977803 | per seed s0=0.999829 s1=0.999931 s2=0.999937 s3=0.998378 s4=0.998762 s5=0.869980 | min over s0-4 0.998378
+N7 gates.json min 0.845397 mean 0.973757 | per seed s0=0.999809 s1=0.999908 s2=0.999953 s3=0.998694 s4=0.998782 s5=0.845397 | min over s0-4 0.998694
+N8 gates.json min 0.802738 mean 0.966728 | per seed s0=0.999824 s1=0.999933 s2=0.999945 s3=0.998909 s4=0.999020 s5=0.802738 | min over s0-4 0.998909
+N9 gates.json min 0.812954 mean 0.968434 | per seed s0=0.999818 s1=0.999933 s2=0.999960 s3=0.998862 s4=0.999074 s5=0.812954 | min over s0-4 0.998862
+N10 gates.json min 0.762829 mean 0.960150 | per seed s0=0.999732 s1=0.999927 s2=0.999956 s3=0.999113 s4=0.999342 s5=0.762829 | min over s0-4 0.999113
+min over seeds 0-4, N5-10: 0.998327
+min over seeds 0-4, N1-10: 0.997821

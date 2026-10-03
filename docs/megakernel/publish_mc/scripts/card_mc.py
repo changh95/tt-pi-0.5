@@ -41,7 +41,13 @@ n1 = T["n1_a4"]
 GI = json.load(open(f"{W}/gpu_inc_c2_L224_H64.json"))
 gpu_bf16 = {int(N): [s["pcc"] for s in v["seeds"] if s["seed"] == 5][0] for N, v in GI["arms"]["bf16"]["per_N"].items()}
 mk_s5 = {c["N"]: [s["pcc"] for s in c["seeds"] if s["seed"] == 5][0] for c in a2}
-others = min(s["pcc"] for c in a2 for s in c["seeds"] if s["seed"] != 5)  # over the 6 failing (N = 5-10) sets
+# per-seed A2 of the failing cell (c2 L224 S64 H64) at every N, recomputed from wp6/out/outs/c2_S64_N*.pt vs the matrix
+# refs with the same comparand as wp6_an.py (min asserted == an/c2_S64_N*.gates.json a2.L224_H64.min)
+CS = "/home/deepgadget/experiments/tt-models/ports/tt-pi-0.5/docs/megakernel/publish_mc/results/a2_cell_seeds.json"
+cs = {int(k): v for k, v in json.load(open(CS)).items()}; SRC["a2_cell_seeds"] = CS
+for c in a2:
+    assert abs(cs[c["N"]][5] - [x["pcc"] for x in c["seeds"] if x["seed"] == 5][0]) < 1e-12
+others = min(min(cs[N][:5]) for N in range(5, 11)); others_all = min(min(cs[N][:5]) for N in range(1, 11))
 
 P = json.load(open(f"{LM}/paired_vs_gpu.json"))
 LS = {k: json.load(open(f"{LM}/{k}_summary.json")) for k in P}
@@ -74,7 +80,7 @@ prof_md = "\n".join(prof_rows)
 # ---------------------------------------------------------------- tables
 libero_rows = "\n".join(
     f"| {k[1]} | {k.split('_n')[1]} | **{P[k]['tt_success']} / 100** | {P[k]['gpu_success']} / 100 | "
-    f"{len(P[k]['tt_only'])} / {len(P[k]['gpu_only'])} | {f(LS[k]['policy_latency']['mean_ms'], 1)} ms | {f(P[k]['gpu_latency_mean_ms'], 1)} ms |"
+    f"{len(P[k]['tt_only'])} / {len(P[k]['gpu_only'])} | {f(LS[k]['policy_latency']['mean_ms'], 1)} ms |"
     for k in ["c2_n10", "c2_n5", "c2_n1", "c1_n10", "c1_n5", "c1_n1"])
 
 bit_rows = "\n".join(
@@ -213,17 +219,17 @@ Every serve profile, served by this image (the card's request; 3-4 cameras repea
 
 ### LIBERO closed loop (TT vs GPU)
 
-`lerobot/pi05_libero` through this code (openpi's `pi05_libero` conventions: H = 10, openpi norm stats, openpi's client and LIBERO loop), libero_spatial 10 tasks × init states 0-9, paired episode by episode with openpi's PyTorch policy on an RTX 5090 (same client, init states and per-call noise seeds). Latency = server-side policy call (host inputs + device + readback), mean.
+`lerobot/pi05_libero` through this code (openpi's `pi05_libero` conventions: H = 10, openpi norm stats, openpi's client and LIBERO loop), libero_spatial 10 tasks × init states 0-9, paired episode by episode with openpi's PyTorch policy on an RTX 5090 (same client, init states and per-call noise seeds). The p150a latency is the server-side policy call (host input building + device + readback). The GPU latency is not reported: it was measured differently (openpi model time only, on a shared, loaded host), so it is not comparable.
 
-| Cameras | N | p150a | RTX 5090 | discordant pairs (TT-only / GPU-only) | p150a latency | RTX 5090 latency |
-|---:|---:|---:|---:|---:|---:|---:|
+| Cameras | N | p150a | RTX 5090 | discordant pairs (TT-only / GPU-only) | p150a policy call (server side, incl. host inputs; mean) |
+|---:|---:|---:|---:|---:|---:|
 {libero_rows}
 
 Every discordant split has exact McNemar p = 1. With 1 camera (the wrist image dropped) both backends collapse (0-2 / 100): pi05_libero needs the wrist view, so those rows are a record, not an accuracy signal.
 
 ### Limitations
 
-- **One input-sensitive trajectory (A2).** All 6 failing A2 sets are one input: 2 cameras, a full 224-token prompt, 64 action rows (H = 64), matrix seed 5, at N = 5-10. openpi's GPU policy in bf16 also fails there from N = 6, but this megakernel is lower at every N; the other five prompts of that preset stay ≥ {f(others,4)} at those step counts:
+- **One input-sensitive trajectory (A2).** All 6 failing A2 sets are one input: 2 cameras, a full 224-token prompt, 64 action rows (H = 64), matrix seed 5, at N = 5-10. openpi's GPU policy in bf16 also fails there from N = 6, but this megakernel is lower at every N; the other five prompts of that cell stay ≥ {f(others,4)} at N = 5-10 (≥ {f(others_all,4)} at every N from 1 to 10):
 
 {a2_tab}
 
