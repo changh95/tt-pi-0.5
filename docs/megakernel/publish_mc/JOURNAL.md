@@ -136,3 +136,17 @@ results/image/ (validate.log, info / smoke / bench per profile, img_check_image.
 Branch multiconfig-2026-10-03 (local, not pushed): 5edf139 (code; = PI05_SOURCE_COMMIT and HF code/), 4188a8f (docs),
 this entry. Publish commands for the lead are in the final report (push + PR + merge commit; one HF create_commit with
 parent 990e22b5 via scripts/hf_commit_mc.py; then pull-back check docker inspect Id == sha256:36f651704bf1...).
+
+## 2026-10-03 12:08:21 KST -- late lead / pi05-libero-gpu-base messages applied
+(Delivered after the build had run.) Lead: demo/ = the combined mp4, poster, 4 clips, manifest.json and README.md from
+tt_mc_matrix/demo (no raw/, tools/, logs). Applied: staging demo/ now holds exactly those 8 files, byte-identical
+(cmp) to the source; my own demo/README.md and demo/libero_eval.json were dropped; the card's demo section links
+demo/manifest.json and names code 7a622a3 / tt-metal f856a38 / digest 1429d5bea05c31ad. HF diff re-run: new 118,
+changed 19, unchanged 109, deleted 43 image blobs + demo/libero_eval.json (the old record file; the new one is
+manifest.json). Note: the source demo README keeps local references (raw/, tools/, ../c2_n10.jsonl, "Nothing has been
+uploaded") that do not exist on the Hub. pi05-libero-gpu-base confirmed serve_pi05_libero.py sha256 96dff490...908 =
+the vendored file.
+Lead: write the OCI export to a new path (build/pi05-base-p150-mc), not over build/pi05-base-p150. Too late: the
+export had already been written over build/pi05-base-p150 (approved (b) at that time). Asked the lead before moving
+anything. Lead rule recorded: when an approved command does not do what was approved, stop and ask; never substitute
+a broader one.

@@ -11,7 +11,7 @@ info = api.model_info(REPO, revision=PARENT, files_metadata=True)
 remote = {s.rfilename: s for s in info.siblings}
 local = {}
 for f in ["README.md", "SERVING.md", "GPU_COMPARISON.md", "PERF_PRESETS.md", "tt-model.yaml", "requirements.lock",
-          "demo/README.md", "demo/libero_eval.json", "demo/pi05_libero_spatial.mp4", "demo/pi05_libero_spatial_poster.png",
+          "demo/README.md", "demo/manifest.json", "demo/pi05_libero_spatial.mp4", "demo/pi05_libero_spatial_poster.png",
           "demo/pi05_tt_libero_spatial_t0_i0.mp4", "demo/pi05_tt_libero_spatial_t3_i0.mp4",
           "demo/pi05_tt_libero_spatial_t5_i0.mp4", "demo/pi05_tt_libero_spatial_t7_i0.mp4"]:
     local[f] = f"{S}/{f}"
@@ -24,7 +24,7 @@ assert not any("__pycache__" in k or k.endswith(".pyc") for k in local)
 assert all(os.path.isfile(v) for v in local.values())
 keep = {".gitattributes", "media/sample_base.png", "media/sample_wrist.png"}
 deletes = sorted(r for r in remote if r not in local and r not in keep)
-unexpected = [r for r in deletes if not r.startswith("image/blobs/")]
+unexpected = [r for r in deletes if not r.startswith("image/blobs/") and r != "demo/libero_eval.json"]  # the demo record is demo/manifest.json now
 assert not unexpected, unexpected
 
 def sha(p):

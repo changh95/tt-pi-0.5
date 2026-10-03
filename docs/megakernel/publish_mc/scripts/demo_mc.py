@@ -43,19 +43,20 @@ This demo runs the **same model code** this repository's image serves, `PI05Mega
 
 Each clip is a fresh episode served live by the p150a (an on-screen MuJoCo viewer captured in real time at 30 fps; observations rendered offscreen exactly as in the evaluation), and each reproduced its step count from the 100-episode evaluation. Same tasks, init state and order as the previous demo. Just before recording, the packaged server's host inputs were `torch.equal` to openpi's on 8 / 8 golden observations (PCC over the 7 action dims, min 0.999958).
 """
-open(f"{S}/demo/README.md", "w").write(readme)
+# demo/README.md is pi05-libero-gpu-base's own (lead 2026-10-03); only the card section is written here
+
 section = f"""## LIBERO closed-loop demo
 
 {video}
 
-The multi-config megakernel this image serves, running LIBERO-Spatial closed loop in MuJoCo on one p150a, captured on screen in real time ([video]({U}/pi05_libero_spatial.mp4)). How it was made and all four clips: [`demo/README.md`](demo/README.md); machine-readable results: [`demo/libero_eval.json`](demo/libero_eval.json).
+The multi-config megakernel this image serves, running LIBERO-Spatial closed loop in MuJoCo on one p150a, captured on screen in real time ([video]({U}/pi05_libero_spatial.mp4)). How it was made and all four clips: [`demo/README.md`](demo/README.md); machine-readable record of the clips (probes, step counts, latency, backend stamps, eval score): [`demo/manifest.json`](demo/manifest.json).
 
 | libero_spatial (10 tasks x init states 0-9) | device | success |
 |---|---|---:|
 | `lerobot/pi05_libero` on `PI05MegakernelTTNN`, 2 cameras, N = 10 | p150a | **{P['tt_success']} / 100** (0 errors; t9/i4 hit the step cap) |
 | openpi `PI0Pytorch`, same weights, client and noise seeds | RTX 5090 | {P['gpu_success']} / 100 |
 
-Policy latency on the p150a: mean **{f1(lat['mean_ms'])} ms** per call (server side, p90 {f1(lat['p90_ms'])}; {lat['n_calls']:,} calls).
+Policy latency on the p150a: mean **{f1(lat['mean_ms'])} ms** per call (server side, p90 {f1(lat['p90_ms'])}; {lat['n_calls']:,} calls). Code: tt-metal-pr `changh95/pi05-megakernel-mc` @ `{m['code']['commit']}` (the model code of `code/`, identical to `fae9cd03fa4`) on tt-metal `f856a38`, kernel digest `1429d5bea05c31ad`.
 
 **Caveat: swapped weights.** The demo uses the LIBERO fine-tune `lerobot/pi05_libero` @ `a217bfd3b146` with openpi's `pi05_libero` norm stats, at openpi's LIBERO shape (H = 10, 5 actions executed per call, 32-token prompts). The image serves `lerobot/pi05_base`. The model code is the same; the LIBERO websocket server is `code/models/experimental/pi0_5/server/serve_pi05_libero.py`, and the client and norm stats live outside this repository.
 """

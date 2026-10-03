@@ -78,6 +78,7 @@
   "code/models/experimental/pi0_5/server/mc_backend.py",
   "code/models/experimental/pi0_5/server/serve_pi05_libero.py",
   "code/models/experimental/pi0_5/tests/test_server_mc.py",
+  "demo/manifest.json",
   "image/blobs/sha256/0458b2ae6155f0a994ace27c139a6803e1a64ee637086ea0f6499a4cd9403fa0",
   "image/blobs/sha256/064f7a6728d4e72aff8e30ec9a8e9bd0a6e0da1fd7060e9481c42132fe2492b0",
   "image/blobs/sha256/077b9dd9098685721872f82443a15e5f5bf9b8240a8a8ce960d07c56a34ef83b",
@@ -130,7 +131,6 @@
   "code/models/experimental/pi0_5/server/app.py",
   "code/models/experimental/pi0_5/server/smoke_test.py",
   "demo/README.md",
-  "demo/libero_eval.json",
   "demo/pi05_libero_spatial.mp4",
   "demo/pi05_libero_spatial_poster.png",
   "demo/pi05_tt_libero_spatial_t0_i0.mp4",
@@ -146,6 +146,7 @@
  ],
  "unchanged": 109,
  "deleted": [
+  "demo/libero_eval.json",
   "image/blobs/sha256/0d7676a6e831f546ded18e6e4de44343e8952bfe1c9134e6052e3b96e2acadf1",
   "image/blobs/sha256/0d8447f4e3f679a0847adb8d7008740793102968349bf61814c95b3ef99d664d",
   "image/blobs/sha256/156fd641d63ed70d6ad8c2527273ddd7d6c4fb7754db7188b0f9ac8cb4460eb3",
@@ -190,9 +191,9 @@
   "image/blobs/sha256/fad9ed19f852a88a992e9554b83fe7e42d1cc7b3e69471b1c070ff75764eea12",
   "image/blobs/sha256/fd72d86b0cddbe49417aa450f0f27f77b0c3cf8309dc483d021391b3e7dc1089"
  ],
- "new_count": 117,
- "changed_count": 20,
- "deleted_count": 43,
+ "new_count": 118,
+ "changed_count": 19,
+ "deleted_count": 44,
  "add_ops": 137,
  "image": {
   "registry": "hf",
