@@ -187,3 +187,11 @@ Staging manifest + HF dry run refreshed (counts unchanged).
   perf/profile_pi05_ops.py, pcc/golden_openpi.py}. They are tt-pi-0.5 files (not tt-metal-pr), unchanged since 821e8c5,
   i.e. already on HF in code/ today. Changing them changes code/, the code commit, code_sha256 and therefore needs a
   re-package (PI05_SOURCE_COMMIT is baked into serve.env) + re-validation.
+
+## 2026-10-03 12:23:31 KST -- D4 decision; follow-ups
+Lead: D4 (a) ship as is. Standing by; no publish until the lead brings the decision to the user.
+Follow-ups (next release):
+- pi0_5 dev test scripts with this host's paths (tests/megakernel/verify_alternating.py, tests/perf/profile_pi05_ops.py,
+  tests/pcc/golden_openpi.py): take paths from env vars / CLI args, skip when absent.
+- Per-preset expert fidelity (HiFi4 where it is not slower) for the A4 one-action-row residual; ETH 12x10 dispatch.
+- The c2 L224 S64 H64 seed-5 input-sensitive trajectory (A2) stays documented.
