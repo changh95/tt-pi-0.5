@@ -1,0 +1,20 @@
+INFO:     Started server process [1]
+INFO:     Waiting for application startup.
+2026-10-03 06:56:42.160 | DEBUG    | ttnn:<module>:45 - Initial ttnn.CONFIG:
+Config{cache_path=/home/tt/.cache/ttnn,model_cache_path=/home/tt/.cache/ttnn/models,tmp_dir=/tmp/ttnn,enable_model_cache=false,enable_fast_runtime_mode=true,validate_program_args=false,throw_exception_on_fallback=false,enable_logging=false,enable_graph_report=false,enable_graph_python_stack_traces=false,enable_detailed_buffer_report=false,enable_detailed_tensor_report=false,enable_comparison_mode=false,comparison_mode_should_raise_exception=false,comparison_mode_pcc=0.9999,root_report_path=generated/ttnn/reports,report_name=std::nullopt,std::nullopt}
+2026-10-03 06:56:42,476 ERROR pi05.server: PI05_MEGAKERNEL=mc refused at startup: pi0.5 megakernel refused: cameras = 5 (compiled: 1, 2, 3, 4) [PI05_NUM_IMAGES=5, PI05_ACTION_HORIZON=50, PI05_NUM_STEPS=10]
+ERROR:    Traceback (most recent call last):
+  File "/opt/tt-venv/lib/python3.12/site-packages/starlette/routing.py", line 654, in lifespan
+    async with self.lifespan_context(app) as maybe_state:
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/share/uv/cpython-3.12.14-linux-x86_64-gnu/lib/python3.12/contextlib.py", line 210, in __aenter__
+    return await anext(self.gen)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/tt-metal/models/experimental/pi0_5/server/app.py", line 795, in lifespan
+    cfg = load_config()
+          ^^^^^^^^^^^^^
+  File "/opt/tt-metal/models/experimental/pi0_5/server/app.py", line 279, in load_config
+    raise RuntimeError(f"PI05_MEGAKERNEL=mc refused: {why}")
+RuntimeError: PI05_MEGAKERNEL=mc refused: pi0.5 megakernel refused: cameras = 5 (compiled: 1, 2, 3, 4) [PI05_NUM_IMAGES=5, PI05_ACTION_HORIZON=50, PI05_NUM_STEPS=10]
+
+ERROR:    Application startup failed. Exiting.

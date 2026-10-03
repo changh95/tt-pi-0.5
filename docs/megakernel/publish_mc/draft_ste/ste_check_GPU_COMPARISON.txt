@@ -1,0 +1,233 @@
+sentences 213 (instructions 0, descriptive 213); over limit 0; paragraphs > 6 sentences 0; max length 22; mean 11.3
+table prose cells: sentences 125, over 25 0, max 20
+British spellings: []
+list items 208; list items nested deeper than 2 levels 0; prose paragraphs (not lists) 16
+  PROSE (1 sentence(s)): Closed-loop comparison of the same day:
+  PROSE (1 sentence(s)): Measurement of 2026-10-01:
+  PROSE (1 sentence(s)): Previous images:
+  PROSE (1 sentence(s)): GPU numbers:
+  PROSE (1 sentence(s)): Interpretation:
+  PROSE (1 sentence(s)): Historical part:
+  PROSE (2 sentence(s)): The GPU run has two differences from the literal reference. Both are necessary for CUDA, and both are in `bench_pi05_gpu.py`:
+  PROSE (1 sentence(s)): Time definitions (the same as the p150a `timing_ms` keys):
+  PROSE (1 sentence(s)): Accuracy of each GPU precision compared with the CPU fp32 reference (same input):
+  PROSE (1 sentence(s)): Weights resident in bf16:
+  PROSE (1 sentence(s)): Stage split:
+  PROSE (1 sentence(s)): Launch overhead:
+  PROSE (1 sentence(s)): `torch.compile` configuration:
+  PROSE (1 sentence(s)): Other facts:
+  PROSE (1 sentence(s)): Served-like loop (same host work as `server/app.py::predict`, 50 iterations, medians ms; p90 of total in brackets):
+  PROSE (1 sentence(s)): Interpretation:
+  3/25 desc | GPU pass: 2026-09-14.
+ 12/25 desc | The p150a side has updates of 2026-10-01 and 2026-10-03 (the next sections).
+  7/25 desc | Original note: this file gives facts only.
+  8/25 desc | The 2026-09-14 pass measured every GPU number below.
+ 18/25 desc | Every p150a number is a copy from the validation / publish reports and logs, with its source line.
+  7/25 desc | The pass did NOT touch the p150a.
+  8/25 desc | The p150a now serves the multi-config megakernel (`PI05MegakernelTTNN`).
+ 15/25 desc | It runs vision | prefix | expert as three persistent `ttnn.generic_op` programs for each call.
+ 10/25 desc | With 3-4 cameras, it runs four programs for each call.
+  4/25 desc | tt-metal: `main` @ `f856a38a361`.
+  2/25 desc | Image: `tt-model/pi05-base-p150:36f651704bf1`.
+ 14/25 desc | The test used 100 warm requests at the served shape of the sections below:
+  9/25 desc | 2 × 224² (two cameras), the card's 142-token prompt.
+  9/25 desc | H = 50: the action chunk has 50 actions.
+  4/25 desc | 10 flow-matching steps (N).
+  6/25 desc | Results of the 100 warm requests:
+  6/25 desc | `timing_ms.inference`: median 56.44 ms (p90 56.65).
+  3/25 desc | `timing_ms.total`: 57.68 ms.
+  4/25 desc | Client wall: 59.29 ms.
+  8/25 desc | The 2026-10-01 image gave 55.84 / 57.13 ms.
+ 10/25 desc | This test did not measure the GPU rows below again.
+  6/25 desc | Closed-loop comparison of the same day:
+  4/25 desc | Benchmark: LIBERO-spatial with `lerobot/pi05_libero`.
+ 11/25 desc | Each row has 100 paired episodes; openpi's client sends the requests.
+ 12/25 desc | The GPU runs openpi's `PI0Pytorch` on the RTX 5090 of this host.
+ 11/25 desc | The p150a latency is the mean of the server-side policy call.
+  7/25 desc | This time includes the host input preparation.
+ 11/25 desc | This file does not report the GPU latency of these runs.
+ 15/25 desc | That measurement used a different method (openpi model time only, on a shared, loaded host).
+  7/25 desc | Thus the GPU latency is not comparable.
+ 15/25 desc | With 1 camera, both backends fail, because the request does not include the wrist view.
+ 11/25 desc | Thus the 1-camera rows are a record, not an accuracy signal.
+ 13/25 desc | On 2026-10-01, the p150a served the whole-model megakernel on tt-metal `main` @ `668c2907575`.
+ 14/25 desc | For each request, ONE persistent `ttnn.generic_op` on 110 cores runs all of these parts:
+  5/25 desc | SigLIP on the two cameras.
+  6/25 desc | The projector and the language embedding.
+ 10/25 desc | The VLM prefill, which writes the K / V caches.
+ 10/25 desc | The full action-expert loop of 10 steps × 18 layers.
+  8/25 desc | The action in/out projections and the Euler updates.
+ 12/25 desc | This op is the only device op of the Metal trace replay.
+ 16/25 desc | This test measured these numbers again on 2026-10-01 with this repo's image `tt-model/pi05-base-p150:6fb244df57ff` on the p150a.
+ 13/25 desc | The test sent 100 warm requests of the card's request after 5 warm-ups.
+ 17/25 desc | The shape was the served shape: 2 × 224² + 224 tokens, H = 50, 10 steps.
+  8/25 desc | `timing_ms.inference`: median 55.84 ms (p10 55.62, p90 56.13).
+  5/25 desc | `timing_ms.total`: 57.13 ms (p90 57.44).
+  7/25 desc | preprocess 1.27 ms; client wall 58.52 ms.
+ 14/25 desc | The in-process trace replay alone (`execute_trace`, host wall, median of 30) is 54.1 ms.
+  4/25 desc | Source: port repo `docs/megakernel/integrate_p2/results/A_whole_base_r1.json`.
+  5/25 desc | The previous image (`fe0d2e3d68a7`, 2026-09-30):
+ 19/25 desc | It ran the SigLIP / VLM prefix as traced stock TT-NN ops and the expert loop as one generic_op.
+ 18/25 desc | It measured 70.81 ms inference and 72.16 ms total, in the same benchmark cycle as the current figures.
+ 13/25 desc | Its replay took 69.6 ms (`A_expert_base_r1.json`, the same session as the current replay).
+  4/25 desc | The 2026-09-29 image (`672900e23919`):
+  9/25 desc | It used stock TT-NN ops plus 3 custom programs.
+ 13/25 desc | It measured 84.05 ms inference, 85.30 ms total and an 82.8 ms replay.
+  9/25 desc | This test did not measure the GPU numbers again.
+ 19/25 desc | They are the 2026-09-14 runs below, of the torch reference at that time, before the mask / RoPE fix.
+ 15/25 desc | The fix changes the attention mask and the RoPE positions but not the tensor shapes.
+ 12/25 desc | This test did not measure the GPU cost of the fixed reference.
+ 14/25 desc | Ratio = p150a ms / GPU ms (> 1 means the GPU is faster).
+ 11/25 desc | The p150a (55.84 ms) is faster than every eager GPU row.
+ 12/25 desc | The fastest eager row is bf16 weights resident (99.869 ms, ratio 0.56).
+ 15/25 desc | The p150a is also faster than the stage-wise compiled rows (best 59.97 ms, ratio 0.93).
+ 19/25 desc | With bf16 weights and a compiled whole-request graph, the GPU gets to 46.6 ms, 1.20x faster than the p150a.
+ 15/25 desc | This test did not measure the p150a power, so this file makes no efficiency comparison.
+ 11/25 desc | The rest of this file is the 2026-09-14 pass as recorded.
+ 20/25 desc | That pass compared the GPU with the previous p150a image (125.84 ms, tt-metal fork `changh95/pi05` @ `4c9fbfcceb9`, before the fix).
+ 12/25 desc | Its references to `DEVICE_VALIDATION.md` now mean `docs/history/DEVICE_VALIDATION_2026-09-13.md` in the port repo changh95/tt-pi-0.5.
+ 10/25 desc | The GPU run has two differences from the literal reference.
+ 10/25 desc | Both are necessary for CUDA, and both are in `bench_pi05_gpu.py`:
+ 12/25 desc | `precompute_freqs_cis` is cached and returns the RoPE tables on the model's device.
+ 20/25 desc | The reference calculates the tables again on the CPU at every expert call, and CPU tables cannot multiply CUDA tensors.
+  8/25 desc | The p150a port also keeps a cos/sin cache.
+ 11/25 desc | The noise sampler returns the fixed seeded tensor (as `test_pcc_pi05_fused.py` does).
+  9/25 desc | All other code is the reference's own code path.
+  9/25 desc | This includes its per-call `weight.to(dtype)` casts and Python-level loops.
+  9/25 desc | Time definitions (the same as the p150a `timing_ms` keys):
+ 16/25 desc | incl_h2d = `.to('cuda')` of the two images, tokens, mask, state and noise + `sample_actions` + `actions.cpu()`.
+ 12/25 desc | The inputs are pageable host tensors, the same as what `predict()` produces.
+ 22/25 desc | `sample_actions` = embed_prefix (SigLIP x2 + projector + language embed), VLM prefill of 736 tokens with KV cache, and 10 expert steps.
+ 19/25 desc | Compare with p150a `timing_ms.inference` = 3 host->device copies + `execute_trace` of the whole graph + readback (125.84 ms, PUBLISH_SUMMARY.md:18).
+ 14/25 desc | excl_h2d = the same forward with resident inputs; the actions stay on the device.
+ 14/25 desc | Compare with the p150a `execute_trace` alone: 128.9 ms in the 130.2 ms configuration (DEVICE_VALIDATION.md:267).
+ 14/25 desc | With the same split, the shipped 125.8 ms configuration has ~124.5 ms of trace.
+ 20/25 desc | served-like = base64 decode + PNG decode + resize/normalize (`decode_image` x2) + `build_prompt` + `tokenize_prompt` + incl_h2d forward + `actions.tolist()`.
+ 14/25 desc | Compare with p150a `timing_ms.total` (127.0 ms = preprocess 1.17 + inference 125.84; PUBLISH_SUMMARY.md:18, warm-hub.json).
+ 15/25 desc | The p150a `preprocess` also contains its base64/PNG decode, because `predict()` starts its clock before `decode_image`.
+ 20/25 desc | stages = embed_prefix / VLM prefill / 10 denoise steps, each measured separately with a sync after it (inputs resident).
+ 16/25 desc | Compare with the p150a segment profile: SigLIP 22.6 / VLM 49.9 / expert 56.3 ms (DEVICE_VALIDATION.md:267-270).
+  8/25 desc | That profile is of the 130.2 ms configuration.
+ 13/25 desc | The shipped default is 4.4 ms faster in the expert, thus ~51.9 ms.
+  9/25 desc | CPU fp32 reference: `PI0Model` on the host, 16 threads.
+  5/25 desc | One `sample_actions` takes 13.9 s.
+ 12/25 desc | The GPU side uses fp32 strict (no TF32) on the same inputs.
+ 10/25 desc | The metric is the PCC over the `[1,50,32]` action chunk.
+  8/25 desc | The p150a e2e gate uses the same quantity.
+ 10/25 desc | PCC > 0.999 holds; the GPU runs the correct model.
+  5/25 desc | Cross-check against the p150a itself:
+ 10/25 desc | The same GPU fp32 model runs on the `serve_probe.py` payload.
+ 14/25 desc | The payload has the same two images and the prompt `"pick up the cube"`.
+ 18/25 desc | It has the state `[0.1, -0.2, 0.3, 0, 0, 0, 0.5, -0.5]` and the model's default seed-42 noise.
+ 17/25 desc | The comparison uses the actions that the p150a served in the verifier session (`logs/megakernel-validate/pi05-base/serve/verify_fused_actions.json`, fused bf16/bf8 trace).
+  7/25 desc | Result: PCC 0.999530, max abs diff 2.643e-02.
+ 16/25 desc | For scale: the port's harness reports torch-vs-fused PCC 0.9977 / 0.9987 on two random observations (DEVICE_VALIDATION.md:262).
+ 13/25 desc | Accuracy of each GPU precision compared with the CPU fp32 reference (same input):
+ 20/25 desc | fp16 autocast is numerically correct on this input: the Gemma-2B activations have no overflow, and the PCC is above 0.999.
+  5/25 desc | Thus the pass timed it.
+ 12/25 desc | Every bf16 GPU row is well above the p150a's own e2e PCC.
+ 12/25 desc | The p150a e2e PCC is 0.9977 / 0.9987 on the harness inputs.
+ 13/25 desc | It is 0.99953 on the served probe payload, compared with this fp32 reference.
+ 12/25 desc | Eager PyTorch, with fp32 weights on the device (as the brief specifies).
+ 11/25 desc | The autocast rows cast the fp32 weights again at every call.
+  8/25 desc | Under `inference_mode`, the autocast weight cache is off.
+  4/25 desc | Weights resident in bf16:
+ 13/25 desc | The script casts every tensor once with `.to(bfloat16)`: 6.76 GiB on the device.
+ 14/25 desc | The script casts the images to bf16 on the device, inside the timed region.
+ 13/25 desc | SigLIP / VLM / expert run in bf16 with the reference's fp32 softmax.
+ 12/25 desc | The script calculates the time embedding in fp32 and then casts it.
+ 16/25 desc | The script casts the velocity to fp32, so the Euler update `x_t + dtv` stays fp32.
+  6/25 desc | The p150a keeps x_t in bf16.
+ 18/25 desc | This configuration is the closest match to the p150a, which holds bf16 / bf8 weights on the device.
+ 10/25 desc | Inputs resident, a sync after each stage, median of 20.
+ 12/25 desc | The p150a row is the segment profile from DEVICE_VALIDATION.md:267-270 (130.2 ms configuration).
+  9/25 desc | The eager reference is launch-bound in the expert loop.
+ 18/25 desc | 18 layers x ~30 small kernels x 10 steps ≈ 5–6 k launches per chunk at 50 tokens.
+ 10/25 desc | Thus the 10 steps cost 65–85 ms at all precisions.
+ 17/25 desc | bf16 autocast is slower than fp32 there, because every step casts the 300 M expert weights again.
+ 18/25 desc | The prefill and SigLIP have real work in each launch, so their time changes with precision as expected.
+  9/25 desc | The p150a whole-graph Metal trace removes exactly this range.
+  9/25 desc | On the GPU, `torch.compile` with CUDA graphs solves it.
+  3/25 desc | Backend: inductor, `dynamic=False`.
+ 14/25 desc | The stage-wise variants compile the three stage functions `embed_image` / `forward_vlm` / `_denoise_forward` separately.
+ 10/25 desc | The Euler loop and the 10 calls stay in Python.
+  9/25 desc | The reduce-overhead (CUDA graphs) variants need two host-side additions:
+  8/25 desc | The `embed_image` output is `.clone()`d outside the graph.
+ 19/25 desc | The graph replays once for each camera, and the second replay overwrites the output buffer of the first camera.
+ 22/25 desc | Without the clone, the first attempt failed with 'accessing tensor output of CUDAGraphs that has been overwritten by a subsequent run' (`compile_run.log`).
+  8/25 desc | The script calls `torch.compiler.cudagraph_mark_step_begin()` once for each request.
+  8/25 desc | The `whole-request` variants compile `forward_inference` as ONE function.
+  6/25 desc | dynamo unrolls the 10-step Euler loop.
+ 14/25 desc | SigLIP x2 + VLM prefill + 10 expert steps are in a single graph.
+  9/25 desc | Under reduce-overhead, each request is one CUDA graph replay.
+ 11/25 desc | This is the closest equivalent of the p150a's single Metal trace.
+  9/25 desc | A stage split is not possible for these variants.
+  8/25 desc | The pass checked the accuracy again after compile.
+ 16/25 desc | Model load: 14.47 GB fp32 safetensors -> host took 1.1 s in the first run (`smoke.log`).
+ 10/25 desc | After that run, the file is page-cached: 0.01 s here.
+  8/25 desc | host -> cuda + model build: 1.6 s.
+ 12/25 desc | The first run took 6.24 s, because the pages were cold (`smoke.log`).
+  8/25 desc | 13.48 GiB of fp32 weights on the device.
+  5/25 desc | First fp32 call: 372.7 ms.
+  5/25 desc | Idle GPU power: 28.6 W.
+ 18/25 desc | Only the fp32 strict loop brings the GPU near its 600 W limit (466 W, 92 % util).
+ 11/25 desc | Every other precision is bandwidth/launch-bound at batch 1 (64-75 % util).
+ 19/25 desc | The fp32 served-like inference median (152.8 ms) is above the standalone incl_h2d median (144.1 ms), with a wide p90.
+ 18/25 desc | Cause: the fp32 loop runs at the power limit, and the host pre/post work between forwards adds variation.
+  7/25 desc | This file gives the value as measured.
+ 16/25 desc | Served-like loop (same host work as `server/app.py::predict`, 50 iterations, medians ms; p90 of total in brackets):
+ 17/25 desc | The host stages are the same code on the two sides (`decode_image` x2 + `build_prompt` + `tokenize_prompt`).
+ 10/25 desc | The GPU-side preprocess runs in the PIL/transformers of this venv.
+ 12/25 desc | Its time is within a millisecond of the p150a server's 1.17 ms.
+ 14/25 desc | Ratio = p150a ms / GPU ms (> 1 means the GPU is faster).
+ 10/25 desc | bf16 activations, bf8 weights in places (VS:38 'inherent bf8 numerics').
+  3/25 desc | Expert projections: `mcast1d_fp32`.
+ 15/25 desc | One Metal trace of the whole graph for each request (DEVICE_VALIDATION.md §2 step 14b, §5).
+ 17/25 desc | In strict fp32, the eager RTX 5090 takes 144.1 ms for each action chunk (H = 50).
+ 10/25 desc | The p150a's fused bf16 trace takes 125.84 ms (ratio 0.87).
+ 16/25 desc | The best eager GPU row is bf16 weights resident (eager, no autocast) at 99.9 ms (1.26x).
+ 21/25 desc | The best compiled row is bf16 weights resident + whole-request `torch.compile` default (one graph: prefix + VLM + 10 unrolled steps).
+ 13/25 desc | With it, the GPU gets to 46.6 ms with transfers, 2.70x the p150a.
+ 15/25 desc | The difference between eager and compiled is launch overhead in the expert loop, not arithmetic.
+ 14/25 desc | The p150a number already contains the equivalent fix (one Metal trace for each request).
+ 10/25 desc | Thus the compiled rows compare the two deployed paths directly.
+ 17/25 desc | The eager rows compare the p150a's fused deployment with an unoptimized GPU run of the reference code.
+ 20/25 desc | This test did not measure the p150a power in this pass, so this file makes no power or cost statement.
+  7/25 desc | p150a power: no pass measured it (BRIEF).
+ 12/25 desc | GPU power is the mean of `nvidia-smi` samples during each timed loop.
+  4/25 desc | The p150a per-stage split:
+  8/25 desc | It is from the 130.2 ms configuration (DEVICE_VALIDATION.md:266-271).
+ 14/25 desc | The shipped default (125.8 ms) is different only in the expert projections (-4.4 ms).
+  9/25 desc | This pass did not measure a p150a number again.
+  5/25 desc | The input description in `p150_numbers.json`:
+ 10/25 desc | It describes the pi05 input as '3 camera images ...
+  2/25 desc | 32 tokens'.
+ 14/25 desc | The served / Hub configuration that gave 125.84 ms is `PI05_NUM_IMAGES=2`, `PI05_TOKEN_LEN=224` (tt-model.yaml `serve.env`).
+ 12/25 desc | DEVICE_VALIDATION.md:205 gives 'Served shape everywhere: 2 x 224x224, 224 tokens, 10 steps'.
+  5/25 desc | This pass ran that configuration.
+ 12/25 desc | The GPU runs the reference's fp32 softmax / adaRMS / Euler math.
+ 10/25 desc | The p150a runs bf16 activations with bf8 weights in places.
+  9/25 desc | The bf16 GPU rows are the closest precision match.
+  8/25 desc | None of them reproduce the bf8 weight quantization.
+ 15/25 desc | Autocast rows cast the fp32 weights again at every call (no autocast cache under `inference_mode`).
+ 12/25 desc | Thus bf16/fp16 autocast are not faster than tf32 in the expert loop.
+  8/25 desc | The resident-bf16 rows do not have this cost.
+ 11/25 desc | The stage-wise variants compile three functions of a hand-written class-based model.
+ 11/25 desc | The 10-step loop and the two `embed_image` calls stay in Python.
+ 10/25 desc | The whole-request variants compile `forward_inference` once, with the loop unrolled.
+ 13/25 desc | The compile times of the re-runs use a warm inductor cache (`compile_run2.log`, `compile_run3.log`).
+ 11/25 desc | The cold compile of the stage functions took 31.7 s (`compile_run.log`).
+  8/25 desc | The stage split of the stage-wise CUDA-graph variants:
+ 11/25 desc | It is valid only with a `cudagraph_mark_step_begin` for each iteration (`compile_run3.log`).
+ 15/25 desc | The split in `compile_run2.log` did not have this call, and it recorded the graphs again.
+ 10/25 desc | Thus its 600 ms denoise numbers are not valid (replaced).
+ 10/25 desc | The whole-request compile of the autocast model (fp32 weights resident):
+ 19/25 desc | The compilation failed because the GPU did not have sufficient memory (`compile_run3.log`: 29.6 GiB allocated by PyTorch of 31.3).
+ 17/25 desc | The unrolled single graph holds the bf16 copies of the 13.5 GiB fp32 weights plus its intermediates.
+  8/25 desc | This file reports it as failed, not timed.
+ 18/25 desc | The bf16-resident whole-graph variants (6.8 GiB of weights) compile in 120-127 s and are the best GPU rows.
+ 12/25 desc | On the GPU side, it runs in `.venv-gpu/pi05` (pillow 12.3, transformers 4.53).
+ 10/25 desc | The p150a preprocess runs inside its container (same host CPU).
+ 10/25 desc | `logs/gpu-vs-p150/pi05-base/full_run.log`, `compile_run.log`, `smoke.log` (first run incl. the CPU reference), `smoke2.log`
+  5/25 desc | `logs/gpu-vs-p150/pi05-base/result.json`, `compile_result.json`, `cpu_fp32_reference.pt`; merged `reports/gpu-vs-p150/pi05-base.json`
+  6/25 desc | p150a: `reports/megakernel/PUBLISH_SUMMARY.md:18`, `logs/publish-megakernel/pi05-base/warm-hub.json`, `models/pi05-base-p150/DEVICE_VALIDATION.md:198-271`, `logs/megakernel-validate/pi05-base/serve/verify_fused_probe.log:7`, `verify_fused_actions.json`

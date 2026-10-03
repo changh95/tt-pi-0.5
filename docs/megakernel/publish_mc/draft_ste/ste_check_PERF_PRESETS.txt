@@ -1,0 +1,29 @@
+sentences 20 (instructions 0, descriptive 20); over limit 2; paragraphs > 6 sentences 0; max length 59; mean 15.9
+  OVER 59/25 descriptive: Footnote: trace replay, median of 60 per build, mean of 2 builds; measured at host 1-min load 2-9; the 4 presets also timed on a quiet host agree within 0.09 ms (c2 L64 S32 +0.027, c3 L224 S32 +0.090, c4 L224 S32 +0.057, c4 L224 S64 +0.081 ms here vs the quiet ABAB holds of 2026-10-03 09:38 / 10:00).
+  OVER 36/25 descriptive: Foreign windows: pid 2847144 seen at 11:13:09 (1 s old; how long it ran is unknown, so only the build spanning 11:13 is marked); pi05-mc-ship pytest 11:19:10-11:20:15 and pytest + git clone 11:21-11:22 (its own report).
+table prose cells: sentences 10, over 25 0, max 17
+British spellings: []
+list items 11; list items nested deeper than 2 levels 0; prose paragraphs (not lists) 3
+  PROSE (1 sentence(s)): Footnote: trace replay, median of 60 per build, mean of 2 builds; measured at host 1-min load 2-9; the 4 presets also timed on a quiet host agree within 0.09 ms
+  PROSE (2 sentence(s)): † one of the two builds ran while a foreign CPU process was active (windows below). Build-to-build se is <= 0.042 ms at 10 steps; at 1 / 5 steps it reaches 0.19
+  PROSE (3 sentence(s)): Foreign windows: pid 2847144 seen at 11:13:09 (1 s old; how long it ran is unknown, so only the build spanning 11:13 is marked); pi05-mc-ship pytest 11:19:10-11
+  4/25 desc | Hardware: one Blackhole p150a.
+ 11/25 desc | Each value is the time of one trace replay in ms.
+ 18/25 desc | A trace replay is one replay of the Metal trace that holds the device programs of one request.
+ 10/25 desc | The host waits for the end of each trace replay.
+  8/25 desc | Each value is the mean of 2 builds.
+  9/25 desc | Each build gives the median of 60 trace replays.
+ 12/25 desc | The ± value is the standard error (se) of the build means.
+  5/25 desc | The batch size is 1.
+ 16/25 desc | H is the number of actions in the action chunk (the actions that one request returns).
+ 10/25 desc | H = 10 for the action-row bucket of 32 rows.
+ 10/25 desc | H = 50 for the action-row bucket of 64 rows.
+ 11/25 desc | The device programs depend on the action-row bucket, not on H.
+ 19/25 desc | In the column names, L is the prompt bucket in tokens and S is the action-row bucket in rows.
+ 16/25 desc | A preset is one combination of a camera count, a prompt bucket and an action-row bucket.
+ 59/25 desc | Footnote: trace replay, median of 60 per build, mean of 2 builds; measured at host 1-min load 2-9; the 4 presets also timed on a quiet host agree within 0.09 ms (c2 L64 S32 +0.027, c3 L224 S32 +0.090, c4 L224 S32 +0.057, c4 L224 S64 +0.081 ms here vs the quiet ABAB holds of 2026-10-03 09:38 / 10:00).
+ 16/25 desc | † one of the two builds ran while a foreign CPU process was active (windows below).
+ 18/25 desc | Build-to-build se is <= 0.042 ms at 10 steps; at 1 / 5 steps it reaches 0.19 ms.
+ 36/25 desc | Foreign windows: pid 2847144 seen at 11:13:09 (1 s old; how long it ran is unknown, so only the build spanning 11:13 is marked); pi05-mc-ship pytest 11:19:10-11:20:15 and pytest + git clone 11:21-11:22 (its own report).
+ 19/25 desc | Every build's load also includes the sweep's own weight loading (~500 % CPU for a few s per build).
+ 11/25 desc | Source: .val/mc_impl/wp6/perf/out/sweep.json, PROGRESS.log; hold 11:11-11:29, 24 / 24 builds, rc 0.

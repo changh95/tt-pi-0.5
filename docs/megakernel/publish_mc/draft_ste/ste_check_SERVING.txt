@@ -1,0 +1,194 @@
+sentences 180 (instructions 18, descriptive 162); over limit 0; paragraphs > 6 sentences 0; max length 19; mean 8.2
+table prose cells: sentences 28, over 25 0, max 17
+British spellings: []
+list items 142; list items nested deeper than 2 levels 0; prose paragraphs (not lists) 10
+  PROSE (2 sentence(s)): This repo is a tt-model container package. It contains these parts:
+  PROSE (1 sentence(s)): The commands and the server:
+  PROSE (1 sentence(s)): Use this procedure to validate the port on the host without Docker:
+  PROSE (1 sentence(s)): Offline overrides:
+  PROSE (1 sentence(s)): With tt-cli:
+  PROSE (1 sentence(s)): Caches and boot times:
+  PROSE (1 sentence(s)): `POST /predict` accepts JSON with these fields:
+  PROSE (2 sentence(s)): Set these environment variables before the server starts. The server reads them only at start.
+  PROSE (1 sentence(s)): Result of the test:
+  PROSE (1 sentence(s)): Served latency of six configurations:
+  7/25 desc | This repo is a tt-model container package.
+  4/25 desc | It contains these parts:
+  1/25 desc | `tt-model.yaml`.
+  4/25 desc | The port in `code/`.
+  6/25 desc | The built OCI image in `image/`.
+  5/25 desc | The commands and the server:
+  6/25 desc | `tt-model package --container` builds the image.
+ 13/25 desc | The image contains tt-metal (built from source), the port and the HTTP stack.
+  8/25 desc | `tt-model serve` runs the image on the card.
+  7/25 desc | The server is `code/models/experimental/pi0_5/server/app.py` (FastAPI, `kind: tt-dit-server`).
+ 13/25 desc | The default backend of the server is the multi-config pi0.5 megakernel `PI05MegakernelTTNN` (`code/models/experimental/pi0/tt/ttnn_pi05_model.py`).
+ 14/25 desc | Camera count: the number of real camera images in each request (1 to 4).
+  8/25 desc | Action chunk: the actions that one request returns.
+  6/25 desc | The action chunk has H actions.
+ 15/25 desc | Flow-matching steps (N): the number of Euler steps of the action expert (1 to 10).
+ 10/25 desc | Configuration: one set of a camera count, H and N.
+  8/25 desc | The server builds one model for one configuration.
+  9/25 desc | Serve profile: a named configuration of the server (`--profile`).
+  7/25 desc | This package has one serve profile, `p150`.
+ 17/25 desc | Prompt bucket: a fixed prompt length that the device programs use: 32, 64, 128 or 224 tokens.
+ 17/25 desc | Action-row bucket (S): a fixed number of action rows that the device programs use: 32 or 64.
+ 14/25 desc | Preset: one combination of a camera count, a prompt bucket and an action-row bucket.
+  4/25 desc | There are 32 presets.
+ 13/25 desc | Device program: one persistent `ttnn.generic_op` megakernel on the 11 x 10 worker grid.
+ 12/25 desc | A request uses 3 device programs (4 with 3 or 4 cameras).
+ 16/25 desc | Trace replay: one replay of the Metal trace that holds the device programs of one request.
+  5/25 desc | Request: one `POST /predict` call.
+  3/25 desc | Inference time: `timing_ms.inference`.
+  9/25 desc | `code/models/` is byte-identical to `models/` of changh95/tt-pi-0.5 @ `5edf139d458e9acabd31eea641cd364079962677`.
+  9/25 desc | In the image, `code/models/` is at `/opt/tt-metal/models/...`, with `PYTHONPATH=/opt/tt-metal`.
+  9/25 desc | tt-model copies the tt-metal tree without its own `models/`.
+ 12/25 desc | Thus this `pi0` package is the only `pi0` package in the image.
+ 11/25 desc | The server finds the kernel sources relative to the Python files.
+ 14/25 desc | The JIT compiler compiles the kernel sources at the first boot of each configuration.
+ 11/25 desc | `source.tt_metal` is a clean clone of tenstorrent/tt-metal `main` @ `f856a38a361939888f92d88f9e69b2f8a83fb713` (v0.80.0-dev20261001-17).
+  9/25 desc | The wire manifest shows `dirty: false` for this tree.
+  9/25 desc | The validation of the multi-config megakernel used this tree.
+  7/25 desc | The previous releases pinned `main` @ `668c2907575`.
+  9/25 desc | These items did not change from the previous releases:
+  4/25 desc | The base image (`ghcr.io/tenstorrent/tt-metal/tt-metalium/ubuntu-22.04-dev-amd64`).
+  2/25 desc | `torch==2.11.0` (+cpu).
+  1/25 desc | `transformers==5.12.1`.
+  4/25 desc | `verify:` checks these items:
+  3/25 desc | The 32 presets.
+  8/25 desc | The 14 kernel sources and their digest (`1429d5bea05c31ad`).
+ 14/25 desc | Each `#include` of the C++ sources of the megakernel, against `tt_metal/hw/inc` in the image.
+  6/25 desc | The default configuration of the server.
+  7/25 desc | The checks of the earlier single-config paths.
+ 12/20 inst | Use this procedure to validate the port on the host without Docker:
+  9/20 inst | Set `T` to a built tt-metal tree @ `f856a38a361`.
+  5/20 inst | Set `R` to this repo.
+  8/25 desc | Export `PYTHONPATH`, `TT_METAL_HOME`, `ARCH_NAME` and the model variables.
+  8/20 inst | Install fastapi and uvicorn into a side directory.
+  5/20 inst | Add that directory to `PYTHONPATH`.
+  5/20 inst | Start the server with `uvicorn`.
+  5/20 inst | Run `smoke_test.py` against the server.
+  9/25 desc | The tree venv does not contain fastapi or uvicorn.
+  5/25 desc | Thus step 3 is necessary.
+ 10/25 desc | The server writes these boot log phrases in this order.
+  7/25 desc | `tt-model serve` uses them for its checklist:
+  2/25 desc | `Loading weights`
+  2/25 desc | `Loading tokenizer`
+  2/25 desc | `Opening device`
+  2/25 desc | `Loading pipeline`
+ 15/25 desc | `Warming up: compiling and capturing the 32 / 64 / 128 / 224-token prompt buckets`
+  2/25 desc | `Warmup 1/2`
+ 14/25 desc | `Warmup complete (... -- N device ops per call, one trace per prompt bucket)`
+  5/25 desc | `Application startup complete` (from uvicorn)
+ 10/25 desc | The server compiles and captures each prompt bucket before READY.
+  8/25 desc | Thus READY means that the server is warm.
+ 16/25 desc | If the startup fails, the server raises an exception and uvicorn exits with a non-zero code.
+ 10/25 desc | The server does not use the CPU as a fallback.
+ 11/25 desc | `PI05_WEIGHTS_DIR=<dir with model.safetensors + config.json>`: a local directory for the weights.
+  9/25 desc | `PI05_TOKENIZER_DIR=<local tokenizer dir>`: a local directory for the tokenizer.
+  7/25 desc | `PI05_TOKENIZER_REQUIRED=0`: the server starts without a tokenizer.
+  5/25 desc | Then only `tokens` requests work.
+  6/20 inst | Set `ROOT` to your tt-model-manager checkout.
+  6/25 desc | The checkout contains `bin/docker-env.sh` and `.venv`.
+  7/20 inst | Run `source $ROOT/bin/docker-env.sh` to use rootless Docker.
+  6/25 desc | This script sets `PATH` and `DOCKER_HOST`.
+  7/25 desc | Build the package with `tt-model package --container`.
+  6/20 inst | Start the server with `tt-model serve`.
+  9/20 inst | Run `smoke_test.py` against the port that `tt-model serve` printed.
+  7/20 inst | Then stop the server with `tt-model stop`.
+  8/20 inst | To start the server, use `tt serve changh95/pi05-base-p150`.
+  9/20 inst | To stop the server, use `tt model stop changh95/pi05-base-p150`.
+  9/20 inst | To see the serve profile, use `tt-model profiles changh95/pi05-base-p150`.
+  4/25 desc | Caches and boot times:
+  5/25 desc | The host cache is `~/.cache/tt-model/pi05-base-p150/{cache,weights,tensors}`.
+ 13/25 desc | The JIT kernels stay in this cache from one boot to the next.
+  5/25 desc | The weights are in `~/.cache/huggingface/hub/models--lerobot--pi05_base`.
+ 17/25 desc | Measured boot times of this image on the p150a (2026-10-03, wall time from `tt-model serve` to READY):
+  8/25 desc | Default configuration, cold (empty JIT cache): 66.2 s.
+ 10/25 desc | The four prompt buckets compile and capture in 11.8 s.
+  5/25 desc | Default configuration, warm: 41.2 s.
+ 10/25 desc | The four prompt buckets compile and capture in 0.8 s.
+ 15/25 desc | Other configurations (1, 3 or 4 cameras; H = 10; N = 5): 35-57 s.
+ 11/25 desc | Each configuration compiles its own device programs at its first boot.
+ 11/25 desc | `GET /health` returns `{"status": "ok" | "starting", "model": "pi05-base-p150", "device": ...}`.
+  6/25 desc | The status code is always 200.
+  8/25 desc | The status is `ok` only after the warm-up.
+  5/25 desc | `GET /info` returns these fields:
+  3/25 desc | model, task, hardware.
+ 12/25 desc | `megakernel`: {backend `mc`, program {kernel_digest, cameras, action_horizon, suffix_rows, num_steps, prompt_buckets, kv_dram, device_ops_per_call}}.
+  2/25 desc | `weights`, `tokenizer`.
+  4/25 desc | `source`: {repo, commit, path}.
+  5/25 desc | `inputs`: num_images, prompt_buckets, missing_images: refused.
+  4/25 desc | `outputs`: actions [H, 32].
+  3/25 desc | `limits`, `warmup_latency_ms`, `license`.
+  6/25 desc | `GET /v1/models` returns an OpenAI-shaped stub.
+ 10/25 desc | The stub prevents a 404 on the tt-model ready card.
+  7/25 desc | This endpoint is not a chat API.
+  7/25 desc | `POST /predict` accepts JSON with these fields:
+ 12/25 desc | The server masks the pad tokens out of the attention (openpi semantics).
+ 18/25 desc | Thus the output does not change with the padding or with the extra pad keys of the bucket.
+  6/25 desc | The response (200) contains these fields:
+ 17/25 desc | `actions`: the action chunk, H x 32 values in the normalized QUANTILES space, zero-padded to 32 dimensions.
+  5/25 desc | `action_horizon`, `action_dim`, `normalized: true`, `denoising_steps`.
+  5/25 desc | `prompt`, `num_tokens`, `token_len`, `prompt_bucket`, `prompt_truncated`.
+  6/25 desc | `images_used`, `images_padded` (0), `original_sizes`, `image_size`, `seed`.
+  4/25 desc | `timing_ms` {preprocess, inference, total}.
+  5/25 desc | The inference time is `timing_ms.inference`.
+  5/25 desc | 400: the input is bad.
+  5/25 desc | The response gives the reason.
+  8/25 desc | 503: the server did not complete its startup.
+  5/25 desc | 500: the device call failed.
+  6/25 desc | The response contains the exception text.
+  5/25 desc | Each request has batch 1.
+  5/25 desc | One lock serializes the requests.
+  8/20 inst | Set these environment variables before the server starts.
+  7/25 desc | The server reads them only at start.
+ 13/25 desc | At start, the server refuses these settings with the message of the model:
+  3/25 desc | An out-of-range value.
+  6/25 desc | A mesh (`TT_MESH_SHAPE` other than 1x1).
+  4/25 desc | `PI05_BATCH_SIZES` other than 1.
+  3/25 desc | A different layout.
+ 13/25 desc | `whole` / `expert` / `off` select the single-config paths of the earlier releases.
+ 14/25 desc | These single-config paths support only 2 cameras, H = 50 and N = 10.
+ 12/25 desc | The validation of these single-config paths used tt-metal `668c2907575`, not this tree.
+  7/25 desc | The package has one serve profile, `p150`.
+ 19/25 desc | Its default configuration is in `tt-model.yaml` (`serve.env`): 2 cameras, an action chunk of 50 actions and 10 flow-matching steps.
+ 19/25 desc | `tt-model serve` has no flag for the environment, and it does not pass the host environment to the container.
+  9/25 desc | This procedure is the tested method (2026-10-03, image `tt-model/pi05-base-p150:36f651704bf1`):
+ 16/25 desc | Write the launch command of the serve profile to a variable with `tt-model serve ... --print`.
+  8/25 desc | Change the three `PI05_` values in the command.
+  3/20 inst | Start the container.
+  3/25 desc | Examine `GET /info`.
+  5/25 desc | It shows the new configuration.
+  4/25 desc | Result of the test:
+ 17/25 desc | `/info` showed cameras 3, `action_horizon` 10, `num_steps` 5, `suffix_rows` 32 and 4 device programs for each call.
+ 13/25 desc | `smoke_test.py` passed: actions (10, 32), repeat difference 0.0000, inference 65.63 / 64.77 ms.
+ 10/25 desc | With `PI05_NUM_IMAGES=5`, the container stopped at start (exit code 3).
+ 17/25 desc | The message was `pi0.5 megakernel refused: cameras = 5 (compiled: 1, 2, 3, 4) [PI05_NUM_IMAGES=5, PI05_ACTION_HORIZON=50, PI05_NUM_STEPS=10]`.
+  5/25 desc | Served latency of six configurations:
+ 16/25 desc | The data is from the validation of image `36f651704bf1` with the request of the model card.
+ 14/25 desc | With 3 or 4 cameras, the request repeated the two images of the card.
+  8/25 desc | The values are the medians of warm requests.
+  2/25 desc | Gated tokenizer.
+ 13/25 desc | `google/paligemma-3b-pt-224` needs an HF token for an account that accepted the Gemma terms.
+  9/25 desc | `tt-model serve` mounts `~/.cache/huggingface`, which contains the token file.
+ 13/25 desc | If the token is not available, the boot fails with the default `PI05_TOKENIZER_REQUIRED=1`.
+  1/25 desc | State.
+ 13/25 desc | The proprioceptive state goes into the model only through the prompt (pi0.5 semantics).
+  2/25 desc | Megakernel limits.
+  9/25 desc | Single p150a (11 x 10 worker grid, Tensix dispatch).
+  2/25 desc | Batch 1.
+  4/25 desc | 224 x 224 images.
+ 11/25 desc | The device must open with the 64 KiB worker-L1 cut (`PI05_DEVICE_PARAMS`).
+  4/25 desc | The server does this.
+  6/25 desc | One live model for each device.
+ 11/25 desc | With 4 cameras, the K / V caches stay in DRAM.
+  5/25 desc | Accuracy limits (see the card):
+ 17/25 desc | One input-sensitive trajectory of the 320-set matrix (2 cameras, a 224-token prompt, H = 64, N 5-10).
+  7/25 desc | The expert-oracle residual at one action row.
+  5/25 desc | `pi05_base` is a base checkpoint.
+ 11/25 desc | Fine-tune it before you use its actions on an arbitrary robot.
+  2/25 desc | Host RAM.
+ 16/25 desc | The server materializes the fp32 checkpoint (14.5 GB) on the host while it builds the model.
+  9/25 desc | The server releases the checkpoint after the conversion (`PI05_FREE_HOST_WEIGHTS=1`).
+ 14/20 inst | Make sure that the host has about 20 GB of RAM for the peak.
