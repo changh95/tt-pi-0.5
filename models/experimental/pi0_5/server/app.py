@@ -7,6 +7,15 @@ Served by tt-model-manager as ``kind: tt-dit-server``::
     runtime:
       app: models.experimental.pi0_5.server.app:app
 
+Default backend (``PI05_MEGAKERNEL`` unset or ``mc``, single chip): the multi-config pi0.5 megakernel of
+``models/experimental/pi0`` (``PI05MegakernelTTNN``; ``server/mc_backend.py``): three persistent ``ttnn.generic_op``
+programs per call (VISION | PREFIX | EXPERT; four with 3-4 cameras, one vision program per <= 2 cameras), replayed from
+one Metal trace per prompt bucket. ``PI05_NUM_IMAGES`` 1..4, ``PI05_ACTION_HORIZON`` 1..64 and ``PI05_NUM_STEPS``
+1..10 are fixed at server start; each request runs in the smallest 32 / 64 / 128 / 224-token prompt bucket that holds
+its prompt (``prompt_bucket`` overrides it). The single-config paths below (``whole`` / ``expert`` / ``off``, the
+mesh and dp layouts) stay selectable as comparators; they were validated on tt-metal 668c2907575, not re-validated on
+the tree this package pins.
+
 uvicorn runs this module. Importing it has no side effects (no device, no weights, no
 network): the image's ``verify.sh`` imports it as an unprivileged user with no card.
 Everything heavy happens inside the ASGI **lifespan**, so uvicorn's
@@ -210,14 +219,21 @@ class ServerConfig:
     profile: str = "single-robot"  # PI05_PROFILE: the serving profile's name, reported by /info
     prefix_chips: int = 2  # pipeline: chips of the prefix sub-mesh (the remaining chips run the expert)
     pipeline_margin_ms: float = 4.0  # pipeline: safety margin on the measured expert time when waiting for the next group
+    backend: str = "mc"  # PI05_MEGAKERNEL: "mc" (default on one chip: the multi-config megakernel) | whole | expert | off
+    action_horizon: int = ACTION_HORIZON  # PI05_ACTION_HORIZON (mc: 1..64; the single-config paths: 50 only)
 
 
 def load_config() -> ServerConfig:
     """Read the serving configuration from the environment (lifespan only, never at import)."""
     from models.experimental.pi0_5.common.fused_config import FusedConfig
 
-    FusedConfig.from_env()  # fail fast on a bad knob (TT_FUSED=0: the unfused path was removed)
     layout = os.environ.get("PI05_LAYOUT", "mesh").strip().lower() or "mesh"
+    backend = os.environ.get("PI05_MEGAKERNEL", "").strip().lower()
+    if not backend:
+        # the multi-config megakernel is single-chip; the UNSET default on a multi-chip mesh stays the stock-op path
+        backend = "mc" if parse_mesh_shape(os.environ.get("TT_MESH_SHAPE")) == (1, 1) else ""
+    if backend != "mc":
+        FusedConfig.from_env()  # fail fast on a bad knob (TT_FUSED=0: the unfused path was removed)
     batch_sizes = tuple(sorted({int(b) for b in os.environ.get("PI05_BATCH_SIZES", "1").split(",") if b.strip()}))
     profile = os.environ.get("PI05_PROFILE", "").strip().lower() or (
         "multi-robot" if layout in ("dp", "pipeline") else ("single-robot" if batch_sizes == (1,) else "custom")
@@ -244,14 +260,27 @@ def load_config() -> ServerConfig:
         prefix_chips=_env_int("PI05_PREFIX_CHIPS", 2),
         dp_group=_env_int("PI05_DP_GROUP", 2),
         pipeline_margin_ms=float(os.environ.get("PI05_PIPELINE_MARGIN_MS", "4")),
+        backend=backend or "legacy",
+        action_horizon=_env_int("PI05_ACTION_HORIZON", ACTION_HORIZON),
     )
     if cfg.token_len < 1 or cfg.token_len % 32 != 0:
         raise RuntimeError(
             f"PI05_TOKEN_LEN={cfg.token_len} must be a positive multiple of 32 (tile alignment; "
             "validated values: 224 (LIBERO rollout) and 32 (README PCC/perf))"
         )
-    if cfg.num_images < 1 or cfg.num_images > 3:
+    if cfg.backend == "mc":
+        from models.experimental.pi0_5.server import mc_backend
+
+        why = mc_backend.refusal(cfg.num_images, cfg.action_horizon, cfg.num_steps,
+                                 parse_mesh_shape(os.environ.get("TT_MESH_SHAPE")), cfg.layout, cfg.batch_sizes,
+                                 cfg.token_len)
+        if why is not None:
+            LOG.error("PI05_MEGAKERNEL=mc refused at startup: %s", why)
+            raise RuntimeError(f"PI05_MEGAKERNEL=mc refused: {why}")
+    elif cfg.num_images < 1 or cfg.num_images > 3:
         raise RuntimeError(f"PI05_NUM_IMAGES={cfg.num_images} must be 1..3 (validated: 2)")
+    elif cfg.action_horizon != ACTION_HORIZON:
+        raise RuntimeError(f"PI05_ACTION_HORIZON={cfg.action_horizon}: the single-config paths serve {ACTION_HORIZON} only")
     if cfg.num_steps < 1:
         raise RuntimeError(f"PI05_NUM_STEPS={cfg.num_steps} must be >= 1 (validated: 10)")
     if cfg.warmup_runs < 1:
@@ -414,8 +443,10 @@ def tokens_from_request(tokens: List[int], token_len: int) -> Tuple[torch.Tensor
 
 
 def decode_image(b64: str, idx: int) -> Tuple[torch.Tensor, Tuple[int, int]]:
-    """base64 PNG/JPEG -> ``(1, 3, 224, 224)`` float32 in [-1, 1] (the port's preprocessing:
-    RGB, bilinear squash-resize to 224x224, ``/255``, ``(x-0.5)/0.5``). Returns the original size."""
+    """base64 PNG/JPEG -> ``(1, 3, 224, 224)`` float32 in [-1, 1]: RGB, bilinear squash-resize to 224x224 (a
+    224x224 image is not resampled), then ``x * float32(1/255) * 2 - 1`` -- bit-exact to openpi's PyTorch policy input
+    (its ``x / 255.0 * 2.0 - 1.0`` runs on CUDA as a multiply by the float32 reciprocal; a true division differs by
+    1 ulp on some pixels). Returns the original size."""
     try:
         payload = b64.strip()
         if payload.startswith("data:") and "," in payload:
@@ -428,9 +459,8 @@ def decode_image(b64: str, idx: int) -> Tuple[torch.Tensor, Tuple[int, int]]:
         raise HTTPException(status_code=400, detail=f"images[{idx}]: cannot decode base64 PNG/JPEG: {e}") from None
     orig_w, orig_h = im.size
     im = im.resize((IMAGE_SIZE, IMAGE_SIZE), Image.BILINEAR)
-    arr = np.asarray(im, dtype=np.float32) / 255.0
-    t = torch.from_numpy(arr).permute(2, 0, 1).unsqueeze(0)
-    return ((t - 0.5) / 0.5).contiguous(), (orig_w, orig_h)
+    x = torch.from_numpy(np.asarray(im, dtype=np.uint8).copy()).to(torch.float32).permute(2, 0, 1).unsqueeze(0)
+    return (x * torch.tensor(1.0 / 255.0, dtype=torch.float32) * 2.0 - 1.0).contiguous(), (orig_w, orig_h)
 
 
 def black_image() -> torch.Tensor:
@@ -462,11 +492,18 @@ def run_inference(
     lang_masks: torch.Tensor,
     state: torch.Tensor,
     noise: Optional[torch.Tensor] = None,
+    prompt_bucket: Optional[int] = None,
 ) -> torch.Tensor:
-    """One ``sample_actions_fused`` call. Returns ``(1, 50, 32)`` float32: the host builds the im2col /
+    """One ``sample_actions_fused`` call (``PI05_MEGAKERNEL=mc``: one ``PI05MegakernelTTNN.sample_actions`` call). Returns ``(1, 50, 32)`` float32: the host builds the im2col /
     token / noise inputs, the model copies them into its persistent device buffers and replays the trace
     (captured on the first call = warm-up 1, before READY). ``state`` is not a graph input (pi0.5)."""
     model = STATE["model"]
+    if STATE["config"].backend == "mc":
+        from models.experimental.pi0_5.server import mc_backend
+
+        return mc_backend.infer(model, images, lang_tokens, lang_masks, noise, prompt_bucket)[0]
+    if prompt_bucket is not None:
+        raise ValueError("prompt_bucket is a multi-config (PI05_MEGAKERNEL=mc) option")
     return model.sample_actions_fused(images=images, lang_tokens=lang_tokens, noise=noise, lang_masks=lang_masks)
 
 
@@ -674,6 +711,84 @@ def _start_dp(cfg: ServerConfig, config, loader, fused_cfg, device, tokenizer, n
 # ----------------------------------------------------------------------------------------
 
 
+def _start_mc(cfg: ServerConfig) -> None:
+    """The default backend: weights -> tokenizer -> device -> ``PI05MegakernelTTNN`` -> compile + capture every prompt
+    bucket -> warm-up requests. Leaves STATE ready; on any failure releases the model and the device and re-raises."""
+    from models.experimental.pi0_5.server import mc_backend
+
+    weights_dir, weights_info = resolve_weights_dir(cfg)
+    t0 = time.perf_counter()
+    loader = mc_backend.weight_loader(weights_dir)
+    n_tensors = len(loader.state_dict)  # materialises the fp32 safetensors in host RAM
+    LOG.info("Loading weights done: %d tensors in %.1f s", n_tensors, time.perf_counter() - t0)
+    STATE["weights"] = weights_info
+    tokenizer = load_tokenizer(cfg)
+
+    device, open_kwargs = mc_backend.open_device(cfg.device_id)
+    LOG.info("Opening device %s (multi-config megakernel)", {"device_id": cfg.device_id, **open_kwargs})
+    STATE["device"] = device
+    STATE["mesh_shape"] = [1, 1]
+    try:
+        LOG.info(
+            "Loading pipeline: converting %d tensors to device (PI05MegakernelTTNN: %d camera(s), H=%d, %d steps) ...",
+            n_tensors, cfg.num_images, cfg.action_horizon, cfg.num_steps,
+        )
+        t0 = time.perf_counter()
+        torch.manual_seed(cfg.seed)  # the model draws its default initial noise here
+        model = mc_backend.build_model(loader, device, cfg.num_images, cfg.action_horizon, cfg.num_steps)
+        STATE["model"] = model
+        STATE["tokenizer"] = tokenizer
+        LOG.info("Model built in %.1f s", time.perf_counter() - t0)
+        if cfg.free_host_weights:
+            _free_host_weights(model, loader)
+        del loader
+        LOG.info("Warming up: compiling and capturing the %s-token prompt buckets ...",
+                 " / ".join(str(p.prompt_len) for p in model.presets))
+        t0 = time.perf_counter()
+        with LOCK:
+            model.warmup()
+        LOG.info("Warmup traces captured in %.1f s", time.perf_counter() - t0)
+        images, ids, mask, state = _warmup_inputs(cfg, tokenizer)
+        latencies = []
+        for i in range(cfg.warmup_runs):
+            t0 = time.perf_counter()
+            with LOCK, torch.inference_mode():
+                actions = run_inference(images, ids, mask, state)
+            latencies.append((time.perf_counter() - t0) * 1000.0)
+            if tuple(actions.shape) != (1, cfg.action_horizon, ACTION_DIM) or not torch.isfinite(actions).all():
+                raise RuntimeError(f"warm-up produced actions of shape {tuple(actions.shape)} (or non-finite)")
+            LOG.info("Warmup %d/%d: %.1f ms", i + 1, cfg.warmup_runs, latencies[-1])
+        STATE["warmup_ms"] = {"first": round(latencies[0], 1), "last": round(latencies[-1], 1)}
+        STATE["traced"] = True
+        STATE["megakernel"] = mc_backend.describe(model)
+        STATE["fused"] = None
+        STATE["batcher"] = None
+        STATE["ready"] = True
+        LOG.info("Warmup complete (first %.1f ms, steady %.1f ms) -- %d device ops per call, one trace per prompt bucket",
+                 latencies[0], latencies[-1], STATE["megakernel"]["program"]["device_ops_per_call"])
+    except BaseException:
+        _stop_mc()
+        raise
+
+
+def _stop_mc() -> None:
+    STATE["ready"] = False
+    STATE.pop("tokenizer", None)
+    model = STATE.pop("model", None)
+    try:
+        if model is not None:
+            model.close()  # traces + device tensors
+    finally:
+        del model
+        gc.collect()
+        dev = STATE.pop("device", None)
+        if dev is not None:
+            import ttnn
+
+            LOG.info("Closing device")
+            ttnn.close_device(dev)
+
+
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     torch.set_grad_enabled(False)
@@ -682,6 +797,13 @@ async def lifespan(_app: FastAPI):
     STATE["ready"] = False
     mesh = parse_mesh_shape(os.environ.get("TT_MESH_SHAPE"))
     LOG.info("config: %s mesh=%sx%s", asdict(cfg), *mesh)
+    if cfg.backend == "mc":
+        _start_mc(cfg)
+        try:
+            yield
+        finally:
+            _stop_mc()
+        return
 
     # 1. weights on the host first (no device yet): a download/auth failure is cheap here
     weights_dir, weights_info = resolve_weights_dir(cfg)
@@ -904,8 +1026,9 @@ class PredictRequest(BaseModel):
     images: List[str] = Field(
         ...,
         min_length=1,
-        description="1..PI05_NUM_IMAGES base64 PNG/JPEG, ordered [base/exterior camera, wrist camera]. "
-        "Missing slots are padded with a black image (degraded fidelity, documented).",
+        description="base64 PNG/JPEG, ordered [base/exterior camera, wrist camera, ...]. The multi-config "
+        "megakernel (default) takes exactly PI05_NUM_IMAGES; the single-config paths pad missing slots with a black "
+        "image (degraded fidelity, documented).",
     )
     prompt: Optional[str] = Field(
         None, description="Task instruction, e.g. 'pick up the cube'. Required unless tokens is given."
@@ -923,6 +1046,10 @@ class PredictRequest(BaseModel):
     )
     seed: Optional[int] = Field(
         None, description="Seed for the initial flow-matching noise. Default: the model's fixed seeded noise."
+    )
+    prompt_bucket: Optional[int] = Field(
+        None, description="Multi-config megakernel only: run in this prompt bucket (32 / 64 / 128 / 224 tokens) "
+        "instead of the smallest one that holds the prompt."
     )
 
 
@@ -974,6 +1101,11 @@ def _graph_string(cfg: Optional[ServerConfig], traced: bool) -> str:
     if layout == "dp":
         return "fused whole-graph sample_actions_fused per group" + (", one Metal trace per group per batch size" if traced else ", eager")
     mk = (STATE.get("megakernel") or {}).get("backend", "off")
+    if mk == "mc":
+        prog = STATE["megakernel"]["program"]
+        return (f"multi-config megakernel: the entire sample_actions as {prog['device_ops_per_call']} persistent "
+                "generic_op programs (vision | VLM prefix | action expert) on 110 cores"
+                + (", one Metal trace per prompt bucket" if traced else ", eager"))
     if mk == "whole":
         return ("whole-model megakernel: the entire sample_actions (SigLIP x2, projector, language embedding, VLM "
                 "prefill -> K / V caches, the 10-step expert loop) as ONE persistent generic_op"
@@ -992,8 +1124,8 @@ def info() -> dict:
         "model": "pi-0.5 (Physical Intelligence pi0.5 vision-language-action policy, lerobot/pi05_base)",
         "name": MODEL_NAME,
         "status": "ok" if STATE.get("ready") else "starting",
-        "task": "images + language instruction (+ normalised state) -> 50-step chunk of 32-dim normalised actions "
-        "(flow matching, Euler, on device)",
+        "task": f"images + language instruction (+ normalised state) -> {cfg.action_horizon if cfg else ACTION_HORIZON}"
+        "-step chunk of 32-dim normalised actions (flow matching, Euler, on device)",
         "profile": cfg.profile if cfg else None,
         "layout": cfg.layout if cfg else None,
         "hardware": _hardware_string(
@@ -1016,7 +1148,8 @@ def info() -> dict:
         "source": {
             "repo": SOURCE_REPO,
             "commit": SOURCE_COMMIT,
-            "path": "models/experimental/pi0_5",
+            "path": "models/experimental/pi0 (PI05MegakernelTTNN) + models/experimental/pi0_5 (server)"
+            if cfg and cfg.backend == "mc" else "models/experimental/pi0_5",
             "tt_metal": TT_METAL_NOTE,
         },
         "inputs": {
@@ -1025,8 +1158,10 @@ def info() -> dict:
                 : cfg.num_images if cfg else 2
             ],
             "image_size": [IMAGE_SIZE, IMAGE_SIZE],
-            "image_preprocess": "RGB, bilinear squash-resize to 224x224 (no aspect padding), /255, (x-0.5)/0.5",
+            "image_preprocess": "RGB, bilinear squash-resize to 224x224 (no aspect padding), x * float32(1/255) * 2 - 1",
             "token_len": cfg.token_len if cfg else 224,
+            "prompt_buckets": (STATE.get("megakernel") or {}).get("program", {}).get("prompt_buckets"),
+            "missing_images": "refused (exactly num_images)" if cfg and cfg.backend == "mc" else "padded with black",
             "prompt_format": "Task: <prompt>, State: b0 ... b31;\\nAction:  (state discretised into 256 bins over [-1,1])",
             "state_dim": STATE_DIM,
             "state_semantics": "normalised [-1,1] QUANTILES space; enters the model only through the prompt (pi0.5)",
@@ -1041,7 +1176,7 @@ def info() -> dict:
             },
         },
         "outputs": {
-            "actions": [ACTION_HORIZON, ACTION_DIM],
+            "actions": [cfg.action_horizon if cfg else ACTION_HORIZON, ACTION_DIM],
             "normalized": True,
             "note": "lerobot QUANTILES-normalised actions padded to 32 dims; pi05_base ships no per-feature stats, "
             "so denormalise with your dataset's action q01/q99 and slice to your action dim",
@@ -1049,6 +1184,7 @@ def info() -> dict:
         },
         "limits": {
             "max_images": cfg.num_images if cfg else 2,
+            "min_images": (cfg.num_images if cfg.backend == "mc" else 1) if cfg else 1,
             "max_state": STATE_DIM,
             "max_tokens": cfg.token_len if cfg else 224,
             "batch": max(cfg.batch_sizes) if cfg else 1,
@@ -1082,6 +1218,13 @@ def predict(req: PredictRequest) -> dict:
     t_start = time.perf_counter()
 
     # --- images -------------------------------------------------------------------------
+    if cfg.backend == "mc" and len(req.images) != cfg.num_images:
+        raise HTTPException(
+            status_code=400,
+            detail=f"{len(req.images)} images given; this server's model is built for exactly {cfg.num_images} "
+            "camera(s) (PI05_NUM_IMAGES). Masked or padded camera slots are not served: send only the real cameras "
+            "to a server started with PI05_NUM_IMAGES = that count",
+        )
     if len(req.images) > cfg.num_images:
         raise HTTPException(
             status_code=400,
@@ -1126,8 +1269,16 @@ def predict(req: PredictRequest) -> dict:
     noise = None
     if req.seed is not None:
         gen = torch.Generator().manual_seed(int(req.seed))
-        noise = torch.randn(1, ACTION_HORIZON, ACTION_DIM, generator=gen)
+        noise = torch.randn(1, cfg.action_horizon, ACTION_DIM, generator=gen)
     state_t = torch.from_numpy(state32).unsqueeze(0)
+    bucket = None
+    if cfg.backend == "mc":
+        try:
+            bucket = STATE["model"].preset_for(int(mask.sum()), req.prompt_bucket).prompt_len
+        except RuntimeError as e:
+            raise HTTPException(status_code=400, detail=str(e)) from None
+    elif req.prompt_bucket is not None:
+        raise HTTPException(status_code=400, detail="prompt_bucket is a multi-config (PI05_MEGAKERNEL=mc) option")
     t_pre = time.perf_counter()
 
     # --- device -----------------------------------------------------------------------------
@@ -1138,7 +1289,7 @@ def predict(req: PredictRequest) -> dict:
             actions, batched_as = batcher.submit(images, ids, mask, noise).result(timeout=120.0)
         else:
             with LOCK, torch.inference_mode():
-                actions = run_inference(images, ids, mask, state_t, noise)
+                actions = run_inference(images, ids, mask, state_t, noise, req.prompt_bucket)
     except HTTPException:
         raise
     except Exception as e:  # noqa: BLE001
@@ -1146,17 +1297,18 @@ def predict(req: PredictRequest) -> dict:
         raise HTTPException(status_code=500, detail=f"{type(e).__name__}: {e}") from None
     t_end = time.perf_counter()
 
-    if tuple(actions.shape) != (1, ACTION_HORIZON, ACTION_DIM):
+    if tuple(actions.shape) != (1, cfg.action_horizon, ACTION_DIM):
         raise HTTPException(status_code=500, detail=f"unexpected action shape {tuple(actions.shape)}")
     return {
         "actions": actions[0].tolist(),
-        "action_horizon": ACTION_HORIZON,
+        "action_horizon": cfg.action_horizon,
         "action_dim": ACTION_DIM,
         "normalized": True,
         "denoising_steps": cfg.num_steps,
         "prompt": prompt,
         "num_tokens": n_real,
         "token_len": cfg.token_len,
+        "prompt_bucket": bucket,
         "prompt_truncated": truncated,
         "images_used": len(req.images),
         "images_padded": images_padded,

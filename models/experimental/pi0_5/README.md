@@ -11,6 +11,12 @@ input / output formatting (image normalisation, im2col, tokenisation, mask / RoP
 traced graph: stock TT-NN ops plus the 3 custom programs fused attention, row_rsqrt and geglu_rc) are kept only
 as comparator knobs.
 
+**Since 2026-10-03 the server's default is the multi-config megakernel of `models/experimental/pi0`**
+(`PI05MegakernelTTNN`: vision | prefix | expert as three persistent generic_op programs per call, cameras 1-4, H
+1..64, N 1..10, prompt buckets 32 / 64 / 128 / 224; `server/mc_backend.py`, validated on tt-metal `f856a38a361`).
+This package keeps the server (`server/app.py`, `server/serve_pi05_libero.py`) and the single-config paths below as
+comparators (`PI05_MEGAKERNEL=whole` / `expert` / `off`, validated on `668c2907575`).
+
 Attention follows openpi: right-padded prompt tokens are masked out of every query
 (`lang_masks=None` means `tokens != 0`), and the action tokens are rotated at positions
 `n_valid_prefix + [0, H)`.
