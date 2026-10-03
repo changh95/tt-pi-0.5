@@ -172,3 +172,18 @@ a broader one.
    (N5 seed 3); at every N 1-10: min 0.997821 (N3 seed 3) -- the implementer's ">= 0.9978" was over all N. Card now:
    ">= 0.9983 at N = 5-10 (>= 0.9978 at every N from 1 to 10)", read from that json by card_mc.py.
 Staging manifest + HF dry run refreshed (counts unchanged).
+
+## 2026-10-03 12:22:42 KST -- pre-publish check (pi05-mc-shipcheck) D1-D5
+- D1 / D2 (stale demo/README sha in the staging manifest; hf_diff / hf_ops counts 117/20/43 with demo/libero_eval.json):
+  not reproduced on the current files. The manifest / dry-run files were rewritten at 12:12:06-08 (after b649fcc):
+  manifest demo/README.md = 6ac30a8ca39d2602 = disk; hf_diff 118 / 19 / 44, hf_ops lists demo/manifest.json and not
+  libero_eval.json; the check most likely read the 12:05 versions. Re-ran the dry run + manifest again after D3 / D5:
+  137 entries, 0 sha mismatches (recomputed from disk).
+- D3 fixed: SERVING.md ROOT=/path/to/tt-models (was this host's path).
+- D5 fixed: GPU_COMPARISON.md weights row says ~/.cache/huggingface/..., venv row "a dedicated GPU venv
+  (.venv-gpu/pi05)". No /home/deepgadget left in README / SERVING / GPU_COMPARISON / PERF_PRESETS / demo README.
+  (tt-model.yaml source.tt_metal keeps the local clone path: it is the build input, as in every earlier release.)
+- D4 NOT changed (needs the lead): host paths in code/models/experimental/pi0_5/tests/{megakernel/verify_alternating.py,
+  perf/profile_pi05_ops.py, pcc/golden_openpi.py}. They are tt-pi-0.5 files (not tt-metal-pr), unchanged since 821e8c5,
+  i.e. already on HF in code/ today. Changing them changes code/, the code commit, code_sha256 and therefore needs a
+  re-package (PI05_SOURCE_COMMIT is baked into serve.env) + re-validation.
