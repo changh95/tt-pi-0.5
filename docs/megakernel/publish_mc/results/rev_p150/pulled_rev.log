@@ -1,0 +1,24 @@
+=== [16:04:47] default: tt-model serve changh95/pi05-base-p150
+✓ weights lerobot/pi05_base@b211f3d4  
+  ✓ host ready  docker 28.5.2 (rootless) · tt devices · hugepages
+  ✓ image tt-model/pi05-base-p150:4dd06e9d6fd3
+  ✓ container started
+  ✓ server process started  1.7s
+  ✓ pipeline warmed up  36.5s
+  ✓ changh95/pi05-base-p150 ready  40.1s
+info {'kernel_digest': '1429d5bea05c31ad', 'cameras': 2, 'action_horizon': 50, 'suffix_rows': 64, 'num_steps': 10, 'prompt_buckets': [32, 64, 128, 224], 'kv_dram': False, 'device_ops_per_call': 3, 'class': 'models.experimental.pi0.tt.ttnn_pi05_model.PI05MegakernelTTNN'} source 5edf139d458e9acabd31eea641cd364079962677
+PASS pi05 actions=(50,32) max|a|=0.260 std=0.070 repeat_maxdiff=0.0000 change_maxdiff=0.8413 inference_ms=57.77/56.82 tokens=143/224 truncated=False
+  ✓ stopped 1 container(s)
+=== [16:05:29] the card's commands (3 cameras, H 10, N 5)
+{'kernel_digest': '1429d5bea05c31ad', 'cameras': 3, 'action_horizon': 10, 'suffix_rows': 32, 'num_steps': 5, 'prompt_buckets': [32, 64, 128, 224], 'kv_dram': False, 'device_ops_per_call': 4, 'class': 'models.experimental.pi0.tt.ttnn_pi05_model.PI05MegakernelTTNN'}
+PASS pi05 actions=(10,32) max|a|=0.160 std=0.047 repeat_maxdiff=0.0000 change_maxdiff=0.7256 inference_ms=66.24/64.85 tokens=143/224 truncated=False
+tt-model-pi05-base-p150-p150
+=== [16:06:07] refusal PI05_NUM_IMAGES=5
+container exit code 3
+2026-10-03 07:06:11,088 ERROR pi05.server: PI05_MEGAKERNEL=mc refused at startup: pi0.5 megakernel refused: cameras = 5 (compiled: 1, 2, 3, 4) [PI05_NUM_IMAGES=5, PI05_ACTION_HORIZON=50, PI05_NUM_STEPS=10]
+[16:06:12] done RC=0
+  ○ nothing running
+[trap] device users: []
+2026-10-03_16:06:12 [device-guard pid=3081414] RESET AFTER JOB (WITH_DEVICE_RESET_AFTER=1, rc=0): timeout --signal=TERM --kill-after=60 1200 /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/pubmc/rev/pulled_rev.sh
+2026-10-03_16:06:12 [device-guard pid=3081414] RESET: tt-smi -r 0 (probe hung/failed with no other device users)
+2026-10-03_16:06:53 [device-guard pid=3081414] reset exit=0

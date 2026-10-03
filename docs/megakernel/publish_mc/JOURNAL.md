@@ -233,3 +233,19 @@ build/pi05-base-p150 (= the 36f651704bf1 package), scripts + results in docs/meg
   golden PCC7 0.999981 / 0.999958, 8 golden outputs identical to the host reference; c1-c4 outputs torch.equal to the
   host reference; 10 refusals; env launch with the card's commands: /info cameras 3 / H 10 / N 5 / 4 ops, smoke PASS
   (65.93 / 64.71 ms); PI05_NUM_IMAGES=5 -> exit 3 with the model's message.
+
+## 2026-10-03 16:07:16 KST -- PUBLISHED: STE docs + one serve profile p150 (image 4dd06e9d6fd3)
+- GitHub PR #5 (https://github.com/changh95/tt-pi-0.5/pull/5) merged with a merge commit: main =
+  536c507168c8b323f6ef0b3a04434d42d95812a9 (parents b7eaf77 + c22f61c; trailer in the body). main models/ == 5edf139.
+- HF changh95/pi05-base-p150: one create_commit 10b36ea01ef6a9ad492e9c0e20e252d942e85fff, parent ab447b79 (dry run:
+  10 changed = 5 docs + tt-model.yaml + tt_kernel_manifest.json + image index / manifest / repositories, 43 new image
+  blobs, 43 old image blobs deleted, code/ and requirements.lock unchanged).
+- Verify (results/rev_p150/): tree 249 = expected 249, none missing / unexpected, deletes gone, 53 adds checked (14 LFS
+  sha256, 39 git sha1), 0 mismatches. tt-model pull changh95/pi05-base-p150 loaded image Id
+  sha256:4dd06e9d6fd35077096e23b8bc9aa073b7dccab8519f037ec0a538f7114feaca (= manifest digest); tt-model profiles: only
+  p150 (default). Hold 16:04:5x-16:06:12 (reset exit 0), by repo id: default READY 40.1 s, /info 2 / 50 / 10 / 3 ops,
+  source 5edf139, smoke PASS; the card's commands verbatim (3 cameras, H 10, N 5): /info 3 / 10 / 5 / 4 ops, smoke PASS
+  (66.24 / 64.85 ms); PI05_NUM_IMAGES=5 -> exit 3 with the model's message. (A first attempt of this hold ran the smoke
+  test with the tt-models venv python, which has no PIL: a harness fault, rerun with /usr/bin/python3.) Golden PCC7 /
+  bit-identity ran on the same image id before the upload (val_new.log).
+- Local image tt-model/pi05-base-p150:36f651704bf1 removed after the pull of 4dd06e9d6fd3 was verified.

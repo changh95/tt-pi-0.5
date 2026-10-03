@@ -1,0 +1,7 @@
+docker load tt-model/pi05-base-p150:4dd06e9d6fd3…
+Loaded image: tt-model/pi05-base-p150:4dd06e9d6fd3
+✓ docker load tt-model/pi05-base-p150:4dd06e9d6fd3  51.1s
+  ✓ pulled changh95/pi05-base-p150
+  → next:  tt-model serve changh95/pi05-base-p150
+sha256:4dd06e9d6fd35077096e23b8bc9aa073b7dccab8519f037ec0a538f7114feaca
+  • p150 (default)  p150 · P150  seqs None · len -
