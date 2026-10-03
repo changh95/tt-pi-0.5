@@ -49,10 +49,10 @@ Port: [changh95/tt-pi-0.5](https://github.com/changh95/tt-pi-0.5)
 
 <video controls width="480" src="https://huggingface.co/changh95/pi05-base-p150/resolve/main/demo/pi05_libero_spatial.mp4" poster="https://huggingface.co/changh95/pi05-base-p150/resolve/main/demo/pi05_libero_spatial_poster.png"></video>
 
-- The video shows the multi-config megakernel of this imagein a LIBERO-Spatial Closed-loop test in MuJoCo on one Tenstorrent Blakchole p150a.
+- The video shows the multi-config megakernel of this image in a LIBERO-Spatial closed-loop test in MuJoCo on one Tenstorrent Blackhole p150a.
 - Achieves 99/100 success.
 - The mean policy latency on the p150a is **52.7 ms** for each call (server side, p90 53.0, 2,182 calls).
-- CAUTION: The weights used for this demo is LIBERO fine-tuned 'lerobot/pi05_libero', not this `lerobot/pi05_base` which this repository points. To run this demo, you need to swap the weights.
+- CAUTION: The weights used for this demo are the LIBERO fine-tuned `lerobot/pi05_libero`, not the `lerobot/pi05_base` that this repository points to. To run this demo, you need to swap the weights.
 
 ## Quickstart
 
@@ -95,11 +95,11 @@ Other endpoints:
 ### How to change the configuration
 
 - The `p150` profile
-  - Assuems batch=1
+  - Assumes batch=1
   - Default configuration has 2 cameras, an action chunk of 50 actions and 10 flow-matching steps
-  - The server builds the model on boot. To chang the configuration, start the server again with other values.
+  - The server builds the model on boot. To change the configuration, start the server again with other values.
   - The prompt bucket is the only item that can change for each request.
-  - There are total 32 combinations of configurationn (camera: 1/2/3/4, prompt bucket: 32/64/128/224, action-row bucket: 32/64)
+  - There are total 32 combinations of configuration (camera: 1/2/3/4, prompt bucket: 32/64/128/224, action-row bucket: 32/64)
 
 | Item | Environment variable | Python field (`PI0ModelConfig`) | Range | Default | Fixed when |
 |---|---|---|---|---|---|
@@ -190,7 +190,7 @@ Input processing:
 
 ### Implementation implications
 
-- For 1 to 3 cameras, the KV cache lives in L1. For 4 cameras, the KV cache are in DRAM.
+- For 1 to 3 cameras, the KV cache lives in L1. For 4 cameras, the KV cache is in DRAM.
 - A Metal trace for each program (VISION/PREFIX/EXPERT) fixes the model pipeline in cold state. Warm runs are simply replays of the traced replay. This means we are assuming you are feeding 1 robot's data into the server, instead of multiple robots with different configurations.
 
 

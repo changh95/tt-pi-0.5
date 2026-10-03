@@ -262,3 +262,13 @@ build/pi05-base-p150 (= the 36f651704bf1 package), scripts + results in docs/meg
   = the Hub file); the staging manifest's README entry and hf_head now name 873bf8d8. The generated 10b36ea0 card is kept
   only in the history (and scratchpad rev/README_generated_10b36ea0.md).
 - Nothing changed on HF or GitHub.
+
+## 2026-10-03 19:46:25 KST -- HF 7a6cc0e0 (typo fix by the lead); card: block sync deferred
+- The lead pushed a typo-only fix on top of the user's card: HF 7a6cc0e0c6c4c3fe64d0ca926ae1ec94c7d13839 (parent
+  873bf8d8, README.md only; 6 lines: "image in", "closed-loop", "Blackhole", "are the LIBERO fine-tuned ... points to",
+  "Assumes", "change", "configuration"). Pulled into the staging dir and hf_card/README.md (sha256 e509471016c3e342...,
+  = the Hub file); the staging manifest names 7a6cc0e0.
+- The user's card (now 7a6cc0e0) is the REFERENCE for all future cards.
+- Agreed with the user: the card: block of tt-model.yaml (still the generated 10b36ea0 text) is synced to the user's card
+  at the NEXT repackage, not now. Until then, a repackage must not publish its rendered README over the Hub card.
+- Nothing pushed or uploaded.
