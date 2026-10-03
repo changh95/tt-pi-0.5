@@ -1,0 +1,7 @@
+one image too few: HTTP 400: {"detail":"1 images given; this server's model is built for exactly 2 camera(s) (PI05_NUM_IMAGES). Masked or padded camera slots are not served: send only the real cameras to a server started with PI05_NUM_IMAGES = that count"}
+one image too many: HTTP 400: {"detail":"3 images given; this server's model is built for exactly 2 camera(s) (PI05_NUM_IMAGES). Masked or padded camera slots are not served: send only the real cameras to a server started with PI05_NUM_IMAGES = that count"}
+num_steps mismatch: HTTP 400: {"detail":"num_steps=3 cannot be changed per request: the port precomputes the per-step conditioning at build time (server runs 10; set PI05_NUM_STEPS to change it)"}
+prompt_bucket 48: HTTP 400: {"detail":"pi0.5 megakernel: prompt_bucket=48 (compiled: 32 / 64 / 128 / 224)"}
+prompt_bucket 32 too small: HTTP 400: {"detail":"pi0.5 megakernel: prompt_bucket=32 cannot hold 41 real tokens"}
+prompt_bucket 224 explicit (ok): HTTP 200: bucket=224 H=50 inf=57.72
+auto bucket 32 (ok): HTTP 200: bucket=32 H=50 inf=55.42

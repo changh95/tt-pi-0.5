@@ -1,0 +1,154 @@
+[11:48:07] start; manifest /home/deepgadget/experiments/tt-models/build/pi05-base-p150/tt_kernel_manifest.json; image {'registry': 'hf', 'repository': 'pi05-base-p150', 'tag': 'tt-model/pi05-base-p150:36f651704bf1', 'digest': 'sha256:36f651704bf123ebed106991303c3b077ff94e96b77d5c8c684d3f6772432477'}; source 5edf139d458e9acabd31eea641cd364079962677
+removing ~/.cache/tt-model/pi05-base-p150/cache (159M) for a cold boot
+=== c2-default-c1 profile=default [11:48:08] ===
+[11:49:14] serve exit=0 wall=66.2s
+    2026-10-03T02:48:25.343500067Z 2026-10-03 02:48:25.343 | info     |             UMD | Opening local chip ids/PCIe ids: {0}/[0] and remote chip ids {} (cluster.cpp:172)
+    2026-10-03T02:48:27.875564332Z 2026-10-03 02:48:27,875 INFO pi05.server: Opening device {'device_id': 0, 'l1_small_size': 24576, 'worker_l1_size': 1395712, 'trace_region_size': 10000000} (multi-config megakernel)
+    2026-10-03T02:49:01.882923917Z 2026-10-03 02:49:01,882 INFO pi05.server: Model built in 34.0 s
+    2026-10-03T02:49:02.441412746Z 2026-10-03 02:49:02,441 INFO pi05.server: Warming up: compiling and capturing the 32 / 64 / 128 / 224-token prompt buckets ...
+    2026-10-03T02:49:14.191707685Z 2026-10-03 02:49:14,191 INFO pi05.server: Warmup traces captured in 11.8 s
+    2026-10-03T02:49:14.257123647Z 2026-10-03 02:49:14,257 INFO pi05.server: Warmup 1/2: 63.3 ms
+    2026-10-03T02:49:14.313979161Z 2026-10-03 02:49:14,313 INFO pi05.server: Warmup 2/2: 56.8 ms
+    2026-10-03T02:49:14.314031409Z 2026-10-03 02:49:14,313 INFO pi05.server: Warmup complete (first 63.3 ms, steady 56.8 ms) -- 3 device ops per call, one trace per prompt bucket
+info: mc {"kernel_digest": "1429d5bea05c31ad", "cameras": 2, "action_horizon": 50, "suffix_rows": 64, "num_steps": 10, "prompt_buckets": [32, 64, 128, 224], "kv_dram": false, "device_ops_per_call": 3, "class": "models.experimental.pi0.tt.ttnn_pi05_model.PI05MegakernelTTNN"} source 5edf139d458e9acabd31eea641cd364079962677 inputs.num_images 2 outputs [50, 32] warmup {'first': 63.3, 'last': 56.8}
+PASS pi05 actions=(50,32) max|a|=0.260 std=0.070 repeat_maxdiff=0.0000 change_maxdiff=0.8413 inference_ms=57.67/56.63 tokens=143/224 truncated=False
+BENCH {"preprocess": {"median": 1.19, "p10": 1.11, "p90": 1.45, "min": 1.08, "max": 1.82}, "inference": {"median": 56.36, "p10": 56.25, "p90": 56.54, "min": 56.14, "max": 57.01}, "total": {"median": 57.56, "p10": 57.43, "p90": 57.87, "min": 57.25, "max": 58.71}, "client_wall": {"median": 59.17, "p10": 58.85, "p90": 59.69, "min": 58.52, "max": 69.44}}
+  ✓ stopped 1 container(s)
+device users after stop: []
+=== c2-default-c2 profile=default [11:49:24] ===
+[11:50:06] serve exit=0 wall=41.2s
+    2026-10-03T02:49:33.868629390Z 2026-10-03 02:49:33.868 | info     |             UMD | Opening local chip ids/PCIe ids: {0}/[0] and remote chip ids {} (cluster.cpp:172)
+    2026-10-03T02:49:34.141006662Z 2026-10-03 02:49:34,140 INFO pi05.server: Opening device {'device_id': 0, 'l1_small_size': 24576, 'worker_l1_size': 1395712, 'trace_region_size': 10000000} (multi-config megakernel)
+    2026-10-03T02:50:04.556494545Z 2026-10-03 02:50:04,556 INFO pi05.server: Model built in 30.4 s
+    2026-10-03T02:50:05.120262380Z 2026-10-03 02:50:05,120 INFO pi05.server: Warming up: compiling and capturing the 32 / 64 / 128 / 224-token prompt buckets ...
+    2026-10-03T02:50:05.952481489Z 2026-10-03 02:50:05,952 INFO pi05.server: Warmup traces captured in 0.8 s
+    2026-10-03T02:50:06.017922990Z 2026-10-03 02:50:06,017 INFO pi05.server: Warmup 1/2: 63.4 ms
+    2026-10-03T02:50:06.074745641Z 2026-10-03 02:50:06,074 INFO pi05.server: Warmup 2/2: 56.6 ms
+    2026-10-03T02:50:06.074755650Z 2026-10-03 02:50:06,074 INFO pi05.server: Warmup complete (first 63.4 ms, steady 56.6 ms) -- 3 device ops per call, one trace per prompt bucket
+info: mc {"kernel_digest": "1429d5bea05c31ad", "cameras": 2, "action_horizon": 50, "suffix_rows": 64, "num_steps": 10, "prompt_buckets": [32, 64, 128, 224], "kv_dram": false, "device_ops_per_call": 3, "class": "models.experimental.pi0.tt.ttnn_pi05_model.PI05MegakernelTTNN"} source 5edf139d458e9acabd31eea641cd364079962677 inputs.num_images 2 outputs [50, 32] warmup {'first': 63.4, 'last': 56.6}
+PASS pi05 actions=(50,32) max|a|=0.260 std=0.070 repeat_maxdiff=0.0000 change_maxdiff=0.8413 inference_ms=57.59/56.76 tokens=143/224 truncated=False
+BENCH {"preprocess": {"median": 1.24, "p10": 1.13, "p90": 1.49, "min": 1.06, "max": 4.06}, "inference": {"median": 56.44, "p10": 56.29, "p90": 56.65, "min": 56.22, "max": 56.91}, "total": {"median": 57.68, "p10": 57.46, "p90": 58.07, "min": 57.39, "max": 60.61}, "client_wall": {"median": 59.29, "p10": 58.96, "p90": 60.26, "min": 58.45, "max": 62.04}}
+  ✓ stopped 1 container(s)
+device users after stop: []
+=== c1-h50-n10 profile=c1-h50-n10 [11:50:14] ===
+[11:51:05] serve exit=0 wall=51.4s
+    2026-10-03T02:50:22.995818425Z 2026-10-03 02:50:22.995 | info     |             UMD | Opening local chip ids/PCIe ids: {0}/[0] and remote chip ids {} (cluster.cpp:172)
+    2026-10-03T02:50:23.279156379Z 2026-10-03 02:50:23,279 INFO pi05.server: Opening device {'device_id': 0, 'l1_small_size': 24576, 'worker_l1_size': 1395712, 'trace_region_size': 10000000} (multi-config megakernel)
+    2026-10-03T02:50:53.606214323Z 2026-10-03 02:50:53,605 INFO pi05.server: Model built in 30.3 s
+    2026-10-03T02:50:54.167502131Z 2026-10-03 02:50:54,167 INFO pi05.server: Warming up: compiling and capturing the 32 / 64 / 128 / 224-token prompt buckets ...
+    2026-10-03T02:51:05.780245742Z 2026-10-03 02:51:05,779 INFO pi05.server: Warmup traces captured in 11.6 s
+    2026-10-03T02:51:05.833451555Z 2026-10-03 02:51:05,833 INFO pi05.server: Warmup 1/2: 51.2 ms
+    2026-10-03T02:51:05.878736743Z 2026-10-03 02:51:05,878 INFO pi05.server: Warmup 2/2: 45.4 ms
+    2026-10-03T02:51:05.878787919Z 2026-10-03 02:51:05,878 INFO pi05.server: Warmup complete (first 51.2 ms, steady 45.4 ms) -- 3 device ops per call, one trace per prompt bucket
+info: mc {"kernel_digest": "1429d5bea05c31ad", "cameras": 1, "action_horizon": 50, "suffix_rows": 64, "num_steps": 10, "prompt_buckets": [32, 64, 128, 224], "kv_dram": false, "device_ops_per_call": 3, "class": "models.experimental.pi0.tt.ttnn_pi05_model.PI05MegakernelTTNN"} source 5edf139d458e9acabd31eea641cd364079962677 inputs.num_images 1 outputs [50, 32] warmup {'first': 51.2, 'last': 45.4}
+PASS pi05 actions=(50,32) max|a|=0.312 std=0.074 repeat_maxdiff=0.0000 change_maxdiff=0.8804 inference_ms=45.32/44.39 tokens=143/224 truncated=False
+BENCH {"preprocess": {"median": 0.73, "p10": 0.69, "p90": 0.77, "min": 0.68, "max": 1.08}, "inference": {"median": 44.33, "p10": 44.21, "p90": 44.43, "min": 44.18, "max": 44.59}, "total": {"median": 45.08, "p10": 44.93, "p90": 45.18, "min": 44.87, "max": 45.67}, "client_wall": {"median": 46.65, "p10": 46.28, "p90": 47.52, "min": 46.25, "max": 47.93}}
+  ✓ stopped 1 container(s)
+device users after stop: []
+=== c3-h50-n10 profile=c3-h50-n10 [11:51:11] ===
+[11:52:09] serve exit=0 wall=57.2s
+    2026-10-03T02:51:20.723729070Z 2026-10-03 02:51:20.723 | info     |             UMD | Opening local chip ids/PCIe ids: {0}/[0] and remote chip ids {} (cluster.cpp:172)
+    2026-10-03T02:51:21.230065722Z 2026-10-03 02:51:21,229 INFO pi05.server: Opening device {'device_id': 0, 'l1_small_size': 24576, 'worker_l1_size': 1395712, 'trace_region_size': 10000000} (multi-config megakernel)
+    2026-10-03T02:51:51.884113272Z 2026-10-03 02:51:51,883 INFO pi05.server: Model built in 30.7 s
+    2026-10-03T02:51:52.449044991Z 2026-10-03 02:51:52,448 INFO pi05.server: Warming up: compiling and capturing the 32 / 64 / 128 / 224-token prompt buckets ...
+    2026-10-03T02:52:08.859583591Z 2026-10-03 02:52:08,859 INFO pi05.server: Warmup traces captured in 16.4 s
+    2026-10-03T02:52:08.944896282Z 2026-10-03 02:52:08,944 INFO pi05.server: Warmup 1/2: 83.4 ms
+    2026-10-03T02:52:09.021533161Z 2026-10-03 02:52:09,021 INFO pi05.server: Warmup 2/2: 76.4 ms
+    2026-10-03T02:52:09.021544242Z 2026-10-03 02:52:09,021 INFO pi05.server: Warmup complete (first 83.4 ms, steady 76.4 ms) -- 4 device ops per call, one trace per prompt bucket
+info: mc {"kernel_digest": "1429d5bea05c31ad", "cameras": 3, "action_horizon": 50, "suffix_rows": 64, "num_steps": 10, "prompt_buckets": [32, 64, 128, 224], "kv_dram": false, "device_ops_per_call": 4, "class": "models.experimental.pi0.tt.ttnn_pi05_model.PI05MegakernelTTNN"} source 5edf139d458e9acabd31eea641cd364079962677 inputs.num_images 3 outputs [50, 32] warmup {'first': 83.4, 'last': 76.4}
+PASS pi05 actions=(50,32) max|a|=0.225 std=0.061 repeat_maxdiff=0.0000 change_maxdiff=0.8232 inference_ms=77.66/76.76 tokens=143/224 truncated=False
+BENCH {"preprocess": {"median": 1.57, "p10": 1.48, "p90": 1.75, "min": 1.47, "max": 4.54}, "inference": {"median": 76.16, "p10": 75.92, "p90": 76.36, "min": 75.88, "max": 76.59}, "total": {"median": 77.72, "p10": 77.47, "p90": 78.18, "min": 77.35, "max": 80.68}, "client_wall": {"median": 79.43, "p10": 79.07, "p90": 80.84, "min": 78.67, "max": 82.34}}
+  ✓ stopped 1 container(s)
+device users after stop: []
+=== c4-h50-n10 profile=c4-h50-n10 [11:52:14] ===
+[11:53:07] serve exit=0 wall=53.8s
+    2026-10-03T02:52:22.571497250Z 2026-10-03 02:52:22.571 | info     |             UMD | Opening local chip ids/PCIe ids: {0}/[0] and remote chip ids {} (cluster.cpp:172)
+    2026-10-03T02:52:23.065664395Z 2026-10-03 02:52:23,065 INFO pi05.server: Opening device {'device_id': 0, 'l1_small_size': 24576, 'worker_l1_size': 1395712, 'trace_region_size': 10000000} (multi-config megakernel)
+    2026-10-03T02:52:53.395101496Z 2026-10-03 02:52:53,394 INFO pi05.server: Model built in 30.3 s
+    2026-10-03T02:52:53.959031848Z 2026-10-03 02:52:53,958 INFO pi05.server: Warming up: compiling and capturing the 32 / 64 / 128 / 224-token prompt buckets ...
+    2026-10-03T02:53:07.668144244Z 2026-10-03 02:53:07,668 INFO pi05.server: Warmup traces captured in 13.7 s
+    2026-10-03T02:53:07.773287764Z 2026-10-03 02:53:07,772 INFO pi05.server: Warmup 1/2: 102.9 ms
+    2026-10-03T02:53:07.869693804Z 2026-10-03 02:53:07,869 INFO pi05.server: Warmup 2/2: 96.4 ms
+    2026-10-03T02:53:07.869704404Z 2026-10-03 02:53:07,869 INFO pi05.server: Warmup complete (first 102.9 ms, steady 96.4 ms) -- 4 device ops per call, one trace per prompt bucket
+info: mc {"kernel_digest": "1429d5bea05c31ad", "cameras": 4, "action_horizon": 50, "suffix_rows": 64, "num_steps": 10, "prompt_buckets": [32, 64, 128, 224], "kv_dram": true, "device_ops_per_call": 4, "class": "models.experimental.pi0.tt.ttnn_pi05_model.PI05MegakernelTTNN"} source 5edf139d458e9acabd31eea641cd364079962677 inputs.num_images 4 outputs [50, 32] warmup {'first': 102.9, 'last': 96.4}
+PASS pi05 actions=(50,32) max|a|=0.212 std=0.058 repeat_maxdiff=0.0000 change_maxdiff=0.8857 inference_ms=98.06/97.19 tokens=143/224 truncated=False
+BENCH {"preprocess": {"median": 2.08, "p10": 1.97, "p90": 2.28, "min": 1.9, "max": 2.46}, "inference": {"median": 96.28, "p10": 96.12, "p90": 96.47, "min": 96.08, "max": 96.62}, "total": {"median": 98.37, "p10": 98.16, "p90": 98.74, "min": 98.09, "max": 98.83}, "client_wall": {"median": 99.94, "p10": 99.65, "p90": 100.37, "min": 99.54, "max": 101.05}}
+  ✓ stopped 1 container(s)
+device users after stop: []
+=== c2-h10-n10 profile=c2-h10-n10 [11:53:15] ===
+[11:54:08] serve exit=0 wall=52.4s
+    2026-10-03T02:53:24.309031382Z 2026-10-03 02:53:24.308 | info     |             UMD | Opening local chip ids/PCIe ids: {0}/[0] and remote chip ids {} (cluster.cpp:172)
+    2026-10-03T02:53:24.585669058Z 2026-10-03 02:53:24,585 INFO pi05.server: Opening device {'device_id': 0, 'l1_small_size': 24576, 'worker_l1_size': 1395712, 'trace_region_size': 10000000} (multi-config megakernel)
+    2026-10-03T02:53:54.696793678Z 2026-10-03 02:53:54,696 INFO pi05.server: Model built in 30.1 s
+    2026-10-03T02:53:55.253575401Z 2026-10-03 02:53:55,253 INFO pi05.server: Warming up: compiling and capturing the 32 / 64 / 128 / 224-token prompt buckets ...
+    2026-10-03T02:54:08.017959256Z 2026-10-03 02:54:08,017 INFO pi05.server: Warmup traces captured in 12.8 s
+    2026-10-03T02:54:08.079988626Z 2026-10-03 02:54:08,079 INFO pi05.server: Warmup 1/2: 60.2 ms
+    2026-10-03T02:54:08.133519532Z 2026-10-03 02:54:08,133 INFO pi05.server: Warmup 2/2: 53.4 ms
+    2026-10-03T02:54:08.133526365Z 2026-10-03 02:54:08,133 INFO pi05.server: Warmup complete (first 60.2 ms, steady 53.4 ms) -- 3 device ops per call, one trace per prompt bucket
+info: mc {"kernel_digest": "1429d5bea05c31ad", "cameras": 2, "action_horizon": 10, "suffix_rows": 32, "num_steps": 10, "prompt_buckets": [32, 64, 128, 224], "kv_dram": false, "device_ops_per_call": 3, "class": "models.experimental.pi0.tt.ttnn_pi05_model.PI05MegakernelTTNN"} source 5edf139d458e9acabd31eea641cd364079962677 inputs.num_images 2 outputs [10, 32] warmup {'first': 60.2, 'last': 53.4}
+PASS pi05 actions=(10,32) max|a|=0.184 std=0.059 repeat_maxdiff=0.0000 change_maxdiff=0.7112 inference_ms=54.62/53.48 tokens=143/224 truncated=False
+BENCH {"preprocess": {"median": 1.15, "p10": 1.12, "p90": 1.26, "min": 1.11, "max": 1.75}, "inference": {"median": 53.43, "p10": 53.26, "p90": 53.59, "min": 53.16, "max": 53.77}, "total": {"median": 54.58, "p10": 54.4, "p90": 54.89, "min": 54.29, "max": 55.34}, "client_wall": {"median": 55.97, "p10": 55.55, "p90": 56.47, "min": 55.55, "max": 56.92}}
+  ✓ stopped 1 container(s)
+device users after stop: []
+=== c2-h10-n5 profile=c2-h10-n5 [11:54:14] ===
+[11:54:49] serve exit=0 wall=35.0s
+    2026-10-03T02:54:23.152601471Z 2026-10-03 02:54:23.152 | info     |             UMD | Opening local chip ids/PCIe ids: {0}/[0] and remote chip ids {} (cluster.cpp:172)
+    2026-10-03T02:54:23.660997231Z 2026-10-03 02:54:23,660 INFO pi05.server: Opening device {'device_id': 0, 'l1_small_size': 24576, 'worker_l1_size': 1395712, 'trace_region_size': 10000000} (multi-config megakernel)
+    2026-10-03T02:54:47.777734491Z 2026-10-03 02:54:47,777 INFO pi05.server: Model built in 24.1 s
+    2026-10-03T02:54:48.347950353Z 2026-10-03 02:54:48,347 INFO pi05.server: Warming up: compiling and capturing the 32 / 64 / 128 / 224-token prompt buckets ...
+    2026-10-03T02:54:49.115537992Z 2026-10-03 02:54:49,115 INFO pi05.server: Warmup traces captured in 0.8 s
+    2026-10-03T02:54:49.170096272Z 2026-10-03 02:54:49,170 INFO pi05.server: Warmup 1/2: 52.5 ms
+    2026-10-03T02:54:49.216240406Z 2026-10-03 02:54:49,216 INFO pi05.server: Warmup 2/2: 46.1 ms
+    2026-10-03T02:54:49.216245836Z 2026-10-03 02:54:49,216 INFO pi05.server: Warmup complete (first 52.5 ms, steady 46.1 ms) -- 3 device ops per call, one trace per prompt bucket
+info: mc {"kernel_digest": "1429d5bea05c31ad", "cameras": 2, "action_horizon": 10, "suffix_rows": 32, "num_steps": 5, "prompt_buckets": [32, 64, 128, 224], "kv_dram": false, "device_ops_per_call": 3, "class": "models.experimental.pi0.tt.ttnn_pi05_model.PI05MegakernelTTNN"} source 5edf139d458e9acabd31eea641cd364079962677 inputs.num_images 2 outputs [10, 32] warmup {'first': 52.5, 'last': 46.1}
+PASS pi05 actions=(10,32) max|a|=0.172 std=0.056 repeat_maxdiff=0.0000 change_maxdiff=0.7205 inference_ms=46.9/45.69 tokens=143/224 truncated=False
+BENCH {"preprocess": {"median": 1.14, "p10": 1.08, "p90": 1.27, "min": 1.02, "max": 1.65}, "inference": {"median": 45.86, "p10": 45.6, "p90": 46.01, "min": 45.45, "max": 46.23}, "total": {"median": 47.0, "p10": 46.71, "p90": 47.29, "min": 46.47, "max": 47.64}, "client_wall": {"median": 48.33, "p10": 47.88, "p90": 48.85, "min": 47.66, "max": 49.48}}
+  ✓ stopped 1 container(s)
+device users after stop: []
+=== img_check in the image [11:54:53] ===
+GOLDEN {'backend': 'tt-p150a:models.experimental.pi0.tt.ttnn_pi05_model.PI05MegakernelTTNN[cameras=2,H=10,num_steps=10,kv_dram=False,digest=1429d5bea05c31ad]', 'n': 8, 'all_inputs_equal': True, 'pcc7_mean': 0.9999812644249046, 'pcc7_min': 0.9999583233106235}
+BITID c1 {'cameras': 1, 'H': 10, 'N': 10, 'n_tokens': 20, 'preset': [1, 32, 32], 'kv_dram': False, 'device_ops_per_call': 3, 'shape': [1, 10, 32], 'sha': '2e91855b9fa71da136e9b5d7413dc948b573a5df2839adddb4c06d3b29981b96', 'replay_identical': True, 'finite': True, 'call_ms_median': 39.78390200063586,
+BITID c2 {'cameras': 2, 'H': 50, 'N': 10, 'n_tokens': 150, 'preset': [2, 224, 64], 'kv_dram': False, 'device_ops_per_call': 3, 'shape': [1, 50, 32], 'sha': '63d5c2b66833644d901307623d5056ff90e7ba01430a785f1d2724b127f91ab0', 'replay_identical': True, 'finite': True, 'call_ms_median': 56.5989300084766
+BITID c3 {'cameras': 3, 'H': 32, 'N': 5, 'n_tokens': 50, 'preset': [3, 64, 32], 'kv_dram': False, 'device_ops_per_call': 4, 'shape': [1, 32, 32], 'sha': 'd9f8d48c5ecdf0394b95c5866853fc52d6585066d96fc8182ed04c3ce5cb6ac4', 'replay_identical': True, 'finite': True, 'call_ms_median': 62.75437900330871, 
+BITID c4 {'cameras': 4, 'H': 64, 'N': 10, 'n_tokens': 100, 'preset': [4, 128, 64], 'kv_dram': True, 'device_ops_per_call': 4, 'shape': [1, 64, 32], 'sha': 'cc8090acd8b1027c0dbb052f92f60a99ff51393fac5981524dc6189183aca208', 'replay_identical': True, 'finite': True, 'call_ms_median': 95.28016750118695
+REFUSE H=65 at construction {'raised': True, 'type': 'RuntimeError', 'msg': 'pi0.5 megakernel refused: action_horizon=65 (the megakernel serves 1..64 action rows)', 'ok': True}
+REFUSE N=11 at construction {'raised': True, 'type': 'RuntimeError', 'msg': 'pi0.5 megakernel refused: num_denoising_steps=11 (the megakernel runs 1..10 denoising steps)', 'ok': True}
+REFUSE cameras=5 at construction {'raised': True, 'type': 'RuntimeError', 'msg': 'pi0.5 megakernel refused: cameras = 5 (compiled: 1, 2, 3, 4)', 'ok': True}
+REFUSE masked camera {'raised': True, 'type': 'RuntimeError', 'msg': "pi0.5 megakernel: every camera must be valid (img_masks all True); drop the masked image slots and pass only the real cameras (a model built with num_cameras = that count): openpi's masked slots are padding keys that do not advanc
+REFUSE 1 image on a 2-camera model {'raised': True, 'type': 'RuntimeError', 'msg': 'pi0.5 megakernel serves 2 cameras (got 1)', 'ok': True}
+REFUSE 40 tokens in prompt_bucket 32 {'raised': True, 'type': 'RuntimeError', 'msg': 'pi0.5 megakernel: prompt_bucket=32 cannot hold 40 real tokens', 'ok': True}
+REFUSE prompt_bucket 48 {'raised': True, 'type': 'RuntimeError', 'msg': 'pi0.5 megakernel: prompt_bucket=48 (compiled: 32 / 64 / 128 / 224)', 'ok': True}
+REFUSE batch 2 {'raised': True, 'type': 'RuntimeError', 'msg': 'pi0.5 megakernel serves batch 1 (got batch 2)', 'ok': True}
+REFUSE second live model on the device {'raised': True, 'type': 'RuntimeError', 'msg': 'pi0.5 megakernel: 1 other model(s) on this device still hold device memory (2 cameras / 32 action rows (90,624 B of L1 per core)); close() them or build them in a `with` block before building another', 'ok': True
+DONE {"kernel_digest": "1429d5bea05c31ad", "refuse_all_ok": true}
+[11:57:58] img_check rc=0
+=== device profiler: programs per replay [11:57:58] ===
+call 2 5 (2, 32, 64)
+call 2 150 (2, 224, 64)
+call 2 40 (2, 64, 64)
+call 2 5 (2, 32, 64)
+call 2 150 (2, 224, 64)
+call 2 40 (2, 64, 64)
+call 3 5 (3, 32, 32)
+call 3 150 (3, 224, 32)
+call 3 40 (3, 64, 32)
+call 3 5 (3, 32, 32)
+call 3 150 (3, 224, 32)
+call 3 40 (3, 64, 32)
+PROF DONE
+[11:59:36] profiler run rc=0
+csv: /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/pubmc/prof/.logs/cpp_device_perf_report.csv
+Traceback (most recent call last):
+  File "/tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/pubmc/prof_analyze.py", line 11, in <module>
+    by_trace[t].append((len(v), sorted({r["OP CODE"] for r in v}), sorted({r["CORE COUNT"] for r in v}),
+  File "/tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/pubmc/prof_analyze.py", line 11, in <setcomp>
+    by_trace[t].append((len(v), sorted({r["OP CODE"] for r in v}), sorted({r["CORE COUNT"] for r in v}),
+KeyError: 'OP CODE'
+[11:59:36] done rc=0
+[trap] stop
+  ○ nothing running
+[trap] device users after stop: []
+2026-10-03_11:59:36 [device-guard pid=2941907] RESET AFTER JOB (WITH_DEVICE_RESET_AFTER=1, rc=0): timeout --signal=TERM --kill-after=120 5400 /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/pubmc/run_container_mc.sh
+2026-10-03_11:59:36 [device-guard pid=2941907] RESET: tt-smi -r 0 (probe hung/failed with no other device users)
+2026-10-03_12:00:18 [device-guard pid=2941907] reset exit=0
+rc=0

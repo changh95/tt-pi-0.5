@@ -1,0 +1,282 @@
+{
+ "n": 30,
+ "warmup": 5,
+ "request": {
+  "prompt": "pick up the cube",
+  "state": [
+   0.1,
+   -0.2,
+   0.3,
+   0,
+   0,
+   0,
+   0.5,
+   -0.5
+  ],
+  "images": "media/sample_base.png, media/sample_wrist.png, media/sample_wrist.png"
+ },
+ "stats": {
+  "preprocess": {
+   "median": 1.57,
+   "p10": 1.48,
+   "p90": 1.75,
+   "min": 1.47,
+   "max": 4.54
+  },
+  "inference": {
+   "median": 76.16,
+   "p10": 75.92,
+   "p90": 76.36,
+   "min": 75.88,
+   "max": 76.59
+  },
+  "total": {
+   "median": 77.72,
+   "p10": 77.47,
+   "p90": 78.18,
+   "min": 77.35,
+   "max": 80.68
+  },
+  "client_wall": {
+   "median": 79.43,
+   "p10": 79.07,
+   "p90": 80.84,
+   "min": 78.67,
+   "max": 82.34
+  }
+ },
+ "identical_actions_all": true,
+ "first_response": {
+  "action_horizon": 50,
+  "action_dim": 32,
+  "normalized": true,
+  "denoising_steps": 10,
+  "prompt": "Task: pick up the cube, State: 140 102 166 128 128 128 192 64 128 128 128 128 128 128 128 128 128 128 128 128 128 128 128 128 128 128 128 128 128 128 128 128;\nAction: ",
+  "num_tokens": 142,
+  "token_len": 224,
+  "prompt_bucket": 224,
+  "prompt_truncated": false,
+  "images_used": 3,
+  "images_padded": 0,
+  "original_sizes": [
+   [
+    224,
+    224
+   ],
+   [
+    224,
+    224
+   ],
+   [
+    224,
+    224
+   ]
+  ],
+  "image_size": [
+   224,
+   224
+  ],
+  "seed": null,
+  "batched_as": 1,
+  "timing_ms": {
+   "preprocess": 2.04,
+   "inference": 76.89,
+   "total": 78.93
+  },
+  "actions_head": [
+   [
+    0.0486,
+    -0.1631,
+    0.252,
+    0.0869,
+    -0.0525,
+    0.0459,
+    0.4512,
+    -0.4512
+   ]
+  ]
+ },
+ "rows": [
+  {
+   "preprocess": 1.56,
+   "inference": 75.95,
+   "total": 77.51,
+   "client_wall": 78.66938895313069
+  },
+  {
+   "preprocess": 1.61,
+   "inference": 76.43,
+   "total": 78.04,
+   "client_wall": 79.87099199090153
+  },
+  {
+   "preprocess": 1.57,
+   "inference": 76.18,
+   "total": 77.75,
+   "client_wall": 79.27541597746313
+  },
+  {
+   "preprocess": 1.55,
+   "inference": 75.92,
+   "total": 77.47,
+   "client_wall": 79.0867320029065
+  },
+  {
+   "preprocess": 1.51,
+   "inference": 75.89,
+   "total": 77.4,
+   "client_wall": 78.81912001175806
+  },
+  {
+   "preprocess": 4.54,
+   "inference": 76.13,
+   "total": 80.68,
+   "client_wall": 82.34044094569981
+  },
+  {
+   "preprocess": 1.66,
+   "inference": 76.52,
+   "total": 78.18,
+   "client_wall": 80.0777290132828
+  },
+  {
+   "preprocess": 2.37,
+   "inference": 76.59,
+   "total": 78.96,
+   "client_wall": 80.83546900888905
+  },
+  {
+   "preprocess": 1.63,
+   "inference": 76.19,
+   "total": 77.83,
+   "client_wall": 79.49025800917298
+  },
+  {
+   "preprocess": 1.6,
+   "inference": 76.36,
+   "total": 77.96,
+   "client_wall": 79.37945099547505
+  },
+  {
+   "preprocess": 1.57,
+   "inference": 76.26,
+   "total": 77.83,
+   "client_wall": 79.748201998882
+  },
+  {
+   "preprocess": 1.53,
+   "inference": 76.2,
+   "total": 77.73,
+   "client_wall": 79.8721430473961
+  },
+  {
+   "preprocess": 1.52,
+   "inference": 76.11,
+   "total": 77.63,
+   "client_wall": 79.53149598324671
+  },
+  {
+   "preprocess": 1.48,
+   "inference": 76.12,
+   "total": 77.6,
+   "client_wall": 79.41425603348762
+  },
+  {
+   "preprocess": 1.48,
+   "inference": 75.88,
+   "total": 77.35,
+   "client_wall": 79.17789299972355
+  },
+  {
+   "preprocess": 1.5,
+   "inference": 76.17,
+   "total": 77.67,
+   "client_wall": 79.64552898192778
+  },
+  {
+   "preprocess": 1.75,
+   "inference": 75.98,
+   "total": 77.72,
+   "client_wall": 79.45032400311902
+  },
+  {
+   "preprocess": 1.47,
+   "inference": 76.0,
+   "total": 77.47,
+   "client_wall": 79.1398020228371
+  },
+  {
+   "preprocess": 1.49,
+   "inference": 75.98,
+   "total": 77.48,
+   "client_wall": 79.24875599564984
+  },
+  {
+   "preprocess": 1.49,
+   "inference": 76.12,
+   "total": 77.61,
+   "client_wall": 79.18131997575983
+  },
+  {
+   "preprocess": 1.57,
+   "inference": 76.22,
+   "total": 77.8,
+   "client_wall": 79.57710104528815
+  },
+  {
+   "preprocess": 1.61,
+   "inference": 76.17,
+   "total": 77.77,
+   "client_wall": 79.69819899881259
+  },
+  {
+   "preprocess": 1.58,
+   "inference": 76.13,
+   "total": 77.71,
+   "client_wall": 81.65236102649942
+  },
+  {
+   "preprocess": 1.6,
+   "inference": 76.14,
+   "total": 77.74,
+   "client_wall": 79.41566896624863
+  },
+  {
+   "preprocess": 3.35,
+   "inference": 76.27,
+   "total": 79.63,
+   "client_wall": 81.40758302761242
+  },
+  {
+   "preprocess": 1.58,
+   "inference": 76.13,
+   "total": 77.71,
+   "client_wall": 79.235912009608
+  },
+  {
+   "preprocess": 1.6,
+   "inference": 76.28,
+   "total": 77.88,
+   "client_wall": 79.34791198931634
+  },
+  {
+   "preprocess": 1.55,
+   "inference": 76.17,
+   "total": 77.72,
+   "client_wall": 79.26488702651113
+  },
+  {
+   "preprocess": 1.52,
+   "inference": 76.02,
+   "total": 77.54,
+   "client_wall": 79.07036202959716
+  },
+  {
+   "preprocess": 1.54,
+   "inference": 76.34,
+   "total": 77.88,
+   "client_wall": 79.54297697870061
+  }
+ ],
+ "time": "2026-10-03 11:52:12"
+}
