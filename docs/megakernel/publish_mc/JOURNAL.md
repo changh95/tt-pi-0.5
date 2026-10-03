@@ -249,3 +249,16 @@ build/pi05-base-p150 (= the 36f651704bf1 package), scripts + results in docs/meg
   test with the tt-models venv python, which has no PIL: a harness fault, rerun with /usr/bin/python3.) Golden PCC7 /
   bit-identity ran on the same image id before the upload (val_new.log).
 - Local image tt-model/pi05-base-p150:36f651704bf1 removed after the pull of 4dd06e9d6fd3 was verified.
+
+## 2026-10-03 19:44:34 KST -- the user's README edit on HF is the source of truth for the card
+- The user edited README.md on HF: commit 873bf8d86548ba596c78a8520e5a89191ac3a3c8 ("Update README.md",
+  2026-10-03 10:43:30 UTC), parent 10b36ea0; README only (249 files, the rest unchanged). The edit rewrites the intro
+  (configuration list, implementation note), moves the Demo up, and adds "Implementation implications".
+- From now on that HF README is the card. The generator output (card_mc.py / card_ste.py / readme_ste.py and the
+  card: block of tt-model.yaml) is SUPERSEDED: do not regenerate README.md from it and do not overwrite the HF README.
+  Any later HF commit must take README.md from the Hub head. The card: block in the staged / published tt-model.yaml
+  still holds the generated text (tt-model renders the card from it at package time); it is not edited here.
+- Copies: hf_card/README.md (this repo) and the staging dir models/pi05-base-p150-mc/README.md (sha256 4cb4d8c1c049cf70,
+  = the Hub file); the staging manifest's README entry and hf_head now name 873bf8d8. The generated 10b36ea0 card is kept
+  only in the history (and scratchpad rev/README_generated_10b36ea0.md).
+- Nothing changed on HF or GitHub.
