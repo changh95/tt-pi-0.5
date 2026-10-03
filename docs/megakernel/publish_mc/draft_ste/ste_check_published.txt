@@ -1,0 +1,43 @@
+sentences 77 (instructions 1, descriptive 76); over limit 17; paragraphs > 6 sentences 0; max length 70; mean 21.6
+  OVER 49/25 descriptive: One image serves 1-4 cameras, action chunks of 1-64 steps and 1-10 flow-matching steps (a model per configuration, chosen at server start by serve profile or environment); each request runs in the smallest of four prompt buckets (32 / 64 / 128 / 224 tokens) that holds its prompt.
+  OVER 68/25 descriptive: Every request runs the whole model as three persistent custom-kernel programs (`ttnn.generic_op` megakernels on 110 Tensix cores; four with 3-4 cameras): VISION (SigLIP + projector), PREFIX (language embedding + Gemma-2B prefill writing the K / V caches) and EXPERT (the N-step x 18-layer action expert with its adaRMS time conditioning, the action in / out projections and the Euler steps), replayed from one Metal trace per prompt bucket.
+  OVER 35/25 descriptive: `state` is discretised into 256 bins inside the prompt (`Task: <prompt>, State: b0 … b31;\nAction: `); the pad tokens are masked out of attention (openpi semantics), so the output does not depend on the padding.
+  OVER 26/25 descriptive: The three (four) programs are captured in one Metal trace per prompt bucket; a request writes its inputs into fixed device buffers and replays that trace.
+  OVER 41/25 descriptive: The 32 compiled presets are cameras {1, 2, 3, 4} × prompt buckets {32, 64, 128, 224} × suffix buckets {32, 64} action rows (H ≤ 32 runs in the 32-row bucket); N is folded into the expert's weights at construction.
+  OVER 51/25 descriptive: The full matrix: 32 presets × N 1..10 = 320 (preset, steps) sets, each against the fp32 torch reference on 6 padded prompts (A2), plus an fp32 expert loop fed the device's own K / V caches (A4), the K / V caches (A3, A6), bit-identical replays and an independent cross-check.
+  OVER 45/25 descriptive: Served by this image over HTTP, default profile (2 × 224² images, the card's prompt = 142 tokens -> the 224-token bucket, H = 50, N = 10), median of 100 warm requests: 56.44 ms `timing_ms.inference` (p90 56.65), 57.68 ms `timing_ms.total`, 59.29 ms client wall.
+  OVER 42/25 descriptive: Device replay latency per preset: the trace replay of a call's programs, measured in-process on the release code (L = prompt bucket in tokens, S = action-row bucket; the full source table with the build log the † refers to is `PERF_PRESETS.md`).
+  OVER 59/25 descriptive: Footnote: trace replay, median of 60 per build, mean of 2 builds; measured at host 1-min load 2-9; the 4 presets also timed on a quiet host agree within 0.09 ms (c2 L64 S32 +0.027, c3 L224 S32 +0.090, c4 L224 S32 +0.057, c4 L224 S64 +0.081 ms here vs the quiet ABAB holds of 2026-10-03 09:38 / 10:00).
+  OVER 45/25 descriptive: `lerobot/pi05_libero` through this code (openpi's `pi05_libero` conventions: H = 10, openpi norm stats, openpi's client and LIBERO loop), libero_spatial 10 tasks × init states 0-9, paired episode by episode with openpi's PyTorch policy on an RTX 5090 (same client, init states and per-call noise seeds).
+  OVER 28/25 descriptive: With 1 camera (the wrist image dropped) both backends collapse (0-2 / 100): pi05_libero needs the wrist view, so those rows are a record, not an accuracy signal.
+  OVER 70/25 descriptive: All 6 failing A2 sets are one input: 2 cameras, a full 224-token prompt, 64 action rows (H = 64), matrix seed 5, at N = 5-10. openpi's GPU policy in bf16 also fails there from N = 6, but this megakernel is lower at every N; the other five prompts of that cell stay ≥ 0.9983 at N = 5-10 (≥ 0.9978 at every N from 1 to 10):
+  OVER 31/25 descriptive: Rounding the reference's own K / V to bf16 / bfp8 leaves it ≥ 0.99994 and a higher VLM matmul fidelity does not help: the trajectory amplifies the prefix's reduced-precision error.
+  OVER 35/25 descriptive: The two A4 misses at N ≥ 2 have H = 1: 1 camera / 64-token bucket / N = 5 (0.998746) and 2 cameras / 128-token bucket / N = 3 (0.997803), against 0.999.
+  OVER 33/25 descriptive: Batch 1, 224 × 224 images, 1-4 real cameras (no masked slots), ≤ 224 real prompt tokens, H ≤ 64, N ≤ 10; N, H and the camera count are fixed per server.
+  OVER 32/25 descriptive: The single-config paths of the previous releases (`PI05_MEGAKERNEL=whole` / `expert` / `off`, the mesh layouts) are still in `code/` as comparators; they were validated on tt-metal `668c2907575`, not on this image's tree.
+  OVER 28/25 descriptive: The demo uses the LIBERO fine-tune `lerobot/pi05_libero` @ `a217bfd3b146` with openpi's `pi05_libero` norm stats, at openpi's LIBERO shape (H = 10, 5 actions executed per call, 32-token prompts).
+list items 22; list items nested deeper than 2 levels 0; prose paragraphs (not lists) 24
+  PROSE (4 sentence(s)): Physical Intelligence's pi-0.5 vision-language-action policy (lerobot/pi05_base: SigLIP + Gemma-2B VLM + Gemma-300M flow-matching action expert) running entirel
+  PROSE (1 sentence(s)): Weights: lerobot/pi05_base ·
+  PROSE (1 sentence(s)): Runs on p150 (mesh `P150`, one p150a); six serve profiles pick the cameras / horizon / steps (below).
+  PROSE (1 sentence(s)): Packaged and published with tt-model-manager 0.1.0 (manifest schema 5.1).
+  PROSE (2 sentence(s)): A model is built for one (cameras, horizon H, steps N) at server start; the prompt bucket is picked per request. Serve profiles (`tt-model profiles changh95/pi0
+  PROSE (3 sentence(s)): Any other combination in range is three environment variables of the container: `PI05_NUM_IMAGES` (1..4), `PI05_ACTION_HORIZON` (1..64), `PI05_NUM_STEPS` (1..10
+  PROSE (1 sentence(s)): The end of this card has a LIBERO closed-loop demo of the same code, with the LIBERO fine-tune swapped in.
+  PROSE (4 sentence(s)): The three (four) programs are captured in one Metal trace per prompt bucket; a request writes its inputs into fixed device buffers and replays that trace. The 3
+  PROSE (2 sentence(s)): Validated on one p150a with tt-metal `main` @ `f856a38a361`, batch 1, every expert matmul at HiFi3. The full matrix: 32 presets × N 1..10 = 320 (preset, steps) 
+  PROSE (2 sentence(s)): Served by this image over HTTP, default profile (2 × 224² images, the card's prompt = 142 tokens -> the 224-token bucket, H = 50, N = 10), median of 100 warm re
+  PROSE (1 sentence(s)): Every serve profile, served by this image (the card's request; 3-4 cameras repeat the two card images; `timing_ms` medians, warm requests):
+  PROSE (2 sentence(s)): Device replay latency per preset: the trace replay of a call's programs, measured in-process on the release code (L = prompt bucket in tokens, S = action-row bu
+  PROSE (1 sentence(s)): 10 denoising steps (all 32 presets)
+  PROSE (1 sentence(s)): 2 cameras at 1 and 5 denoising steps
+  PROSE (1 sentence(s)): Footnote: trace replay, median of 60 per build, mean of 2 builds; measured at host 1-min load 2-9; the 4 presets also timed on a quiet host agree within 0.09 ms
+  PROSE (2 sentence(s)): † one of the two builds ran while a foreign CPU process was active (windows below). Build-to-build se is <= 0.042 ms at 10 steps; at 1 / 5 steps it reaches 0.19
+  PROSE (3 sentence(s)): `lerobot/pi05_libero` through this code (openpi's `pi05_libero` conventions: H = 10, openpi norm stats, openpi's client and LIBERO loop), libero_spatial 10 task
+  PROSE (2 sentence(s)): Every discordant split has exact McNemar p = 1. With 1 camera (the wrist image dropped) both backends collapse (0-2 / 100): pi05_libero needs the wrist view, so
+  PROSE (2 sentence(s)): Rounding the reference's own K / V to bf16 / bfp8 leaves it ≥ 0.99994 and a higher VLM matmul fidelity does not help: the trajectory amplifies the prefix's redu
+  PROSE (1 sentence(s)): One image serves every profile below; pick one with `--profile`.
+  PROSE (1 sentence(s)): The exact sources the image was built from — `code/` in this repo is byte-identical to the model code inside the image:
+  PROSE (2 sentence(s)): The multi-config megakernel this image serves, running LIBERO-Spatial closed loop in MuJoCo on one p150a, captured on screen in real time (video). How it was ma
+  PROSE (2 sentence(s)): Policy latency on the p150a: mean 52.7 ms per call (server side, p90 53.0; 2,182 calls). Code: tt-metal-pr `changh95/pi05-megakernel-mc` @ `7a622a3a570` (the mo
+  PROSE (4 sentence(s)): Caveat: swapped weights. The demo uses the LIBERO fine-tune `lerobot/pi05_libero` @ `a217bfd3b146` with openpi's `pi05_libero` norm stats, at openpi's LIBERO sh

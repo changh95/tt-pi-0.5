@@ -1,0 +1,157 @@
+# SPDX-License-Identifier: Apache-2.0
+# tt-model-manager container manifest (schema 5.1) for pi-0.5 (lerobot/pi05_base) on Blackhole.
+# Served path (default PI05_MEGAKERNEL=mc): the multi-config pi0.5 megakernel (code/models/experimental/pi0/tt/
+# ttnn_pi05_model.py, PI05MegakernelTTNN): the whole sample_actions as three persistent generic_op programs per call on
+# 110 cores -- VISION (SigLIP + projector; one program per group of <= 2 cameras, so 3-4 cameras take two), PREFIX
+# (language embedding + VLM prefill -> 18 K/V caches) and EXPERT (N steps x 18 action-expert layers, action in / out,
+# Euler) -- replayed from one Metal trace per prompt bucket. Cameras 1-4, horizon H 1..64 and steps N 1..10 are fixed
+# at server start (serve.env below); each request runs in the smallest 32 / 64 / 128 / 224-token prompt bucket that
+# holds its prompt.
+#
+# Run every tt-model command FROM THIS DIRECTORY: `root: code` below resolves against the
+# process CWD. Rootless Docker on this host needs `source $ROOT/bin/docker-env.sh` first.
+#
+#   tt-model package --container tt-model.yaml --out $ROOT/build       # minutes with the ccache mount, ~2 h cold
+#   tt-model serve   $ROOT/build/pi05-base-p150/tt_kernel_manifest.json   # needs the card
+#   python code/models/experimental/pi0_5/server/smoke_test.py --url http://127.0.0.1:20000
+#   tt-model stop    $ROOT/build/pi05-base-p150/tt_kernel_manifest.json
+#
+# The tt-metal tree is a clean clone of tenstorrent/tt-metal main @ f856a38a361 (v0.80.0-dev20261001-17), the tree the
+# multi-config megakernel was validated on (the previous releases pinned main @ 668c2907575). The megakernel's kernels
+# (code/models/experimental/pi0/tt/megakernel/kernels{,_p2}/*) are compiled at run time by that tree's JIT.
+schema: "5.1"
+
+repo: changh95/pi05-base-p150
+name: pi05-base-p150
+
+# A POINTER. Weights are never baked into the image; `tt-model serve` pre-downloads this
+# pinned snapshot into the host HF cache (mounted at /hf). The server resolves the same
+# files with hf_hub_download(revision=TT_WEIGHTS_REVISION) -- see serve.env.
+weights:
+  repo: lerobot/pi05_base
+  revision: b211f3d44c36b6acfcf7ae94a64e8e96f75a64ba
+  allow_patterns:
+    - model.safetensors
+    - config.json
+    - policy_preprocessor.json
+    - policy_postprocessor.json
+
+kind: tt-dit-server
+arch: blackhole
+
+source:
+  # Clean clone of tenstorrent/tt-metal main @ f856a38a361939888f92d88f9e69b2f8a83fb713 (submodules at the recorded
+  # commits; `git status --porcelain` empty). torch pin 2.11.0, transformers pin 5.12.1 (unchanged from 668c2907575).
+  tt_metal: /home/deepgadget/experiments/gr00t/publish/tt-metal-f856a38a361
+
+  # Relative to the tt-metal tree. The schema needs at least one entry; this port imports
+  # NOTHING from tt-metal's models/ at serve time, so ship the smallest real file. The port's
+  # C++ kernels (code/models/experimental/pi0/tt/megakernel/kernels{,_p2}/*, and the comparator kernels under
+  # code/models/experimental/pi0_5/tt/) include only tt_metal/hw/inc headers and their own port files, all of which are
+  # in the image (verify: below).
+  code:
+    - models/common/lightweightmodule.py
+
+  # The port itself (github.com/changh95/tt-pi-0.5, models/), laid out as in a tt-metal tree so its absolute
+  # `models.experimental.pi0.*` (the model) and `models.experimental.pi0_5.*` (the server; the single-config
+  # comparators) imports work unchanged under PYTHONPATH=/opt/tt-metal. tt-model copies the tt-metal tree without its
+  # models/, so code/models/experimental/pi0 is the only pi0 package in the image.
+  extra_code:
+    - root: code
+      paths:
+        - models
+
+  ubuntu: "22.04"
+  python: "3.12"
+
+runtime:
+  app: models.experimental.pi0_5.server.app:app
+  mesh_shape_env: TT_MESH_SHAPE
+  # On top of the kind's defaults (fastapi, uvicorn, pydantic>=2, pillow) and the auto
+  # torch==<tree pin>+cpu. numpy stays <2 (ttnn). transformers/sentencepiece/protobuf are
+  # for the PaliGemma tokenizer (5.12.1 = the tree's pin).
+  packages:
+    - "numpy>=1.24.4,<2"
+    - safetensors
+    - huggingface_hub
+    - transformers==5.12.1
+    - sentencepiece
+    - protobuf
+
+serve:
+  port: 20000
+  hardware: p150
+  mesh_device: P150
+  env:
+    TT_WEIGHTS_REVISION: "b211f3d44c36b6acfcf7ae94a64e8e96f75a64ba"
+    TT_METAL_VISIBLE_DEVICES: "0"
+    TT_DEVICE_ID: "0"
+    # The multi-config megakernel (also the default when unset on one chip). "whole" / "expert" / "off" select the
+    # previous single-config paths (comparators, validated on tt-metal 668c2907575 only).
+    PI05_MEGAKERNEL: "mc"
+    # Fixed at server start (a model per configuration): cameras 1..4, action horizon 1..64, flow-matching steps 1..10.
+    # A request must send exactly PI05_NUM_IMAGES images. The defaults are the previous release's shape.
+    PI05_NUM_IMAGES: "2"
+    PI05_ACTION_HORIZON: "50"
+    PI05_NUM_STEPS: "10"
+    # Token buffer of the tokenizer (right-padded, pads masked); the request then runs in the smallest of the
+    # 32 / 64 / 128 / 224-token prompt buckets that holds its real tokens. The full pi0.5 prompt with 32 state bins
+    # is ~143 tokens (the 224 bucket).
+    PI05_TOKEN_LEN: "224"
+    PI05_TOKENIZER_REQUIRED: "1"
+    # Reported by GET /info. PI05_SOURCE_COMMIT = the github.com/changh95/tt-pi-0.5 commit code/ was taken from.
+    PI05_MODEL_NAME: "pi05-base-p150"
+    PI05_SOURCE_COMMIT: "5edf139d458e9acabd31eea641cd364079962677"
+
+# ONE serve profile, `p150`, with the default configuration in serve.env above (2 cameras, an action chunk of 50 actions,
+# 10 flow-matching steps). Another configuration (cameras 1..4, H 1..64, N 1..10) is the same image with other values of
+# PI05_NUM_IMAGES / PI05_ACTION_HORIZON / PI05_NUM_STEPS on the container: `tt-model serve changh95/pi05-base-p150
+# --print` gives the docker run command; change the three values in it (SERVING.md, "How to change the configuration").
+default_profile: p150
+serve_profiles:
+  - name: p150
+    description: "One p150a. Default configuration: 2 cameras (base, wrist), an action chunk of 50 actions, 10 flow-matching steps. Change it with PI05_NUM_IMAGES, PI05_ACTION_HORIZON and PI05_NUM_STEPS."
+
+# Build-time assertions run INSIDE the finished image (uid 1000, no device, no weights).
+verify:
+  # The multi-config megakernel (the default): its model class, the 32 compiled presets, the 14 kernel sources and the
+  # kernel digest every WP6 / LIBERO device gate ran on, the server default, and the include check over its C++ sources.
+  - "import models.experimental.pi0.tt.ttnn_pi05_model as m; assert m.PI05MegakernelTTNN and m.PI05_DEVICE_PARAMS['worker_l1_size'] == 1395712, m.PI05_DEVICE_PARAMS"
+  - "from models.experimental.pi0.tt.megakernel import presets as PS; assert len(PS.PRESETS) == 32 and PS.CAMERAS == (1, 2, 3, 4) and PS.PROMPT_BUCKETS == (32, 64, 128, 224) and PS.SUFFIX_BUCKETS == (32, 64)"
+  - "from models.experimental.pi0.tt.megakernel import pe_program as pp; assert len(pp.KERNEL_SOURCES) == 14, pp.KERNEL_SOURCES; assert pp.kernel_digest() == '1429d5bea05c31ad', pp.kernel_digest()"
+  - "import os; [os.environ.pop(k, None) for k in ('PI05_MEGAKERNEL', 'TT_MESH_SHAPE', 'PI05_NUM_IMAGES', 'PI05_ACTION_HORIZON', 'PI05_NUM_STEPS')]; from models.experimental.pi0_5.server import app as a; c = a.load_config(); assert (c.backend, c.num_images, c.action_horizon, c.num_steps) == ('mc', 2, 50, 10), c"
+  - "import re; from pathlib import Path; R = Path('/opt/tt-metal/models/experimental/pi0'); inc = Path('/opt/tt-metal/tt_metal/hw/inc'); ks = sorted(k for k in R.rglob('*') if k.suffix in ('.cpp', '.hpp', '.h')); assert len(ks) == 14, ks; pairs = [(k, i) for k in ks for i in re.findall(r'#include\\s+\"([^\"]+)\"', k.read_text())]; assert len(pairs) >= 38, len(pairs); bad = [(str(k), i) for k, i in pairs if not ((k.parent / i).is_file() or (inc / i).is_file())]; assert not bad, bad"
+  - "from pathlib import Path; assert Path('/opt/tt-metal/models/experimental/pi0_5/server/serve_pi05_libero.py').is_file()"
+  # The single-config comparator paths (models/experimental/pi0_5, unchanged since the 2026-10-01 release).
+  - "import models.experimental.pi0_5.server.app as a; assert a.app"
+  - "import models.experimental.pi0_5.tt.ttnn_pi0_model as m; assert m.PI0ModelTTNN and hasattr(m.PI0ModelTTNN, 'sample_actions_fused') and not hasattr(m.PI0ModelTTNN, 'sample_actions_traced')"
+  - "import models.experimental.pi0_5.common.weight_loader as w; assert w.PI0WeightLoader"
+  - "import models.experimental.pi0_5.tt.ttnn_fused_attn, models.experimental.pi0_5.tt.ttnn_fused_norm"
+  - "import ttnn; assert hasattr(ttnn, 'generic_op') and hasattr(ttnn, 'KernelDescriptor'), 'the fused kernels need ttnn.generic_op'"
+  - "import ttnn; assert hasattr(ttnn.experimental, 'dit_minimal_matmul_addcmul_fused'), 'needs tt-metal main >= 2026-02-17'"
+  - "import ttnn; assert hasattr(ttnn, 'MatmulMultiCoreReuseMultiCastProgramConfig') and hasattr(ttnn, 'MinimalMatmulConfig')"
+  - "import tt_lib.fallback_ops"
+  - "import safetensors, huggingface_hub, sentencepiece, google.protobuf"
+  - "import transformers; assert transformers.__version__ == '5.12.1', transformers.__version__"
+  - "import numpy; assert numpy.__version__.startswith('1.'), numpy.__version__"
+  - "from models.experimental.pi0_5.server.app import parse_mesh_shape as p; assert p('1x1') == p('(1, 1)') == p('1,1') == (1, 1)"
+  - "from models.experimental.pi0_5.server.app import build_prompt; import numpy as np; assert build_prompt('pick_up', np.zeros(32)).startswith('Task: pick up, State: 128 128')"
+  - "from pathlib import Path; assert Path('/opt/tt-metal/models/experimental/pi0_5/server/smoke_test.py').is_file()"
+  - "from models.experimental.pi0_5.common.fused_config import FusedConfig; c = FusedConfig.from_env({}); assert c.trace and c.residual == 'bf16', c"
+  - "from models.experimental.pi0_5.common.fused_config import FusedConfig as F\ntry:\n    F.from_env({'TT_FUSED': '0'})\n    raise SystemExit('TT_FUSED=0 must be refused')\nexcept ValueError:\n    pass"
+  - "import re; from pathlib import Path; ks = sorted(Path('/opt/tt-metal/models/experimental/pi0_5/tt/kernels').glob('*/*.cpp')); incs = {i for k in ks for i in re.findall(r'#include \"([^\"]+)\"', k.read_text())}; assert len(ks) == 9, ks; assert incs and all(Path('/opt/tt-metal/tt_metal/hw/inc', i).is_file() for i in incs), sorted(i for i in incs if not Path('/opt/tt-metal/tt_metal/hw/inc', i).is_file())"
+  - "import models.experimental.pi0_5.tt.megakernel.program as p, models.experimental.pi0_5.tt.megakernel.geometry, models.experimental.pi0_5.tt.megakernel.host_model"
+  - "import models.experimental.pi0_5.tt.megakernel.pe_program as pp, models.experimental.pi0_5.tt.megakernel.pe_geometry, models.experimental.pi0_5.tt.megakernel.pe_host, models.experimental.pi0_5.tt.megakernel.pe_size_check; assert pp.WholeMegakernel"
+  - "from models.experimental.pi0_5.common.fused_config import FusedConfig as F; assert F.from_env({}).megakernel == F.from_env({'PI05_MEGAKERNEL': ''}).megakernel == F.from_env({'PI05_MEGAKERNEL': 'whole'}).megakernel == 'whole' and F.from_env({'PI05_MEGAKERNEL': 'expert'}).megakernel == 'expert' and F.from_env({'PI05_MEGAKERNEL': 'off'}).megakernel == 'off'"
+  # The expert-loop megakernel sources ship complete (phase 2 includes them): the five files, the three entry points, the digest.
+  - "import os; from pathlib import Path; import models.experimental.pi0_5.tt.megakernel.program as p; d = Path('/opt/tt-metal/models/experimental/pi0_5/tt/megakernel/kernels'); fs = sorted(x.name for x in d.iterdir()); assert fs == ['mk_brisc.cpp', 'mk_defs.hpp', 'mk_dm.hpp', 'mk_ncrisc.cpp', 'mk_trisc.cpp'], fs; assert all(os.path.isfile(k) for k in p.KERNELS.values()), p.KERNELS; assert p.kernel_digest() == '328761c8a1ce3fd9', p.kernel_digest()"
+  # Build-time include check over EVERY C++ source of the port: each quoted #include resolves to a sibling file or to tt_metal/hw/inc in this image.
+  # The whole-model megakernel ships complete: the nine kernels_p2 files, its three entry points, and kernel_digest2 = the digest every phase-2 device gate ran on.
+  - "import os; from pathlib import Path; import models.experimental.pi0_5.tt.megakernel.pe_program as pp; d = Path('/opt/tt-metal/models/experimental/pi0_5/tt/megakernel/kernels_p2'); fs = sorted(x.name for x in d.iterdir()); assert fs == ['pe_brisc.hpp', 'pe_common.hpp', 'pe_defs.hpp', 'pe_dm.hpp', 'pe_ncrisc.hpp', 'pe_trisc.hpp', 'whole_brisc.cpp', 'whole_ncrisc.cpp', 'whole_trisc.cpp'], fs; assert all(os.path.isfile(k) for k in pp.KERNELS2.values()), pp.KERNELS2; assert len(pp.KERNEL_SOURCES2) == 14, pp.KERNEL_SOURCES2; assert pp.kernel_digest2() == '4aa02cdf21ed0c94', pp.kernel_digest2()"
+  - "import re; from pathlib import Path; R = Path('/opt/tt-metal/models/experimental/pi0_5'); inc = Path('/opt/tt-metal/tt_metal/hw/inc'); ks = sorted(k for k in R.rglob('*') if k.suffix in ('.cpp', '.hpp', '.h')); assert len(ks) == 23, ks; pairs = [(k, i) for k in ks for i in re.findall(r'#include\\s+\"([^\"]+)\"', k.read_text())]; assert len(pairs) >= 69, len(pairs); bad = [(str(k), i) for k, i in pairs if not ((k.parent / i).is_file() or (inc / i).is_file())]; assert not bad, bad"
+
+card:
+  description: |
+    __CARD_DESCRIPTION__
+  quickstart: |
+    __CARD_QUICKSTART__

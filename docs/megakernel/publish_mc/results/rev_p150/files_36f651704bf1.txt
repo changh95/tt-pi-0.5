@@ -1,0 +1,7 @@
+ca7c53513eaf469ac1b94adb55222eb673c7da7679a99cdf782cac905011a18c  /usr/local/bin/serve-default.sh
+1282aff2cb307d72a3c5663bfff32d33757704e313694dc5a4452a0de7399c03  -
+_ttnn.so
+_ttnncpp.so
+cmake
+0e233da247f3acedcc240ca58fb54388a73338d371f9a3ebdfe7bbf9310e4b58  /opt/tt-metal/build_Release/lib/libtt_metal.so
+fc646bb545a267f4ae4df1807c92abadba1d14a3ed25e56f193ec6e8b2ec99a7  /opt/tt-metal/build_Release/lib/_ttnncpp.so

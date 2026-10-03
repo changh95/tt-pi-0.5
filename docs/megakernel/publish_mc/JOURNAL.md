@@ -215,3 +215,21 @@ Follow-ups (next release):
 Facts to remember: HF ab447b79 (parent 990e22b5), image 36f651704bf1, GitHub PR #4 merge ec6d00b, source 5edf139,
 tt-metal pin f856a38a361 (clean clone gr00t/publish/tt-metal-f856a38a361), staging models/pi05-base-p150-mc, build dir
 build/pi05-base-p150 (= the 36f651704bf1 package), scripts + results in docs/megakernel/publish_mc/.
+
+## 2026-10-03 15:58:55 KST -- STE docs + single serve profile p150 (user approved)
+- STE rewrite (ASD-STE100 rules + bullets) of the card, SERVING.md, GPU_COMPARISON.md, PERF_PRESETS.md (prose only) and
+  demo/README.md: draft_ste/ (generators ste_text.py / card_ste.py / demo_ste.py / readme_ste.py, checks ste_check.py /
+  integrity_check.py, CHANGES*.md). ste_check: 0 sentences over the limits in every file except the verbatim
+  PERF_PRESETS footnote / build log.
+- One serve profile p150 (default 2 cameras / H 50 / N 10); configuration through PI05_NUM_IMAGES /
+  PI05_ACTION_HORIZON / PI05_NUM_STEPS. tt-model serve has no --env and does not pass the host env; the tested method is
+  `tt-model serve ... --print` + change the values in the printed docker run (draft_ste/build/env_test.log).
+- Repackaged with p150: image tt-model/pi05-base-p150:4dd06e9d6fd3 (sha256:4dd06e9d6fd35077096e23b8bc9aa073b7dccab8519f037ec0a538f7114feaca).
+  The profile list is a build ARG / LABEL of the runtime stage, so 20 of 22 layer diff ids changed (43 new OCI blobs,
+  3.01 GB). Content: dpkg list (157) and python distributions (85) identical, libtt_metal.so / _ttnncpp.so and the
+  models/ python identical, only /usr/local/bin/serve-default.sh differs (profile name). code_sha256 184c58b636fb7621.
+- Re-validation (one hold 15:52-15:56, reset exit 0; results/rev_p150/): /info mc 1429d5bea05c31ad, profile label
+  p150; smoke PASS; 100 requests inference median 56.40 ms (p90 56.60), total 57.63 (36f651704bf1: 56.44 / 57.68);
+  golden PCC7 0.999981 / 0.999958, 8 golden outputs identical to the host reference; c1-c4 outputs torch.equal to the
+  host reference; 10 refusals; env launch with the card's commands: /info cameras 3 / H 10 / N 5 / 4 ops, smoke PASS
+  (65.93 / 64.71 ms); PI05_NUM_IMAGES=5 -> exit 3 with the model's message.

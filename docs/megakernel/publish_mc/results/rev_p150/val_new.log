@@ -1,0 +1,32 @@
+=== [15:52:22] 1. default profile p150 via tt-model serve
+✓ weights lerobot/pi05_base@b211f3d4  
+  ✓ host ready  docker 28.5.2 (rootless) · tt devices · hugepages
+  ✓ image tt-model/pi05-base-p150:4dd06e9d6fd3
+  ✓ container started
+  ✓ server process started  1.7s
+  ✓ pipeline warmed up  36.9s
+  ✓
+container image sha256:4dd06e9d6fd35077096e23b8bc9aa073b7dccab8519f037ec0a538f7114feaca profile label p150
+info mc 1429d5bea05c31ad cameras 2 H 50 N 10 ops 3 source 5edf139d458e9acabd31eea641cd364079962677
+PASS pi05 actions=(50,32) max|a|=0.260 std=0.070 repeat_maxdiff=0.0000 change_maxdiff=0.8413 inference_ms=57.6/56.43 tokens=143/224 truncated=False
+BENCH {"preprocess": {"median": 1.21, "p10": 1.14, "p90": 1.43, "min": 1.1, "max": 1.71}, "inference": {"median": 56.4, "p10": 56.27, "p90": 56.6, "min": 56.16, "max": 56.88}, "total": {"median": 57.63, "p10": 57.48, "p90": 57.87, "min": 57.27, "max": 58.26}, "client_wall": {"median": 59.16, "p10": 58.87, "p90": 59.69, "min": 58.64, "max": 60.07}}
+  ✓ stopped 1 container(s)
+=== [15:53:11] 2. img_check in the image (golden, bit-identity c1-c4, refusals)
+GOLDEN {'backend': 'tt-p150a:models.experimental.pi0.tt.ttnn_pi05_model.PI05MegakernelTTNN[cameras=2,H=10,num_steps=10,kv_dram=False,digest=1429d5bea05c31ad]', 'n': 8, 'all_inputs_equal': True, 'pcc7_mean': 0.9999812644249046, 'pcc7_min': 0.9999583233106235}
+BITID c1 {'cameras': 1, 'H': 10, 'N': 10, 'n_tokens': 20, 'preset': [1, 32, 32], 'kv_dram': False, 'device_ops_per_call': 3, 'shape': [1, 10, 32], 'sha': '2e91855b9fa71da136e9b5d7413dc948b573a5df2839adddb4c06d3b29981b96', 'replay_identical': True, 'finite': Tr
+BITID c2 {'cameras': 2, 'H': 50, 'N': 10, 'n_tokens': 150, 'preset': [2, 224, 64], 'kv_dram': False, 'device_ops_per_call': 3, 'shape': [1, 50, 32], 'sha': '63d5c2b66833644d901307623d5056ff90e7ba01430a785f1d2724b127f91ab0', 'replay_identical': True, 'finite': 
+BITID c3 {'cameras': 3, 'H': 32, 'N': 5, 'n_tokens': 50, 'preset': [3, 64, 32], 'kv_dram': False, 'device_ops_per_call': 4, 'shape': [1, 32, 32], 'sha': 'd9f8d48c5ecdf0394b95c5866853fc52d6585066d96fc8182ed04c3ce5cb6ac4', 'replay_identical': True, 'finite': Tru
+BITID c4 {'cameras': 4, 'H': 64, 'N': 10, 'n_tokens': 100, 'preset': [4, 128, 64], 'kv_dram': True, 'device_ops_per_call': 4, 'shape': [1, 64, 32], 'sha': 'cc8090acd8b1027c0dbb052f92f60a99ff51393fac5981524dc6189183aca208', 'replay_identical': True, 'finite': T
+DONE {"kernel_digest": "1429d5bea05c31ad", "refuse_all_ok": true}
+=== [15:56:01] 3. env launch with the card's commands (3 cameras, H 10, N 5)
+{'kernel_digest': '1429d5bea05c31ad', 'cameras': 3, 'action_horizon': 10, 'suffix_rows': 32, 'num_steps': 5, 'prompt_buckets': [32, 64, 128, 224], 'kv_dram': False, 'device_ops_per_call': 4, 'class': 'models.experimental.pi0.tt.ttnn_pi05_model.PI05MegakernelTTNN'}
+PASS pi05 actions=(10,32) max|a|=0.160 std=0.047 repeat_maxdiff=0.0000 change_maxdiff=0.7256 inference_ms=65.93/64.71 tokens=143/224 truncated=False
+=== [15:56:38] 4. refusal PI05_NUM_IMAGES=5
+container exit code 3
+2026-10-03 06:56:42,476 ERROR pi05.server: PI05_MEGAKERNEL=mc refused at startup: pi0.5 megakernel refused: cameras = 5 (compiled: 1, 2, 3, 4) [PI05_NUM_IMAGES=5, PI05_ACTION_HORIZON=50, PI05_NUM_STEPS=10]
+[15:56:43] done RC=0
+  ○ nothing running
+[trap] device users: []
+2026-10-03_15:56:43 [device-guard pid=3075189] RESET AFTER JOB (WITH_DEVICE_RESET_AFTER=1, rc=0): timeout --signal=TERM --kill-after=60 2400 /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/pubmc/rev/val_new.sh
+2026-10-03_15:56:43 [device-guard pid=3075189] RESET: tt-smi -r 0 (probe hung/failed with no other device users)
+2026-10-03_15:57:24 [device-guard pid=3075189] reset exit=0

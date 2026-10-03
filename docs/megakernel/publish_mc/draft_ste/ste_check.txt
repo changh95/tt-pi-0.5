@@ -1,0 +1,216 @@
+sentences 197 (instructions 16, descriptive 181); over limit 0; paragraphs > 6 sentences 0; max length 25; mean 11.2
+table prose cells: sentences 53, over 25 0, max 17
+British spellings: []
+list items 148; list items nested deeper than 2 levels 0; prose paragraphs (not lists) 15
+  PROSE (1 sentence(s)): This package runs the pi-0.5 vision-language-action policy of Physical Intelligence on one Tenstorrent Blackhole p150a.
+  PROSE (1 sentence(s)): Weights: lerobot/pi05_base ·
+  PROSE (1 sentence(s)): `POST /predict` accepts these fields:
+  PROSE (1 sentence(s)): Other endpoints:
+  PROSE (1 sentence(s)): Where in the code (paths in `code/`):
+  PROSE (1 sentence(s)): To change the configuration of the server:
+  PROSE (1 sentence(s)): To use another configuration in Python:
+  PROSE (1 sentence(s)): Cameras:
+  PROSE (1 sentence(s)): Values out of range:
+  PROSE (1 sentence(s)): To get the actions for your robot:
+  PROSE (1 sentence(s)): Input processing:
+  PROSE (1 sentence(s)): Test conditions:
+  PROSE (1 sentence(s)): Device time of one trace replay in ms for each preset (the mean of 2 builds; each build gives the median of 60 trace replays):
+  PROSE (1 sentence(s)): Test conditions:
+  PROSE (2 sentence(s)): Caution: Do not use this demo to estimate the results of `lerobot/pi05_base`. The demo uses different weights and a different configuration:
+ 15/25 desc | This package runs the pi-0.5 vision-language-action policy of Physical Intelligence on one Tenstorrent Blackhole p150a.
+ 17/25 desc | The model is `lerobot/pi05_base`: a SigLIP vision encoder, a Gemma-2B VLM and a Gemma-300M flow-matching action expert.
+  5/25 desc | One image supports these configurations:
+  4/25 desc | 1 to 4 cameras.
+ 14/25 desc | An action chunk of 1 to 64 actions (the action chunk has H actions).
+  6/25 desc | 1 to 10 flow-matching steps (N).
+ 11/25 desc | The server builds one model for one configuration when it starts.
+ 12/25 desc | Three environment variables select the configuration (see "How to change the configuration").
+ 19/25 desc | A prompt bucket is a fixed prompt length that the device programs use: 32, 64, 128 or 224 tokens.
+ 11/25 desc | Each request uses the smallest prompt bucket that holds its prompt.
+ 12/25 desc | A device program is one persistent `ttnn.generic_op` megakernel on 110 Tensix cores.
+ 12/25 desc | Each request uses three device programs (four with 3 or 4 cameras):
+ 16/25 desc | VISION: SigLIP and the projector (one device program for each group of 2 cameras or fewer).
+ 15/25 desc | PREFIX: the language embedding and the Gemma-2B prefill, which writes the K / V caches.
+ 24/25 desc | EXPERT: the action expert (N steps × 18 layers) with its adaRMS time conditioning, the action input and output projections and the Euler steps.
+ 11/25 desc | One Metal trace for each prompt bucket holds these device programs.
+  9/25 desc | Each request is one trace replay of that trace.
+ 16/25 desc | The default serve profile has 2 cameras, an action chunk of 50 actions and 10 steps.
+ 17/25 desc | With this profile and a prompt of about 143 tokens, the inference time is 56.4 ms (`timing_ms.inference`).
+ 12/25 desc | Weights: lerobot/pi05_base · Paper: arXiv:2504.16054 · Upstream code: Physical-Intelligence/openpi · Port: changh95/tt-pi-0.5
+  9/25 desc | This package runs on p150 (mesh `P150`, one p150a).
+  7/25 desc | The package has one serve profile, `p150`.
+ 12/25 desc | Three environment variables change its configuration (see "How to change the configuration").
+  8/25 desc | The package uses tt-model-manager 0.1.0 (manifest schema 5.1).
+ 12/25 desc | `tt-model pull` downloads the weights `lerobot/pi05_base` at `b211f3d44c36` into your HF cache.
+  7/25 desc | The image does not contain the weights.
+  5/25 desc | The server uses port 20000.
+ 12/25 desc | If that port is busy, the server uses the next free port.
+ 11/25 desc | The server is ready when the log shows `Application startup complete`.
+ 10/20 inst | Start the server, send one request and stop the server:
+  5/25 desc | `POST /predict` accepts these fields:
+ 21/25 desc | `images`: one base64 PNG or JPEG image for each camera of the server (default 2), in the order `[base/exterior, wrist, ...]`.
+ 11/25 desc | The server refuses masked cameras and a wrong number of images.
+ 13/20 inst | If you have fewer cameras, start a server for that number of cameras.
+ 14/25 desc | `prompt` (the task text) or `tokens` (PaliGemma token ids, 224 real tokens or fewer).
+ 15/25 desc | `state` (optional): the proprioceptive state, 32 or fewer floats, normalized to the range [-1, 1].
+  4/25 desc | The default is zeros.
+  9/25 desc | `seed` (optional): the seed of the initial flow-matching noise.
+ 10/25 desc | The default noise is fixed, thus the output is deterministic.
+  7/25 desc | `prompt_bucket` (optional): 32, 64, 128 or 224.
+ 16/25 desc | The request then uses that prompt bucket, not the smallest prompt bucket that holds the prompt.
+  6/25 desc | `GET /health` shows the server status.
+ 19/25 desc | `GET /info` (path `/info`) shows the configuration, the kernel digest and the number of device programs for each call.
+  7/25 desc | The package has one serve profile, `p150`.
+ 16/25 desc | Its default configuration has 2 cameras, an action chunk of 50 actions and 10 flow-matching steps.
+ 11/25 desc | The server builds one model for one configuration when it starts.
+ 11/20 inst | To change the configuration, start the server again with other values.
+ 13/25 desc | The prompt bucket is the only item that can change for each request.
+  7/25 desc | Where in the code (paths in `code/`):
+  7/25 desc | To change the configuration of the server:
+  7/25 desc | Pull the package: `tt-model pull changh95/pi05-base-p150 --with-weights`.
+ 11/25 desc | Write the launch command of the serve profile to a variable.
+  8/25 desc | `tt-model serve` has no flag for the environment.
+  8/25 desc | Change the three `PI05_` values in the command.
+  7/25 desc | The server reads them only at start.
+  3/20 inst | Start the container.
+  9/25 desc | Then examine `GET /info`: it shows the new configuration.
+  7/20 inst | Run the smoke test or send requests.
+  7/20 inst | Send exactly `PI05_NUM_IMAGES` images in each request.
+  6/25 desc | To use another configuration in Python:
+ 12/20 inst | Open the device with `PI05_DEVICE_PARAMS` (the 64 KiB worker-L1 cut is necessary).
+  8/20 inst | Make a `PI0ModelConfig` with `num_cameras`, `action_horizon` and `num_denoising_steps`.
+  7/25 desc | Build the model in a `with` block.
+ 10/25 desc | Only one model can use the device at a time.
+  6/25 desc | Call `sample_actions` with exactly `num_cameras` images.
+  6/25 desc | The model selects the prompt bucket.
+ 17/20 inst | Send the images in this order: base (exterior) camera, then the wrist camera, then the other cameras.
+  4/20 inst | Send only real cameras.
+  6/25 desc | The model refuses masked camera slots.
+ 17/20 inst | If you have fewer cameras, start a server (or build a model) for that number of cameras.
+  4/25 desc | Values out of range:
+ 12/25 desc | If a value is out of range, the server does not start.
+  9/25 desc | The error message gives the name and the value.
+ 18/25 desc | For example, `PI05_NUM_IMAGES=5` gives: `pi0.5 megakernel refused: cameras = 5 (compiled: 1, 2, 3, 4) [PI05_NUM_IMAGES=5, PI05_ACTION_HORIZON=50, PI05_NUM_STEPS=10]`.
+ 19/25 desc | The server also refuses a mesh, a `PI05_BATCH_SIZES` value other than 1 and a `PI05_TOKEN_LEN` value larger than 224.
+ 10/25 desc | `actions` is the action chunk: H rows and 32 columns.
+ 11/25 desc | The values are in the normalized QUANTILES action space of lerobot.
+  8/25 desc | The columns after your action dimension are zero.
+  7/25 desc | To get the actions for your robot:
+ 11/25 desc | Denormalize the actions with `(a+1)(q99-q01)/2+q01` and the statistics of your dataset.
+ 16/20 inst | Use only the columns of your action dimension (for example, the first 7 columns for LIBERO).
+ 14/25 desc | The server resizes each image to 224×224 and does not keep the aspect ratio.
+ 13/25 desc | Then it normalizes each image as openpi does: `x  float32(1/255)  2 - 1`.
+ 10/25 desc | The result is bit-exact to the PyTorch input of openpi.
+ 17/25 desc | The server puts `state` into the prompt as 256 bins: `Task: <prompt>, State: b0 … b31;\nAction: `.
+  8/25 desc | The attention masks the pad tokens (openpi semantics).
+ 10/25 desc | Thus the pad tokens have no effect on the output.
+ 19/25 desc | The end of this card shows a LIBERO closed-loop demo of the same code with the LIBERO fine-tuned weights.
+ 14/25 desc | One Metal trace for each prompt bucket holds the three (or four) device programs.
+  9/25 desc | A request writes its inputs into fixed device buffers.
+  5/25 desc | Then it replays that trace.
+ 16/25 desc | A preset is one combination of a camera count, a prompt bucket and an action-row bucket.
+ 21/25 desc | The 32 presets are all combinations of 4 camera counts, 4 prompt buckets and 2 action-row buckets (32 and 64 rows).
+ 12/25 desc | If H is 32 or less, the request uses the 32-row bucket.
+ 13/25 desc | The model includes N in the expert weights when it builds the model.
+ 13/25 desc | For 1 to 3 cameras, the K / V caches stay in L1.
+ 11/25 desc | For 4 cameras, the K / V caches are in DRAM.
+ 15/25 desc | The image build checks the 32 presets and each C++ header that the kernels include.
+ 14/25 desc | The image build also checks the kernel digest that the device gates used (`1429d5bea05c31ad`).
+ 15/25 desc | One p150a, tt-metal `main` @ `f856a38a361`, batch size 1 and HiFi3 for each expert matmul.
+ 12/25 desc | The full test matrix has 320 sets: 32 presets × N 1..10.
+ 16/25 desc | A2: each set compares the device output with the fp32 torch reference on 6 padded prompts.
+ 17/25 desc | A4: the expert against an fp32 expert loop with the K / V caches of the device.
+  8/25 desc | A3 and A6: the K / V caches.
+  7/25 desc | The trace replays, which must be bit-identical.
+  3/25 desc | An independent cross-check.
+ 25/25 desc | Device time of one trace replay in ms for each preset (the mean of 2 builds; each build gives the median of 60 trace replays):
+ 23/25 desc | Each value is the device time of one trace replay of all device programs of one request (in-process, release code, batch size 1).
+ 25/25 desc | Served over HTTP with the default configuration (2 cameras, H = 50, N = 10), the median `timing_ms.inference` was 56.44 ms for 100 warm requests.
+ 15/25 desc | `PERF_PRESETS.md` gives the standard errors, the † marks and the build log of these measurements.
+ 13/25 desc | The tests used `lerobot/pi05_libero` with this code and the `pi05_libero` conventions of openpi.
+ 19/25 desc | The conventions are H = 10, the openpi normalization statistics, the openpi client and the LIBERO loop of openpi.
+ 11/25 desc | The test set is libero_spatial: 10 tasks × initial states 0-9.
+ 21/25 desc | Each episode on the p150a has a pair: the same episode with the PyTorch policy of openpi on an RTX 5090.
+ 14/25 desc | Both runs used the same client, initial states and noise seeds for each call.
+ 21/25 desc | The p150a latency is the time of one policy call on the server, with host input preparation, device time and readback.
+ 23/25 desc | This card does not give the GPU latency, because its measurement was different (openpi model time only, on a shared host with load).
+ 15/25 desc | For each row, the exact McNemar test of the discordant pairs gives p = 1.
+ 11/25 desc | With 1 camera, the policy does not get the wrist image.
+ 16/25 desc | Then both backends fail (0 to 2 successes of 100), because pi05_libero needs the wrist view.
+  5/25 desc | These rows are a record.
+  5/25 desc | They do not show accuracy.
+  4/25 desc | One input-sensitive trajectory (A2).
+  9/25 desc | All 6 failed A2 sets have the same input.
+ 25/25 desc | The input has 2 cameras, a full 224-token prompt, 64 action rows (H = 64) and matrix seed 5, at N = 5 to 10.
+ 17/25 desc | The bf16 GPU policy of openpi also fails on this input for N = 6 and more.
+ 11/25 desc | But the result of this device is lower at each N.
+ 20/25 desc | For the other five prompts of this cell, the PCC is 0.9983 or more at N = 5 to 10.
+ 12/25 desc | At each N from 1 to 10, it is 0.9978 or more.
+ 25/25 desc | If you round the K / V caches of the reference to bf16 or bfp8, the reference stays at a PCC of 0.99994 or more.
+ 10/25 desc | A higher fidelity for the VLM matmuls does not help.
+  9/25 desc | This trajectory increases the reduced-precision error of the prefix.
+  8/25 desc | The closed-loop LIBERO test is the end-to-end check.
+  5/25 desc | A4 with one action row.
+ 10/25 desc | Two A4 sets fail at N = 2 or more.
+  6/25 desc | Both sets have H = 1.
+  4/25 desc | The gate is 0.999.
+ 14/25 desc | The first set has 1 camera, the 64-token bucket and N = 5 (0.998746).
+ 14/25 desc | The second set has 2 cameras, the 128-token bucket and N = 3 (0.997803).
+ 13/25 desc | At N = 1, 21 of 96 (preset, H) values are below 0.999.
+ 15/25 desc | The lowest value is 0.993544, with 1 camera, the 32-token bucket and H = 1.
+  8/25 desc | HiFi4 for each expert matmul removes both failures.
+ 14/25 desc | But HiFi4 is slower for some configurations, thus this release does not use it.
+  9/25 desc | Expert fidelity for each preset is a future task.
+  2/25 desc | Supported inputs.
+ 13/25 desc | The server supports only batch size 1 and images of 224 × 224.
+ 11/25 desc | It supports 1 to 4 real cameras, with no masked cameras.
+  9/25 desc | The prompt must have 224 real tokens or fewer.
+ 13/25 desc | H must be 64 or less, and N must be 10 or less.
+ 13/25 desc | The camera count, H and N stay the same until the server stops.
+  5/25 desc | One model for each device.
+ 10/25 desc | Only one model can use a device at a time.
+ 14/25 desc | If a second model starts, the server refuses it until the first model closes.
+  2/25 desc | Worker grid.
+ 12/25 desc | The worker grid is 11 × 10 (110 cores) with Tensix dispatch.
+ 13/25 desc | A later release will use the 12 × 10 grid with Ethernet dispatch.
+  2/25 desc | Gated tokenizer.
+  6/20 inst | Accept the Gemma terms of `google/paligemma-3b-pt-224`.
+  8/20 inst | Then use `hf auth login` before `tt serve`.
+ 12/25 desc | The prompt tokenizer of this model is gated under the Gemma terms.
+ 10/20 inst | If you cannot get access, send `tokens` instead of `prompt`.
+  2/25 desc | Base checkpoint.
+  9/25 desc | The outputs are normalized actions of the base checkpoint.
+  6/25 desc | This checkpoint has no task-specific fine-tune.
+ 14/25 desc | The rows with real inputs (openpi golden, LIBERO) use `lerobot/pi05_libero` with the same code.
+  1/25 desc | API.
+  5/25 desc | The API is not OpenAI-compatible.
+  6/25 desc | `GET /v1/models` is only a stub.
+  2/25 desc | Previous paths.
+ 20/25 desc | `code/` also has the single-configuration paths of the previous releases (`PI05_MEGAKERNEL=whole` / `expert` / `off`, the mesh layouts) as comparators.
+ 15/25 desc | The tests for these paths used tt-metal `668c2907575`, not the tt-metal tree of this image.
+  6/25 desc | Weights: lerobot/pi05_base, Gemma Terms of Use.
+  7/25 desc | This repository does not include the weights.
+  7/25 desc | `tt-model` downloads them into your HF cache.
+  9/25 desc | The tokenizer google/paligemma-3b-pt-224 is gated under the same terms.
+ 14/25 desc | Port and server code (`code/`): Apache-2.0 headers, with distribution under the same Gemma terms.
+  7/25 desc | The code is from changh95/tt-pi-0.5 @ `5edf139`.
+  9/25 desc | The next table shows the sources of the image.
+ 13/25 desc | `code/` in this repository is byte-identical to the model code in the image.
+ 19/25 desc | The video shows the multi-config megakernel of this image in a LIBERO-Spatial closed-loop test in MuJoCo on one p150a.
+ 10/25 desc | A screen capture recorded the test in real time (video).
+ 12/25 desc | `demo/README.md` gives the procedure for the demo and shows the four clips.
+ 16/25 desc | `demo/manifest.json` is the machine-readable record of the clips (probes, step counts, latency, backend stamps, eval score).
+ 19/25 desc | The mean policy latency on the p150a is 52.7 ms for each call (server side, p90 53.0, 2,182 calls).
+  7/25 desc | The code is tt-metal-pr `changh95/pi05-megakernel-mc` @ `7a622a3a570`.
+ 10/25 desc | This is the model code of `code/`, identical to `fae9cd03fa4`.
+ 11/25 desc | The tt-metal version is `f856a38`, and the kernel digest is `1429d5bea05c31ad`.
+ 12/20 inst | Caution: Do not use this demo to estimate the results of `lerobot/pi05_base`.
+  9/25 desc | The demo uses different weights and a different configuration:
+ 16/25 desc | The weights are the LIBERO fine-tuned `lerobot/pi05_libero` @ `a217bfd3b146` with the `pi05_libero` normalization statistics of openpi.
+  8/25 desc | The configuration is the LIBERO configuration of openpi.
+  8/25 desc | The action chunk has H = 10 actions.
+  8/25 desc | The robot executes 5 actions of each chunk.
+  5/25 desc | The prompts have 32 tokens.
+  9/25 desc | The image serves `lerobot/pi05_base` with the same model code.
+  6/25 desc | The LIBERO websocket server is `code/models/experimental/pi0_5/server/serve_pi05_libero.py`.
+ 11/25 desc | The client and the normalization statistics are not in this repository.

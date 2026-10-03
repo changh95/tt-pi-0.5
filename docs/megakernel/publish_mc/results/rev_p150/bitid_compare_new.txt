@@ -1,0 +1,5 @@
+c1 torch.equal host vs 4dd06e9: True
+c2 torch.equal host vs 4dd06e9: True
+c3 torch.equal host vs 4dd06e9: True
+c4 torch.equal host vs 4dd06e9: True
+golden outputs identical: True PCC7 0.999981 / 0.999958 refusals True 10
