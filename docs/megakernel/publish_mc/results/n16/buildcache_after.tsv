@@ -1,0 +1,93 @@
+0B	  12 days ago	 from local
+0B	  12 days ago	 from local
+0B	  12 days ago	 from local
+0B	  12 days ago	 from local
+0B	  12 days ago	 from local
+0B	  12 days ago	 from local
+0B	  12 days ago	 from local
+0B	  12 days ago	 from local
+0B	  12 days ago	 from local
+0B	  12 days ago	 from local
+0B	  12 days ago	 from local
+0B	  12 days ago	 from local
+0B	  12 days ago	 from local
+0B	  3 days ago	 [runtime 8/22] COPY --from=builder /opt/vllm /opt/vllm
+0B	  12 days ago	 from local
+0B	  12 days ago	 from local
+0B	  12 days ago	 from local
+0B	  12 days ago	 from local
+0B	  12 days ago	 from local
+0B	  12 days ago	 from local
+0B	  12 days ago	 from local
+0B	  12 days ago	 from local
+0B	  12 days ago	 from local
+0B	  3 days ago	 [runtime 8/22] COPY --from=builder /opt/vllm /opt/vllm
+0B	  12 days ago	 from local
+0B	  11 days ago	 [runtime 8/22] COPY --from=builder /opt/vllm /opt/vllm
+0B	  12 days ago	 from local
+0B	  12 days ago	 from local
+0B	  4 days ago	 [builder 1/12] WORKDIR /opt/tt-metal
+0B	  12 days ago	 from local
+0B	  12 days ago	 from local
+0B	  12 days ago	 from local
+0B	  23 hours ago	 pulled from docker.io/docker/dockerfile:1.7-labs@sha256:b99fecfe00268a8b556fad7d9c37ee25d716ae08a5d
+0B	  12 days ago	 from local
+0B	  12 days ago	 from local
+0B	  12 days ago	 from local
+0B	  4 days ago	 [runtime 8/22] COPY --from=builder /opt/vllm /opt/vllm
+0B	  12 days ago	 from local
+0B	  11 days ago	 [runtime 8/22] COPY --from=builder /opt/vllm /opt/vllm
+0B	  4 days ago	 [runtime 8/22] COPY --from=builder /opt/vllm /opt/vllm
+0B	  12 days ago	 from local
+0B	  12 days ago	 from local
+0B	  12 days ago	 from local
+0B	  12 days ago	 from local
+0B	  11 days ago	 from local
+0B	  12 days ago	 from local
+0B	  11 days ago	 [runtime 8/22] COPY --from=builder /opt/vllm /opt/vllm
+0B	  12 days ago	 from local
+16.03kB	  23 hours ago	 local source for dockerfile
+24.53kB	  8 seconds ago	 mount / from exec /bin/bash -euo pipefail -c git init -q /opt/tt-metal && git -C /opt/tt-metal -c u
+333.7kB	  12 days ago	 mount / from exec /bin/sh -c existing="$(getent passwd 1000 | cut -d: -f1)" && if [ -n "$existing" 
+333.7kB	  11 days ago	 mount / from exec /bin/sh -c existing="$(getent passwd 1000 | cut -d: -f1)" && if [ -n "$existing" 
+333.7kB	  11 days ago	 mount / from exec /bin/sh -c existing="$(getent passwd 1000 | cut -d: -f1)" && if [ -n "$existing" 
+333.7kB	  4 days ago	 mount / from exec /bin/sh -c existing="$(getent passwd 1000 | cut -d: -f1)" && if [ -n "$existing" 
+33.09MB	  12 days ago	 [runtime 4/22] COPY --from=builder /opt/openmpi-v5.0.7-ulfm /opt/openmpi-v5.0.7-ulfm
+33.09MB	  11 days ago	 [runtime 4/22] COPY --from=builder /opt/openmpi-v5.0.7-ulfm /opt/openmpi-v5.0.7-ulfm
+33.09MB	  11 days ago	 [runtime 4/22] COPY --from=builder /opt/openmpi-v5.0.7-ulfm /opt/openmpi-v5.0.7-ulfm
+33.09MB	  4 days ago	 [runtime 4/22] COPY --from=builder /opt/openmpi-v5.0.7-ulfm /opt/openmpi-v5.0.7-ulfm
+102.5MB	  11 days ago	 mount / from exec /bin/bash -euo pipefail -c uv venv --python "${PYTHON_VERSION}" --relocatable --l
+136MB	  1 second ago	 [runtime 10/22] COPY --from=builder --chown=tt:tt /opt/tt-metal/build_Release /opt/tt-metal/build_R
+136MB	  1 second ago	 [runtime 10/22] COPY --from=builder --chown=tt:tt /opt/tt-metal/build_Release /opt/tt-metal/build_R
+137.7MB	  11 days ago	 [runtime 10/22] COPY --from=builder --chown=tt:tt /opt/tt-metal/build_Release /opt/tt-metal/build_R
+137.7MB	  2 seconds ago	 [runtime 11/22] COPY --from=builder --chown=tt:tt /opt/tt-metal/build /opt/tt-metal/build
+140.2MB	  27 hours ago	 cached mount /root/.cache/ccache from exec /bin/bash -euo pipefail -c ./build_metal.sh --enable-cca
+162.3MB	  4 days ago	 [metal-local 1/1] COPY --from=metalsrc --exclude=.git --exclude=.cpmcache --exclude=build_Release* 
+180.3MB	  11 days ago	 [runtime 6/22] COPY --from=builder /usr/local/share/uv /usr/local/share/uv
+180.3MB	  3 days ago	 [runtime 6/22] COPY --from=builder /usr/local/share/uv /usr/local/share/uv
+180.3MB	  3 days ago	 [runtime 6/22] COPY --from=builder /usr/local/share/uv /usr/local/share/uv
+180.3MB	  11 days ago	 [runtime 6/22] COPY --from=builder /usr/local/share/uv /usr/local/share/uv
+180.3MB	  11 days ago	 [runtime 6/22] COPY --from=builder /usr/local/share/uv /usr/local/share/uv
+203.2MB	  11 days ago	 mount / from exec /bin/sh -c apt-get update && apt-get install -y --no-install-recommends libhwloc1
+203.2MB	  11 days ago	 mount / from exec /bin/sh -c apt-get update && apt-get install -y --no-install-recommends libhwloc1
+203.2MB	  12 days ago	 mount / from exec /bin/sh -c apt-get update && apt-get install -y --no-install-recommends libhwloc1
+203.2MB	  4 days ago	 mount / from exec /bin/sh -c apt-get update && apt-get install -y --no-install-recommends libhwloc1
+452.9MB	  11 days ago	 [runtime 5/22] COPY --from=builder /opt/tenstorrent /opt/tenstorrent
+452.9MB	  4 days ago	 [runtime 5/22] COPY --from=builder /opt/tenstorrent /opt/tenstorrent
+452.9MB	  11 days ago	 [runtime 5/22] COPY --from=builder /opt/tenstorrent /opt/tenstorrent
+452.9MB	  11 days ago	 [runtime 5/22] COPY --from=builder /opt/tenstorrent /opt/tenstorrent
+453.4MB	  Less than a second ago	 [runtime 9/22] COPY --from=builder --chown=tt:tt /opt/tt-metal/runtime /opt/tt-metal/runtime
+453.4MB	  3 days ago	 [runtime 9/22] COPY --from=builder --chown=tt:tt /opt/tt-metal/runtime /opt/tt-metal/runtime
+453.4MB	  Less than a second ago	 [runtime 9/22] COPY --from=builder --chown=tt:tt /opt/tt-metal/runtime /opt/tt-metal/runtime
+453.4MB	  3 days ago	 [runtime 9/22] COPY --from=builder --chown=tt:tt /opt/tt-metal/runtime /opt/tt-metal/runtime
+453.4MB	  Less than a second ago	 [runtime 9/22] COPY --from=builder --chown=tt:tt /opt/tt-metal/runtime /opt/tt-metal/runtime
+453.4MB	  11 days ago	 [runtime 9/22] COPY --from=builder --chown=tt:tt /opt/tt-metal/runtime /opt/tt-metal/runtime
+453.4MB	  Less than a second ago	 [runtime 9/22] COPY --from=builder --chown=tt:tt /opt/tt-metal/runtime /opt/tt-metal/runtime
+1.084GB	  4 days ago	 [runtime 7/22] COPY --from=builder /opt/tt-venv /opt/tt-venv
+1.084GB	  4 days ago	 [runtime 7/22] COPY --from=builder /opt/tt-venv /opt/tt-venv
+1.085GB	  3 days ago	 [runtime 7/22] COPY --from=builder /opt/tt-venv /opt/tt-venv
+1.085GB	  3 days ago	 [runtime 7/22] COPY --from=builder /opt/tt-venv /opt/tt-venv
+1.086GB	  11 days ago	 [runtime 7/22] COPY --from=builder /opt/tt-venv /opt/tt-venv
+1.086GB	  11 days ago	 [runtime 7/22] COPY --from=builder /opt/tt-venv /opt/tt-venv
+1.086GB	  11 days ago	 [runtime 7/22] COPY --from=builder /opt/tt-venv /opt/tt-venv
+3.353GB	  27 hours ago	 cached mount /cpm from exec /bin/bash -euo pipefail -c ./build_metal.sh --enable-ccache --cpm-sourc

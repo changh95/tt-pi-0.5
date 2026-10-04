@@ -284,3 +284,15 @@ build/pi05-base-p150 (= the 36f651704bf1 package), scripts + results in docs/meg
 - Waiting for: impl's final commit / digest / RELEASE_TABLE / WP-V summary / eth runtime notes / watchdog;
   pi05-libero-gpu-base's LIBERO 2 profiles x N 1/5/10/16 and the new demo. Quiet-host window: no clone / build until
   the lead says so.
+
+## 2026-10-04 14:39:46 KST -- eth16 clean clone; build cache prune (A, approved)
+- Clean clone gr00t/publish/tt-metal-eth16-c718b5df9b9 (local clone of ~/experiments/tt-metal-eth16): detached at
+  c718b5df9b9589f8920e2f960af56145e4bf91dc, porcelain empty, submodules at the recorded commits, describe
+  v0.80.0-dev20261001-19-gc718b5df9b9; origin = the local eth16 repo (built.tt_metal will say pushed=false).
+  Patch vs f856a38a361: core_descriptor.cpp (skip ETH dispatch cores on harvested channels), system_memory_manager.cpp
+  (fetch-queue TT_FATAL in Release), blackhole dev_mem_map.h (MEM_IERISC_KERNEL_SIZE 40 KiB) + 2 test files.
+- Disk 24 GB free -> lead approved (A): `docker builder prune -a -f --max-used-space 12GB` (14:39): reclaimed 15.5 GB,
+  build cache 28.31 -> 16.32 GB (93 records), disk 35 GB free. Listings: results/n16/buildcache_{before,after}.tsv.
+- Build waits for impl's final commit. Serving-latency benchmarks only in a quiet slot (not during WP-V scoring /
+  impl's final perf sweep), with the host load recorded. Every validation step of the pulled image runs under a
+  timeout with a stack dump on hang (lead: watchdog = validation harness only).
