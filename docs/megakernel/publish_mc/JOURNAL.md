@@ -336,3 +336,21 @@ build/pi05-base-p150 (= the 36f651704bf1 package), scripts + results in docs/meg
     equal the previous release's (fae9cd0) outputs, c4 differs (R: wide attention chunks); 10/10 refusals incl. N=17;
     the card's env commands 3 cameras / H10 / N5 (/info 3/10/5/4 ops, smoke PASS) and 2 / H50 / N16 (/info N 16,
     smoke PASS); PI05_NUM_IMAGES=5 and PI05_NUM_STEPS=17 refused at start (exit 3, the model's messages).
+
+## 2026-10-05 01:40:31 KST -- N16: host reference, served bench, card final
+- Bit-identity reference (lead 10-04: a host run of dd9431f on the eth16 runtime, not the fae9cd0 outputs): ref16 =
+  git archive dd9431f, ttnn from tt-metal-eth16, both profiles, 22:50-23:14, rc 0 (results/n16/host_ref/). c1/c2/c3/c4/
+  c2n16 full sha256 host == image on eth/non-scalable and tensix/scalable, eth == tensix on the host; golden host ==
+  image (mean 0.9999812644, min 0.9999583233, inputs equal). The hold queued behind the LIBERO matrix; a deadline guard
+  (stop at 23:40) protected libero-gpu-base's per-config timeout and was not needed.
+- Served bench in the quiet slot after impl's sweep and the demo, 2026-10-05 01:34-01:36, rc 0 (results/n16/bench/): image
+  fe6ecd0b4e86 by manifest, 100 warm requests per profile (the card's curl request, actions identical, /info profile
+  checked). Inference median non-scalable 55.21 ms (p10 55.05 / p90 55.48), scalable 56.50 (56.32 / 56.71); the sweep's
+  device replay 54.92 / 55.93. Host load in the JSON (1-min <= 3.3, the server container's own; no foreign process).
+- Card (card_n16/card_n16.py from the HF head 061677cf; --final, 0 PENDING): profiles, N 1..16, open_pi05_device(0),
+  line refs re-read on 33528a8; Accuracy from impl's WP-V summary (1,024 sets) with the A2 limitation table asserted
+  from wpv/summary.json + the GPU incumbent bf16 arm and the per-seed files (other 5 prompts >= 0.998: both files);
+  Benchmarks from impl's sweep.json, asserted cell by cell against RELEASE_TABLE.md; LIBERO 8 rows from the matrix
+  summaries (latency column dropped: loaded host); demo 99/100, quiet median 49.3 ms; served 55.2 / 56.5 ms; the user's
+  "143 token-long prompt" -> 142 (measured num_tokens; lead approved). tt-model.yaml card: block synced to this README
+  (sync_card_block.py, validates against ContainerManifest; the card is not in the image or the manifest).
