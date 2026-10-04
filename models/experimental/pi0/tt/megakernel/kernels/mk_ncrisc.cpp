@@ -8,6 +8,9 @@
 // the per-(step, layer) constant stream WC at their own offsets). The three rings (CB_W8, CB_W16, CB_WC) are filled
 // independently in stream order: the TRISC consumes each ring in its own order, so no interleave table is needed.
 // Reads carry a transaction id per ring slot so each landed page is pushed in order as soon as it is complete.
+// MK_NO_DRAM (test-only diagnostic arm): the rings are pushed without reading DRAM (garbage weights, unchanged
+// consumption order and timing of the compute / rounds): its step time is the expert's critical path with the weights
+// already present.
 #include "mk_dm.hpp"
 
 using namespace mk;
@@ -51,10 +54,12 @@ struct Ring {
         if (cb_free_pages(cb) < PAGE_TILES * (in_flight + 1)) {
             return false;
         }
+#ifndef MK_NO_DRAM
         const uint32_t trid = trid0 + issue_slot;
         noc_async_read_set_trid(trid);
         const uint64_t src = get_noc_addr_from_bank_id<true>(bank, addr + off + issued * page_bytes);
         noc_async_read(src, wr, page_bytes);
+#endif
         TRD("I", cb, issued);
         wr += page_bytes;
         if (wr >= end) {
@@ -71,9 +76,11 @@ struct Ring {
         if (in_flight == 0) {
             return false;
         }
+#ifndef MK_NO_DRAM
         if (!ncrisc_noc_read_with_transaction_id_flushed(noc_index, trid0 + done_slot)) {
             return false;
         }
+#endif
         invalidate_l1_cache();
         asm volatile("" ::: "memory");
         cb_push_back(cb, PAGE_TILES);

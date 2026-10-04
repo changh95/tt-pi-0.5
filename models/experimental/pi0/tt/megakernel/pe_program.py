@@ -244,7 +244,9 @@ class PrefixEngineProgram:
     def core_args(self, xy) -> List[int]:
         mk = self.mk
         x, y = xy
-        a = list(mk.core_args(xy)) + [0] * (P.PR0 - G.N_RT_ARGS)
+        # the expert loop's per-core args (its grid can be narrower than the prefix engine's: none past it)
+        p1 = mk.core_args(xy) if x < G.GRID[0] and y < G.GRID[1] else [0] * G.N_RT_ARGS
+        a = list(p1) + [0] * (P.PR0 - G.N_RT_ARGS)
         assert len(a) == P.PR0
         p = [0] * (P.PR_N - P.PR0)
 
@@ -253,7 +255,7 @@ class PrefixEngineProgram:
 
         put(P.PR_X, x)
         put(P.PR_Y, y)
-        put(P.PR_LIN, y * 11 + x)
+        put(P.PR_LIN, y * P.NCOL + x)
         wf = mk.noc((x, P.WF_Y))
         put(P.PR_WFX, wf[0])
         put(P.PR_WFY, wf[1])
@@ -269,8 +271,8 @@ class PrefixEngineProgram:
         if y == P.IF_Y and x < 8:
             put(P.PR_ROWY, mk.noc((0, x))[1])
         put(P.PR_ROWX0, mk.noc((0, 0))[0])
-        put(P.PR_ROWX1, mk.noc((10, 0))[0])
-        g = mk.rect((0, 0), (10, 9))
+        put(P.PR_ROWX1, mk.noc((P.NCOL - 1, 0))[0])
+        g = mk.rect((0, 0), (P.NCOL - 1, P.GRID_Y - 1))
         put(P.PR_GX0, g[0])
         put(P.PR_GY0, g[1])
         put(P.PR_GX1, g[2])
@@ -339,7 +341,7 @@ class PrefixEngineProgram:
     def cb_descriptors(self) -> List:
         import ttnn
 
-        cores = core_range_set()
+        cores = core_range_set(P.PE_GRID)
         fmt = {"bf16": ttnn.bfloat16, "bfp8": ttnn.bfloat8_b, "fp32": ttnn.float32, "raw": ttnn.bfloat16}
         pbytes = {"bf16": P.T16, "bfp8": P.T8, "fp32": P.T32, "raw": 64}
 
@@ -371,7 +373,7 @@ class PrefixEngineProgram:
 
         mk, sh, ps = self.mk, self.shape, self.ps
         mk.check_kv(kv)
-        cores = core_range_set()
+        cores = core_range_set(P.PE_GRID)
         # compile-time args: the expert loop's list (the shared binary compiles the expert code), then the prefix
         # engine's
         ct = mk.compile_time_args(kv, mask, tables, noise, out)
@@ -396,8 +398,8 @@ class PrefixEngineProgram:
         common = self.common_args(mk.common_args(kv, mask, tables, noise, out, mk.ngen), kv)
         rt = ttnn.RuntimeArgs()
         rt_t = ttnn.RuntimeArgs()  # the TRISC reads the expert loop's per-core args only
-        for x in range(G.GRID[0]):
-            for y in range(G.GRID[1]):
+        for x in range(P.NCOL):
+            for y in range(P.GRID_Y):
                 a_ = self.core_args((x, y))
                 rt[x][y] = a_
                 rt_t[x][y] = a_[: G.N_RT_ARGS]
@@ -442,15 +444,17 @@ class PrefixEngineProgram:
                 config=compute_config(modes),
             ),
         ]
-        return ttnn.ProgramDescriptor(kernels=kernels, semaphores=semaphores(), cbs=self.cb_descriptors())
+        return ttnn.ProgramDescriptor(kernels=kernels, semaphores=semaphores(P.PE_GRID), cbs=self.cb_descriptors())
 
     def defines(self, pe_ct0: int) -> List:
         # MK_FID8_HIFI2: the expert code compiled (never run) into these programs keeps the single-program build's
         # fidelity, so the prefix engine compiles to the measured machine code
         fid = FIDELITY_DEFINES["vision" if (self.first, self.stop) == VISION_OPS else "prefix"]
         spill = [("PE_MERGE_SPILL", "1")] if self.ps.force_spill else []  # A / B: the spill merge at any part count
+        # PE_NCOL only on the 12-column grid: the 11-column build keeps its exact define list (and machine code)
+        grid = [("PE_NCOL", str(P.NCOL))] if P.NCOL != 11 else []
         return merge_defines(
-            [("PE_CT0", str(pe_ct0)), ("MK_FID8_HIFI2", "1")] + CODEGEN_DEFINES + fid + spill, self.extra_defines
+            [("PE_CT0", str(pe_ct0)), ("MK_FID8_HIFI2", "1")] + CODEGEN_DEFINES + fid + spill + grid, self.extra_defines
         )
 
     def io_tensors(self, kv) -> List:

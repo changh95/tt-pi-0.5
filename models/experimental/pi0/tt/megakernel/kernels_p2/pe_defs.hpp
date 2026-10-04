@@ -3,8 +3,8 @@
 //
 // pi0.5 whole-model megakernel (phase 2): constants of the PREFIX ENGINE (SigLIP x2 + projector + language embedding +
 // VLM prefill writing the expert's K / V caches), shared by the three RISC kernels AND the host.
-// pe_geometry.py parses every `constexpr uint32_t NAME = <int>;` line of this file (one definition per line, integer
-// literals only), exactly like geometry.py parses ../kernels/mk_defs.hpp.
+// pe_geometry.py parses every `constexpr uint32_t NAME = <int>;` and `NAME = NCOL == 11 ? <int> : <int>;` line of this
+// file (one definition per line, integer literals only), like geometry.py parses ../kernels/mk_defs.hpp.
 //
 // Execution model (see ../README.md): a fixed sequence of N_OPS ops; every op reads its inputs from DRAM
 // (activations) / multicast feeders (weights, in0 bands) and writes its outputs to DRAM; consecutive ops are separated
@@ -18,12 +18,20 @@
 namespace pe {
 
 // ---------------------------------------------------------------- grid roles
-constexpr uint32_t NCOL = 11;  // matmul columns (x)
+// The prefix engine's grid is NCOL x 10 worker cores: 11 under Tensix dispatch (the 12th column dispatches), 12 under
+// ethernet dispatch (the host defines PE_NCOL = 12; absent = 11, so the 11 x 10 build compiles to the same code). The
+// grid-dependent constants below are `NCOL == 11 ? <11 x 10 value> : <12 x 10 value>`; pe_geometry.py evaluates them
+// for its grid.
+#ifndef PE_NCOL
+#define PE_NCOL 11
+#endif
+constexpr uint32_t NCOL = PE_NCOL;  // matmul columns (x)
+static_assert(NCOL == 11 || NCOL == 12, "the prefix engine runs on an 11 x 10 or 12 x 10 grid");
 constexpr uint32_t GRID_Y = 10;
-constexpr uint32_t NCORES = 110;
+constexpr uint32_t NCORES = NCOL == 11 ? 110 : 120;
 constexpr uint32_t WF_Y = 8;  // weight feeder of column x = (x, WF_Y)
 constexpr uint32_t IF_Y = 9;  // in0 feeder of band b = (b, IF_Y), b < 8
-constexpr uint32_t HUB_X = 10;
+constexpr uint32_t HUB_X = NCOL == 11 ? 10 : 11;  // the last column
 constexpr uint32_t HUB_Y = 9;
 
 // ---------------------------------------------------------------- model constants (tiles)
@@ -215,10 +223,11 @@ constexpr uint32_t PS_DBG = 10;    // 10..13 NCRISC (op, phase, a, b), 14..15 BR
 // summed credit lets a receiver that runs ahead cover for one that lags, and the feeder then overwrites a slot the
 // laggard is still reading (ring depth > 1; reproduced 2026-09-30 on the VLM down op, bands far from the feeders).
 constexpr uint32_t PS_W_RDY0 = 16;   // weight feeder of column x: 16 + y = credits of receiver (x, y), y < 8
-constexpr uint32_t PS_I_RDY0 = 24;   // in0 feeder of band b: 24 + x = credits of receiver (x, b), x < 11
-constexpr uint32_t PS_SRC_KV = 35;   // K / V feeder-local source of the valid multicast
-constexpr uint32_t PS_KV_VAL0 = 36;  // 36..39: every core: VLM K / V quarter f landed ((op << 16) | 1)
-constexpr uint32_t KVF_X0 = 7;  // the 4 VLM K / V feeders: (7..10, IF_Y) (linear index >= 106: never an attention item)
+constexpr uint32_t PS_I_RDY0 = 24;   // in0 feeder of band b: 24 + x = credits of receiver (x, b), x < NCOL (24..35)
+constexpr uint32_t PS_SRC_KV = NCOL == 11 ? 35 : 73;   // K / V feeder-local source of the valid multicast
+constexpr uint32_t PS_KV_VAL0 = NCOL == 11 ? 36 : 74;  // + 0..3: every core: VLM K / V quarter f landed ((op << 16) | 1)
+// the 4 VLM K / V feeders: (KVF_X0 .. NCOL - 1, IF_Y) (linear index >= 106 / 116: never an attention item)
+constexpr uint32_t KVF_X0 = NCOL == 11 ? 7 : 8;
 constexpr uint32_t PS_N = 40;
 constexpr uint32_t PS_DIAG = 40;    // 40..43: diagnostics staging (8 words, written once at the end)
 constexpr uint32_t PS_TSTAMP = 44;  // 44..47: the hub's time-stamp record staging (16 B)
@@ -226,57 +235,57 @@ constexpr uint32_t PS_SHARE = 48;   // 48..63: the NCRISC's (Op, Lay) of the cur
 constexpr uint32_t PS_IV0 = 64;     // 64..71: every compute core: mode-R in0 piece q landed ((op << 16) | 1)
 constexpr uint32_t PS_IV_N = 8;     // (at most 8 K pieces per mode-R op)
 constexpr uint32_t PS_KVX = 72;     // SigLIP attention item core: K / V thirds landed from its 2 group peers (count)
-constexpr uint32_t PS_WORDS = 73;   // P_SYNC = PS_WORDS x PSTRIDE bytes
+constexpr uint32_t PS_WORDS = NCOL == 11 ? 73 : 78;  // P_SYNC = PS_WORDS x PSTRIDE bytes
 
 // ---------------------------------------------------------------- common runtime args (appended after phase 1's)
 // The TRISC reads only phase 1's and PA_EXPERT..PA_REPS, so its list is cut at PA_TRISC_N (ring bytes). The VLM K / V
 // cache addresses are phase 1's own C_K_ADDR / C_V_ADDR (the prefix writes the caches the expert reads).
-constexpr uint32_t PA_EXPERT = 99;  // 1: the expert loop runs after the op range (whole_*.cpp); the split programs: 0
-constexpr uint32_t PA0 = 100;
-constexpr uint32_t PA_OPFIRST = 100;  // first op executed (0 = from the start)
-constexpr uint32_t PA_DBGSTOP = 101;  // first op NOT executed (N_OPS = everything)
-constexpr uint32_t PA_REPS = 102;     // the op range [OPFIRST, DBGSTOP) runs this many times (timing; 1 in production)
-constexpr uint32_t PA_TRISC_N = 103;  // the TRISC's common-arg list length
-constexpr uint32_t PA_X_S = 103;      // fp32  [512, 1152]   SigLIP residual
-constexpr uint32_t PA_XN_S = 104;     // bf16  [512, 1152]   normalised (LN out)
-constexpr uint32_t PA_QKV_S = 105;    // bf16  [512, 4608]
-constexpr uint32_t PA_CTX_S = 106;    // bf16  [512, 1536]
-constexpr uint32_t PA_H_S = 107;      // bf16  [512, 4352]
-constexpr uint32_t PA_X_V = 108;      // fp32  [MT*32, 2048] VLM residual
-constexpr uint32_t PA_XN_V = 109;     // bf16  [MT*32, 2048]
-constexpr uint32_t PA_Q_V = 110;      // bf16  [8 heads][MT][8] tiles
-constexpr uint32_t PA_CTX_V = 111;    // bf16  [MT*32, 2048]
-constexpr uint32_t PA_H_V = 112;      // bfp8  [MT*32, 16384]
-constexpr uint32_t PA_IM2COL = 113;   // bf16  [512, 608] TILE (host im2col, the request's pixels)
-constexpr uint32_t PA_TOK = 114;      // uint32 [1, NTOK] ROW_MAJOR (the request's token ids)
-constexpr uint32_t PA_EMB = 115;      // bf16  [vocab, 2048] ROW_MAJOR (embedding table)
-constexpr uint32_t PA_VMASK = 116;    // bf16  [32, P] TILE: row-broadcast key bias of the VLM (the request's mask)
-constexpr uint32_t PA_COSQ = 117;     // bf16  [MT*32, 256] TILE: VLM q RoPE cos (x 1/16)
-constexpr uint32_t PA_SINQ = 118;     // signed sin (x 1/16)
-constexpr uint32_t PA_COSK = 119;
-constexpr uint32_t PA_SINK = 120;
-constexpr uint32_t PA_POS = 121;      // bf16  [256, 1152] position table + patch bias
-constexpr uint32_t PA_SVEC = 122;     // bf16  per SigLIP layer: row-broadcast vectors (see pe_common.hpp SV_*)
-constexpr uint32_t PA_VVEC = 123;     // bf16  per VLM layer: 1 + w of both RMS norms (row-broadcast)
-constexpr uint32_t PA_GVEC = 124;     // bf16  post-LN w, b, projector bias (row-broadcast)
-constexpr uint32_t PA_CONST = 125;    // bf16  [32, 32 * PC_N] constants
-constexpr uint32_t PA_WPATCH = 126;   // bf16  patch-embed weight arena (bank-striped pages)
-constexpr uint32_t PA_WPROJ = 127;    // bfp8  projector weight arena
-constexpr uint32_t PA_DIAG = 128;     // uint32 [110 pages of 64 B] per-core diagnostics (arena bounds, ops run)
-constexpr uint32_t PA_TIMES = 129;    // uint32 [4096, 16] ROW_MAJOR: the hub stamps (wall clock, k, op) at every go
-constexpr uint32_t PA_NOCX0 = 130;    // 130..140: NoC x of logical columns 0..10 (host-translated)
-constexpr uint32_t PA_BRISC_N = 141;  // the BRISC's common-arg list length (the weight arenas are NCRISC-only)
-constexpr uint32_t PA_WS = 141;       // SigLIP layer weight arenas (27, bfp8, bank-striped pages)
-constexpr uint32_t PA_WV = 168;       // VLM layer weight arenas (18)
-constexpr uint32_t PA_WV16 = 186;     // VLM layer qkv weight arenas (18, bf16: bfp8 qkv weights were the largest
-                                      // prefix K / V error term, CPU emulation 2026-09-30)
-constexpr uint32_t PA_N = 204;        // common args in total
+constexpr uint32_t PA_EXPERT = 111;  // 1: the expert loop runs after the op range (whole_*.cpp); the split programs: 0
+constexpr uint32_t PA0 = 112;
+constexpr uint32_t PA_OPFIRST = 112;  // first op executed (0 = from the start)
+constexpr uint32_t PA_DBGSTOP = 113;  // first op NOT executed (N_OPS = everything)
+constexpr uint32_t PA_REPS = 114;     // the op range [OPFIRST, DBGSTOP) runs this many times (timing; 1 in production)
+constexpr uint32_t PA_TRISC_N = 115;  // the TRISC's common-arg list length
+constexpr uint32_t PA_X_S = 115;      // fp32  [512, 1152]   SigLIP residual
+constexpr uint32_t PA_XN_S = 116;     // bf16  [512, 1152]   normalised (LN out)
+constexpr uint32_t PA_QKV_S = 117;    // bf16  [512, 4608]
+constexpr uint32_t PA_CTX_S = 118;    // bf16  [512, 1536]
+constexpr uint32_t PA_H_S = 119;      // bf16  [512, 4352]
+constexpr uint32_t PA_X_V = 120;      // fp32  [MT*32, 2048] VLM residual
+constexpr uint32_t PA_XN_V = 121;     // bf16  [MT*32, 2048]
+constexpr uint32_t PA_Q_V = 122;      // bf16  [8 heads][MT][8] tiles
+constexpr uint32_t PA_CTX_V = 123;    // bf16  [MT*32, 2048]
+constexpr uint32_t PA_H_V = 124;      // bfp8  [MT*32, 16384]
+constexpr uint32_t PA_IM2COL = 125;   // bf16  [512, 608] TILE (host im2col, the request's pixels)
+constexpr uint32_t PA_TOK = 126;      // uint32 [1, NTOK] ROW_MAJOR (the request's token ids)
+constexpr uint32_t PA_EMB = 127;      // bf16  [vocab, 2048] ROW_MAJOR (embedding table)
+constexpr uint32_t PA_VMASK = 128;    // bf16  [32, P] TILE: row-broadcast key bias of the VLM (the request's mask)
+constexpr uint32_t PA_COSQ = 129;     // bf16  [MT*32, 256] TILE: VLM q RoPE cos (x 1/16)
+constexpr uint32_t PA_SINQ = 130;     // signed sin (x 1/16)
+constexpr uint32_t PA_COSK = 131;
+constexpr uint32_t PA_SINK = 132;
+constexpr uint32_t PA_POS = 133;      // bf16  [256, 1152] position table + patch bias
+constexpr uint32_t PA_SVEC = 134;     // bf16  per SigLIP layer: row-broadcast vectors (see pe_common.hpp SV_*)
+constexpr uint32_t PA_VVEC = 135;     // bf16  per VLM layer: 1 + w of both RMS norms (row-broadcast)
+constexpr uint32_t PA_GVEC = 136;     // bf16  post-LN w, b, projector bias (row-broadcast)
+constexpr uint32_t PA_CONST = 137;    // bf16  [32, 32 * PC_N] constants
+constexpr uint32_t PA_WPATCH = 138;   // bf16  patch-embed weight arena (bank-striped pages)
+constexpr uint32_t PA_WPROJ = 139;    // bfp8  projector weight arena
+constexpr uint32_t PA_DIAG = 140;     // uint32 [NCORES pages of 64 B] per-core diagnostics (arena bounds, ops run)
+constexpr uint32_t PA_TIMES = 141;    // uint32 [4096, 16] ROW_MAJOR: the hub stamps (wall clock, k, op) at every go
+constexpr uint32_t PA_NOCX0 = 142;    // 142 .. 142 + NCOL - 1: NoC x of logical columns 0 .. NCOL - 1 (host-translated)
+constexpr uint32_t PA_BRISC_N = NCOL == 11 ? 153 : 154;  // the BRISC's common-arg list length (arenas are NCRISC-only)
+constexpr uint32_t PA_WS = NCOL == 11 ? 153 : 154;       // SigLIP layer weight arenas (27, bfp8, bank-striped pages)
+constexpr uint32_t PA_WV = NCOL == 11 ? 180 : 181;       // VLM layer weight arenas (18)
+constexpr uint32_t PA_WV16 = NCOL == 11 ? 198 : 199;     // VLM layer qkv weight arenas (18, bf16: bfp8 qkv weights were
+                                                         // the largest prefix K / V error term, CPU emulation 2026-09-30)
+constexpr uint32_t PA_N = NCOL == 11 ? 216 : 217;        // common args in total
 
 // ---------------------------------------------------------------- per-core runtime args (appended after phase 1's)
 constexpr uint32_t PR0 = 48;
 constexpr uint32_t PR_X = 48;    // logical x
 constexpr uint32_t PR_Y = 49;    // logical y
-constexpr uint32_t PR_LIN = 50;  // y * 11 + x
+constexpr uint32_t PR_LIN = 50;  // y * NCOL + x
 constexpr uint32_t PR_WFX = 51;  // NoC x / y of this core's column weight feeder
 constexpr uint32_t PR_WFY = 52;
 constexpr uint32_t PR_IFX = 53;  // NoC x / y of this core's band in0 feeder (y < 8)
@@ -286,7 +295,7 @@ constexpr uint32_t PR_HUBY = 56;
 constexpr uint32_t PR_COLX = 57;   // weight feeder: its column rectangle x (NoC) ; y0 = row 0 ; y1 given per op
 constexpr uint32_t PR_COLY0 = 58;  // NoC y of logical row 0 in this column
 constexpr uint32_t PR_ROWY = 59;   // in0 feeder: NoC y of its band row
-constexpr uint32_t PR_ROWX0 = 60;  // NoC x of logical column 0 / 10
+constexpr uint32_t PR_ROWX0 = 60;  // NoC x of logical column 0 / NCOL - 1
 constexpr uint32_t PR_ROWX1 = 61;
 constexpr uint32_t PR_GX0 = 62;  // whole-grid rectangle (NoC)
 constexpr uint32_t PR_GY0 = 63;

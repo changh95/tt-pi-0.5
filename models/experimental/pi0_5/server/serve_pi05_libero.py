@@ -2,7 +2,14 @@
 
 Serves `lerobot/pi05_libero` through the pi0.5 megakernel (`PI05MegakernelTTNN`: SigLIP | VLM prefill | action expert
 as three ttnn.generic_op programs, replayed from one Metal trace per prompt bucket) with openpi's `pi05_libero` host
-conventions, so openpi's own LIBERO client (`examples/libero/main.py`) talks to it unchanged:
+conventions, so openpi's own LIBERO client (`examples/libero/main.py`) talks to it unchanged.
+
+Device profile (--dispatch, or the PI05_DISPATCH env var; fixed per process, read when the model package is imported):
+  eth     "non-scalable": ethernet dispatch cores, 12 x 10 worker grid (the default of this server)
+  tensix  "scalable": Tensix dispatch cores, 11 x 10 worker grid; the ethernet cores stay free for a fabric
+The device is opened with the model's own open_pi05_device() (the profile's dispatch cores + the 64 KiB worker-L1 cut).
+
+
 
   request  msgpack_numpy({"observation/image": uint8 (224,224,3), "observation/wrist_image": uint8 (224,224,3),
                           "observation/state": (8,), "prompt": str [, "__noise_seed__": int]})
@@ -17,7 +24,7 @@ Host conventions (bit-exact to openpi's PyTorch policy inputs, checked against o
     (openpi pi05_libero, discrete_state_input=False: the state is not used); the smallest prompt bucket that holds it.
   * actions: the first 7 of 32 dims, unnormalised with openpi pi05_libero quantiles: (y+1)/2*(q99-q01+1e-6)+q01.
   * noise: `__noise_seed__` -> np.random.default_rng(seed).standard_normal((1, 10, 32)) (float32); otherwise
-    np.random.standard_normal. Action horizon 10, --num-steps flow-matching steps (1..10, default 10).
+    np.random.standard_normal. Action horizon 10, --num-steps flow-matching steps (1..16, default 10).
 
 Requirements: tt-metal with ttnn (Blackhole), this repo's `models/` on PYTHONPATH, torch, numpy, sentencepiece,
 websockets >= 13, openpi-client (msgpack_numpy), the checkpoint (lerobot/pi05_libero), openpi's pi05_libero
@@ -25,7 +32,7 @@ norm_stats.json and the PaliGemma tokenizer (gs://big_vision/paligemma_tokenizer
 
 Example:
   python serve_pi05_libero.py --ckpt lerobot/pi05_libero --norm-stats norm_stats.json \
-      --tokenizer paligemma_tokenizer.model --cameras 2 --num-steps 10 --port 8000
+      --tokenizer paligemma_tokenizer.model --dispatch eth --cameras 2 --num-steps 10 --port 8000
 """
 
 import argparse
@@ -73,7 +80,8 @@ class Pi05LiberoPolicy:
 
         from models.experimental.pi0.common.configs import PI0ModelConfig, SigLIPConfig
         from models.experimental.pi0.common.weight_loader import PI0WeightLoader
-        from models.experimental.pi0.tt.ttnn_pi05_model import PI05_DEVICE_PARAMS, PI05MegakernelTTNN
+        from models.experimental.pi0.tt.megakernel import profile as mk_profile
+        from models.experimental.pi0.tt.ttnn_pi05_model import PI05MegakernelTTNN, open_pi05_device
 
         self.ttnn = ttnn
         self.H, self.cameras, self.num_steps = H, int(cameras), int(num_steps)
@@ -86,7 +94,8 @@ class Pi05LiberoPolicy:
         cfg.num_cameras = self.cameras
         cfg.siglip_config = SigLIPConfig(hidden_size=1152, intermediate_size=4304, num_hidden_layers=27,
                                          num_attention_heads=16, image_size=224, patch_size=14)
-        self.device = ttnn.open_device(device_id=device_id, **PI05_DEVICE_PARAMS)
+        self.profile = dict(dispatch=mk_profile.DISPATCH, name=mk_profile.NAME, pe_grid=list(mk_profile.PE_GRID))
+        self.device = open_pi05_device(device_id)
         self.model = None
         try:
             t0 = time.time()
@@ -105,7 +114,9 @@ class Pi05LiberoPolicy:
     @property
     def backend_stamp(self):
         m = self.model
-        return (f"tt-p150a:{type(m).__module__}.{type(m).__name__}[cameras={m.cameras},H={m.horizon},"
+        pr = self.profile
+        return (f"tt-p150a:{type(m).__module__}.{type(m).__name__}[profile={pr['name']},dispatch={pr['dispatch']},"
+                f"grid={pr['pe_grid'][0]}x{pr['pe_grid'][1]},cameras={m.cameras},H={m.horizon},"
                 f"num_steps={m.config.num_denoising_steps},kv_dram={m.kv_dram},digest={str(m.kernel_digest)[:16]}]")
 
     def infer(self, obs):
@@ -148,7 +159,10 @@ def main():
     ap.add_argument("--norm-stats", required=True, help="openpi pi05_libero norm_stats.json")
     ap.add_argument("--tokenizer", required=True, help="PaliGemma sentencepiece model (paligemma_tokenizer.model)")
     ap.add_argument("--cameras", type=int, choices=(1, 2), default=2)
-    ap.add_argument("--num-steps", type=int, default=10, help="flow-matching steps, 1..10")
+    ap.add_argument("--num-steps", type=int, default=10, help="flow-matching steps, 1..16")
+    ap.add_argument("--dispatch", choices=("eth", "tensix"), default=None,
+                    help="device profile: eth = non-scalable (12x10, default), tensix = scalable (11x10); "
+                         "default: $PI05_DISPATCH if set, else eth")
     ap.add_argument("--device-id", type=int, default=0)
     ap.add_argument("--host", default="127.0.0.1")
     ap.add_argument("--port", type=int, default=8000)
@@ -158,6 +172,11 @@ def main():
     ap.add_argument("--ready-file", default="", help="write this file once serving")
     ap.add_argument("--call-log", default="", help="append one JSON line per policy call")
     a = ap.parse_args()
+    # the model package reads PI05_DISPATCH when it is imported (inside Pi05LiberoPolicy), so set it first
+    env = os.environ.get("PI05_DISPATCH")
+    if a.dispatch is not None and env is not None and env != a.dispatch:
+        ap.error(f"--dispatch {a.dispatch} contradicts PI05_DISPATCH={env}")
+    os.environ["PI05_DISPATCH"] = a.dispatch or env or "eth"
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s", force=True)
 
     from openpi_client import msgpack_numpy
@@ -174,7 +193,8 @@ def main():
                    "observation/state": np.zeros(8, np.float32), "prompt": "warm up the kernels", "__noise_seed__": i})
         logging.info("warm-up call %d: %.1f ms", i, (time.time() - t0) * 1000)
     pol.n_calls = 0
-    metadata = dict(backend=pol.backend_stamp, action_horizon=pol.H, num_steps=pol.num_steps, cameras=pol.cameras,
+    metadata = dict(backend=pol.backend_stamp, profile=pol.profile, action_horizon=pol.H, num_steps=pol.num_steps,
+                    cameras=pol.cameras,
                     ckpt=str(a.ckpt), norm_stats=str(a.norm_stats), config="pi05_libero (openpi conventions)")
     calls = open(a.call_log, "a") if a.call_log else None
     state = {"last": time.time(), "in_call": None}

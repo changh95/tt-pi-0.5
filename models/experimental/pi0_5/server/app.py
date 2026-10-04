@@ -11,7 +11,7 @@ Default backend (``PI05_MEGAKERNEL`` unset or ``mc``, single chip): the multi-co
 ``models/experimental/pi0`` (``PI05MegakernelTTNN``; ``server/mc_backend.py``): three persistent ``ttnn.generic_op``
 programs per call (VISION | PREFIX | EXPERT; four with 3-4 cameras, one vision program per <= 2 cameras), replayed from
 one Metal trace per prompt bucket. ``PI05_NUM_IMAGES`` 1..4, ``PI05_ACTION_HORIZON`` 1..64 and ``PI05_NUM_STEPS``
-1..10 are fixed at server start; each request runs in the smallest 32 / 64 / 128 / 224-token prompt bucket that holds
+1..16 are fixed at server start (``PI05_DISPATCH``: eth = non-scalable, the default / tensix = scalable); each request runs in the smallest 32 / 64 / 128 / 224-token prompt bucket that holds
 its prompt (``prompt_bucket`` overrides it). The single-config paths below (``whole`` / ``expert`` / ``off``, the
 mesh and dp layouts) stay selectable as comparators; they were validated on tt-metal 668c2907575, not re-validated on
 the tree this package pins.

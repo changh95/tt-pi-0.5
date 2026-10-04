@@ -37,7 +37,7 @@ def test_default_backend_is_mc_on_one_chip(monkeypatch):
         ({"PI05_NUM_IMAGES": "0"}, "cameras = 0"),
         ({"PI05_ACTION_HORIZON": "65"}, "action_horizon=65"),
         ({"PI05_ACTION_HORIZON": "0"}, "action_horizon=0"),
-        ({"PI05_NUM_STEPS": "11"}, "num_denoising_steps=11"),
+        ({"PI05_NUM_STEPS": "17"}, "num_denoising_steps=17"),
         ({"PI05_MEGAKERNEL": "mc", "TT_MESH_SHAPE": "1x4"}, "single-chip"),
         ({"PI05_BATCH_SIZES": "1,2"}, "batch 1 only"),
         ({"PI05_TOKEN_LEN": "256"}, "PI05_TOKEN_LEN=256"),
@@ -50,7 +50,7 @@ def test_mc_refuses_by_name(monkeypatch, env, why):
         _cfg(monkeypatch, **env)
 
 
-@pytest.mark.parametrize("cams, h, n", [(1, 1, 1), (2, 50, 10), (3, 32, 5), (4, 64, 10), (2, 33, 1)])
+@pytest.mark.parametrize("cams, h, n", [(1, 1, 1), (2, 50, 10), (3, 32, 5), (4, 64, 16), (2, 33, 1)])
 def test_mc_accepts_the_compiled_range(monkeypatch, cams, h, n):
     cfg = _cfg(monkeypatch, PI05_NUM_IMAGES=str(cams), PI05_ACTION_HORIZON=str(h), PI05_NUM_STEPS=str(n))
     assert (cfg.backend, cfg.num_images, cfg.action_horizon, cfg.num_steps) == ("mc", cams, h, n)

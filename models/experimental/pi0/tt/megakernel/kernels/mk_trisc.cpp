@@ -58,6 +58,14 @@ namespace {
 constexpr uint32_t RT = get_compile_time_arg_val(CT_RT);
 constexpr uint32_t PT = get_compile_time_arg_val(CT_PT);
 constexpr uint32_t CHT = get_compile_time_arg_val(CT_CHT);
+#ifdef MK_RT1_MM
+// test-only price arm (expert re-partition B): the weight matmuls of query rows >= 1 are skipped (garbage outputs,
+// timing only); the stamps then show what one matmul pass over both rows could save at most
+constexpr uint32_t RTM = 1;
+#else
+constexpr uint32_t RTM = RT;
+#endif
+constexpr uint32_t SPASS = 7;  // key tiles per DST pass of a unit (scores + the mask temporary in DST 7)
 constexpr uint32_t NCH = get_compile_time_arg_val(CT_NCH);
 constexpr bool ROWLOOP = NCH * RT > GRID_ROWS;  // unit = (head, chunk) running both query rows (mk_brisc.cpp)
 constexpr uint32_t EPS_BITS = get_compile_time_arg_val(CT_EPS_BITS);
@@ -172,7 +180,7 @@ NOINL void pair_qkv() {
     for (uint32_t r = 0; r < RT; ++r) {
         tile_regs_acquire();
         mm_init_f<LOFI>(CB_IN0, CB_W8);
-        for (uint32_t kb = 0; kb < 4; ++kb) {
+        for (uint32_t kb = 0; kb < 4 && r < RTM; ++kb) {
             for (uint32_t k = 0; k < 8; ++k) {
                 const uint32_t a = r * 32 + kb * 8 + k;
                 mm_f<LOFI>(CB_IN0, CB_W8, a, (2 * kb) * 8 + k, 0);
@@ -251,6 +259,22 @@ NOINL void scores_into(uint32_t i, uint32_t t) {
     }
 }
 
+// scores of chunk tile i (key tile t) into DST dst: the two-pass unit (CHT > SPASS) puts tile i0 + i of the chunk in
+// DST i, so the DST slot and the chunk's K tile differ in its second pass (scores_into uses one index for both)
+NOINL void scores_at(uint32_t dst, uint32_t i, uint32_t t) {
+    if (t < PT) {
+        mm_init_f<HIFI2>(CB_Q, CB_KV, 1);
+        for (uint32_t d = 0; d < DH_T; ++d) {
+            mm_f<HIFI2>(CB_Q, CB_KV, me.ur * DH_T + d, i * DH_T + d, dst);
+        }
+    } else {
+        mm_init_f<HIFI2>(CB_Q, CB_KSV, 1);
+        for (uint32_t d = 0; d < DH_T; ++d) {
+            mm_f<HIFI2>(CB_Q, CB_KSV, me.ur * DH_T + d, (t - PT) * DH_T + d, dst);
+        }
+    }
+}
+
 NOINL void unit_attention() {
     TR("unit_attention", 0);
     cb_wait_front(CB_Q, DH_T * RT);
@@ -262,20 +286,40 @@ NOINL void unit_attention() {
     }
     // S = q K^T + mask
     cb_reserve_back(CB_S, CHT);
-    tile_regs_acquire();
-    for (uint32_t i = 0; i < CHT; ++i) {
-        scores_into(i, me.kt0 + i);
+    if constexpr (CHT <= SPASS) {
+        tile_regs_acquire();
+        for (uint32_t i = 0; i < CHT; ++i) {
+            scores_into(i, me.kt0 + i);
+        }
+        for (uint32_t i = 0; i < CHT; ++i) {
+            load(CB_MASK, i, 7);
+            fadd(i, 7, i);
+        }
+        tile_regs_commit();
+        tile_regs_wait();
+        for (uint32_t i = 0; i < CHT; ++i) {
+            pack_to(i, CB_S, i);
+        }
+        tile_regs_release();
+    } else {  // two DST passes (key tiles [0, SPASS) then [SPASS, CHT)): same tiles, same arithmetic
+        for (uint32_t i0 = 0; i0 < CHT; i0 += SPASS) {
+            const uint32_t n = CHT - i0 < SPASS ? CHT - i0 : SPASS;
+            tile_regs_acquire();
+            for (uint32_t i = 0; i < n; ++i) {
+                scores_at(i, i0 + i, me.kt0 + i0 + i);
+            }
+            for (uint32_t i = 0; i < n; ++i) {
+                load(CB_MASK, i0 + i, 7);
+                fadd(i, 7, i);
+            }
+            tile_regs_commit();
+            tile_regs_wait();
+            for (uint32_t i = 0; i < n; ++i) {
+                pack_to(i, CB_S, i0 + i);
+            }
+            tile_regs_release();
+        }
     }
-    for (uint32_t i = 0; i < CHT; ++i) {
-        load(CB_MASK, i, 7);
-        fadd(i, 7, i);
-    }
-    tile_regs_commit();
-    tile_regs_wait();
-    for (uint32_t i = 0; i < CHT; ++i) {
-        pack_to(i, CB_S, i);
-    }
-    tile_regs_release();
     cb_push_back(CB_S, CHT);
     cb_wait_front(CB_S, CHT);
     // m = rowmax(S)  (column vector)
@@ -308,20 +352,43 @@ NOINL void unit_attention() {
     reconfig_data_format(CB_S, CB_M);
     sub_bcast_cols_init(CB_S, CB_M);
     exp_tile_init<false>();
-    tile_regs_acquire();
-    for (uint32_t i = 0; i < CHT; ++i) {
-        sub_tiles_bcast_cols(CB_S, CB_M, i, 0, i);
-        exp_tile<false>(i);
+    if constexpr (CHT <= SPASS) {
+        tile_regs_acquire();
+        for (uint32_t i = 0; i < CHT; ++i) {
+            sub_tiles_bcast_cols(CB_S, CB_M, i, 0, i);
+            exp_tile<false>(i);
+        }
+        tile_regs_commit();
+        cb_pop_front(CB_S, CHT);
+        cb_reserve_back(CB_S, CHT);
+        tile_regs_wait();
+        for (uint32_t i = 0; i < CHT; ++i) {
+            pack_to(i, CB_S, i);
+        }
+        tile_regs_release();
+        cb_push_back(CB_S, CHT);
+    } else {
+        // per pass: the front n S tiles -> DST, pop them, P into the n slots just freed (the CB holds exactly CHT
+        // pages, so pass 1 writes pages [0, SPASS) while pass 2 still reads S from [SPASS, CHT); after pass 2 the
+        // front is P_0 .. P_{CHT-1} at page 0 again, with no tile index wrapping the ring)
+        for (uint32_t i0 = 0; i0 < CHT; i0 += SPASS) {
+            const uint32_t n = CHT - i0 < SPASS ? CHT - i0 : SPASS;
+            tile_regs_acquire();
+            for (uint32_t i = 0; i < n; ++i) {
+                sub_tiles_bcast_cols(CB_S, CB_M, i, 0, i);
+                exp_tile<false>(i);
+            }
+            tile_regs_commit();
+            cb_pop_front(CB_S, n);
+            cb_reserve_back(CB_S, n);
+            tile_regs_wait();
+            for (uint32_t i = 0; i < n; ++i) {
+                pack_to(i, CB_S, i);
+            }
+            tile_regs_release();
+            cb_push_back(CB_S, n);
+        }
     }
-    tile_regs_commit();
-    cb_pop_front(CB_S, CHT);
-    cb_reserve_back(CB_S, CHT);
-    tile_regs_wait();
-    for (uint32_t i = 0; i < CHT; ++i) {
-        pack_to(i, CB_S, i);
-    }
-    tile_regs_release();
-    cb_push_back(CB_S, CHT);
     cb_wait_front(CB_S, CHT);
     // l = sum_i P_i @ ONES (row sums in every column, fp32)
     cb_reserve_back(CB_L, 1);
@@ -694,7 +761,7 @@ NOINL void owner_oproj() {
     mm_init_f<HIFI2>(CB_IN0, CB_W16);
     for (uint32_t kb = 0; kb < 8; ++kb) {
         cb_wait_front(CB_W16, PAGE_TILES);
-        for (uint32_t r = 0; r < RT; ++r) {
+        for (uint32_t r = 0; r < RTM; ++r) {
             for (uint32_t k = 0; k < 8; ++k) {
                 mm_f<HIFI2>(CB_IN0, CB_W16, r * 64 + kb * 8 + k, k, r);
             }
@@ -731,7 +798,7 @@ NOINL void mlp_upgate() {
         mm_init_f<LOFI>(CB_IN0, CB_W8);
         for (uint32_t kb = 0; kb < 4; ++kb) {
             cb_wait_front(CB_W8, 2 * PAGE_TILES);
-            for (uint32_t r = 0; r < RT; ++r) {
+            for (uint32_t r = 0; r < RTM; ++r) {
                 for (uint32_t k = 0; k < 8; ++k) {
                     const uint32_t a = r * 32 + kb * 8 + k;
                     mm_f<LOFI>(CB_IN0, CB_W8, a, k, 2 * r);
@@ -780,7 +847,7 @@ NOINL void mlp_down() {
     for (uint32_t kb = 0; kb < 2; ++kb) {
         for (uint32_t n = 0; n < 4; ++n) {
             cb_wait_front(CB_W16, PAGE_TILES);
-            for (uint32_t r = 0; r < RT; ++r) {
+            for (uint32_t r = 0; r < RTM; ++r) {
                 for (uint32_t k = 0; k < 8; ++k) {
                     mm_f<HIFI2>(CB_HG, CB_W16, r * 16 + kb * 8 + k, k, n * RT + r);
                 }

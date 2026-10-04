@@ -20,7 +20,7 @@ FORCE_INLINE auto bdram(uint32_t arg, uint32_t page) { return TensorAccessor(bac
 NOINL void wrp(uint32_t arg, uint32_t z, uint32_t page, uint32_t l1) { noc_async_write_page(page, bdram(arg, z), l1); }
 
 struct BState {
-    uint32_t ibase[NCOL] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};  // in0 feeder: pages each receiver column was sent
+    uint32_t ibase[NCOL] = {};  // in0 feeder: pages each receiver column was sent
 };
 
 // ---------------------------------------------------------------- matmul outputs

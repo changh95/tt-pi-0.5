@@ -3,7 +3,7 @@
 """The default serving backend (``PI05_MEGAKERNEL`` unset or ``mc``): the multi-config pi0.5 megakernel.
 
 ``models/experimental/pi0`` (``tt/ttnn_pi05_model.py``, ``PI05MegakernelTTNN``) runs the whole ``sample_actions`` as
-three persistent ``ttnn.generic_op`` programs per call on 110 cores of one Blackhole chip -- VISION (SigLIP + the
+three persistent ``ttnn.generic_op`` programs per call on one Blackhole chip -- VISION (SigLIP + the
 projector; one program per group of <= 2 cameras, so 3 or 4 cameras take two), PREFIX (language embedding + the VLM
 prefill writing the 18 K / V caches) and EXPERT (the N-step x 18-layer action expert, action in / out, Euler) --
 replayed from one Metal trace per prompt bucket.
@@ -12,11 +12,14 @@ A model fixes at construction (here: at server start, from the environment):
 
 * ``PI05_NUM_IMAGES``      cameras, 1..4 (default 2); a request must send exactly that many images;
 * ``PI05_ACTION_HORIZON``  H, 1..64 (default 50; suffix buckets of 32 / 64 action rows);
-* ``PI05_NUM_STEPS``       flow-matching steps N, 1..10 (default 10; the adaRMS folds depend on the schedule).
+* ``PI05_NUM_STEPS``       flow-matching steps N, 1..16 (default 10; the adaRMS folds depend on the schedule).
+* ``PI05_DISPATCH``        the device profile: ``eth`` (non-scalable, the default: ethernet dispatch, a 12 x 10 worker
+                           grid) or ``tensix`` (scalable: Tensix dispatch, 11 x 10 workers, the ethernet cores stay free);
+                           read by ``models/experimental/pi0/tt/megakernel/profile.py`` at import.
 
 A request runs in the smallest prompt bucket (32 / 64 / 128 / 224 tokens) that holds its real tokens, or in the
-bucket it names (``prompt_bucket``). Batch 1, 224 x 224 images, a single chip opened with ``PI05_DEVICE_PARAMS``
-(the 64 KiB worker-L1 cut), one live model per device. Anything else is refused with a message that names it.
+bucket it names (``prompt_bucket``). Batch 1, 224 x 224 images, a single chip opened with ``open_pi05_device``
+(the profile's dispatch cores and the 64 KiB worker-L1 cut), one live model per device. Anything else is refused with a message that names it.
 
 Importing this module has no side effects (no ttnn import).
 """
@@ -55,12 +58,14 @@ def refusal(num_images: int, action_horizon: int, num_steps: int, mesh: Tuple[in
 
 
 def open_device(device_id: int):
-    """``ttnn.open_device`` with the megakernel's validated parameters (``PI05_DEVICE_PARAMS``)."""
-    import ttnn
+    """The device for the profile (``open_pi05_device``: the dispatch cores of ``PI05_DISPATCH``, the 64 KiB worker-L1
+    cut); returns it and a printable description of the parameters."""
+    from models.experimental.pi0.tt.megakernel import profile as PR
+    from models.experimental.pi0.tt.ttnn_pi05_model import PI05_DEVICE_PARAMS, open_pi05_device
 
-    from models.experimental.pi0.tt.ttnn_pi05_model import PI05_DEVICE_PARAMS
-
-    return ttnn.open_device(device_id=device_id, **PI05_DEVICE_PARAMS), dict(PI05_DEVICE_PARAMS)
+    params = {k: str(v) for k, v in PI05_DEVICE_PARAMS.items()}
+    params.update(profile=PR.NAME, dispatch=PR.DISPATCH)
+    return open_pi05_device(device_id), params
 
 
 def weight_loader(weights_dir):
@@ -94,8 +99,11 @@ def device_ops_per_call(model) -> int:
 
 def describe(model) -> Dict[str, Any]:
     """``/info`` ``megakernel`` block."""
+    from models.experimental.pi0.tt.megakernel import profile as PR
+
     return {
         "backend": "mc",
+        "profile": {"name": PR.NAME, "dispatch": PR.DISPATCH, "grid": list(PR.PE_GRID)},
         "program": {
             "kernel_digest": str(model.kernel_digest),
             "cameras": model.cameras,

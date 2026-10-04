@@ -41,10 +41,11 @@ def kv_mcast(shape: G.Shape, kv_dram: bool = False) -> bool:
     return shape.rt == 2 or kv_dram
 
 
-def core_range_set():
+def core_range_set(grid=G.GRID):
+    """The program's cores: logical (0, 0) .. grid - 1 (the expert loop: geometry.GRID; the prefix engine: its own)."""
     import ttnn
 
-    return ttnn.CoreRangeSet([ttnn.CoreRange(ttnn.CoreCoord(0, 0), ttnn.CoreCoord(G.GRID[0] - 1, G.GRID[1] - 1))])
+    return ttnn.CoreRangeSet([ttnn.CoreRange(ttnn.CoreCoord(0, 0), ttnn.CoreCoord(grid[0] - 1, grid[1] - 1))])
 
 
 def compute_config(unpack_modes):
@@ -58,11 +59,11 @@ def compute_config(unpack_modes):
     return cc
 
 
-def semaphores():
+def semaphores(grid=G.GRID):
     """Semaphores 0 / 1: the expert loop's boot barrier; 2 / 3: the prefix engine's."""
     import ttnn
 
-    return [ttnn.SemaphoreDescriptor(id=i, core_ranges=core_range_set(), initial_value=0) for i in (0, 1, 2, 3)]
+    return [ttnn.SemaphoreDescriptor(id=i, core_ranges=core_range_set(grid), initial_value=0) for i in (0, 1, 2, 3)]
 
 
 def constants_tensor(device):
@@ -121,9 +122,10 @@ class ExpertMegakernel:
             device,
             ttnn.DRAM_MEMORY_CONFIG,
         )
-        self._noc = {}
-        for x in range(G.GRID[0]):
-            for y in range(G.GRID[1]):
+        self._noc = {}  # every worker core of the device (the prefix engine's grid can be wider than the expert's)
+        g = device.compute_with_storage_grid_size()
+        for x in range(max(G.GRID[0], int(g.x))):
+            for y in range(max(G.GRID[1], int(g.y))):
                 c = device.worker_core_from_logical_core(ttnn.CoreCoord(x, y))
                 self._noc[(x, y)] = (int(c.x), int(c.y))
         self.program_hash = None
