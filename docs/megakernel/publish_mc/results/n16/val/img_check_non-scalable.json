@@ -1,0 +1,311 @@
+{
+ "time": "2026-10-04 12:56:17",
+ "parts": [
+  "golden",
+  "bitid",
+  "refuse"
+ ],
+ "kernel_digest": "26f0c46b7f1721c1",
+ "profile": {
+  "name": "non-scalable",
+  "dispatch": "eth",
+  "grid": [
+   12,
+   10
+  ]
+ },
+ "ttnn_file": "/opt/tt-metal/ttnn/ttnn/__init__.py",
+ "model_file": "/opt/tt-metal/models/experimental/pi0/tt/ttnn_pi05_model.py",
+ "device_grid": [
+  12,
+  10
+ ],
+ "golden_policy_file": "/opt/tt-metal/models/experimental/pi0_5/server/serve_pi05_libero.py",
+ "golden": {
+  "backend": "tt-p150a:models.experimental.pi0.tt.ttnn_pi05_model.PI05MegakernelTTNN[profile=non-scalable,dispatch=eth,grid=12x10,cameras=2,H=10,num_steps=10,kv_dram=False,digest=26f0c46b7f1721c1]",
+  "rows": [
+   {
+    "tag": "libero_spatial/t0/i0/call0/step10",
+    "inputs_equal": true,
+    "preset": "(2, 32, 32)",
+    "pcc7": 0.9999722742612134,
+    "out_sha": "0d951a8a32c0c9dac6c8053178730b990d90890ad006749150b744a1df98da5e"
+   },
+   {
+    "tag": "libero_spatial/t0/i0/call12/step70",
+    "inputs_equal": true,
+    "preset": "(2, 32, 32)",
+    "pcc7": 0.9999898447899912,
+    "out_sha": "01298fd103c78ad09bd1401517a4c801c6c4c283dae40f5201dacd1a48b3b7ac"
+   },
+   {
+    "tag": "libero_spatial/t3/i1/call0/step10",
+    "inputs_equal": true,
+    "preset": "(2, 32, 32)",
+    "pcc7": 0.9999890076180813,
+    "out_sha": "081765b1aa9c609ba5997266ceb30f78fafac43d7008e674b7584000da3bd42a"
+   },
+   {
+    "tag": "libero_spatial/t3/i1/call12/step70",
+    "inputs_equal": true,
+    "preset": "(2, 32, 32)",
+    "pcc7": 0.9999956192840365,
+    "out_sha": "a874038a850a02685e7553319f01f72c413034eb4846a888b5bb6849e9481623"
+   },
+   {
+    "tag": "libero_spatial/t6/i2/call0/step10",
+    "inputs_equal": true,
+    "preset": "(2, 32, 32)",
+    "pcc7": 0.999977612448541,
+    "out_sha": "5ec5ca1f29f07899e83f7ec8cf8708415f153acd7b24e1977d6230a0dfb629a1"
+   },
+   {
+    "tag": "libero_spatial/t6/i2/call12/step70",
+    "inputs_equal": true,
+    "preset": "(2, 32, 32)",
+    "pcc7": 0.9999734470590813,
+    "out_sha": "cd2f2086a6eaee88b2279627f12ef623150a2f771bdf9b6bef951ffae943e0c4"
+   },
+   {
+    "tag": "libero_spatial/t9/i3/call0/step10",
+    "inputs_equal": true,
+    "preset": "(2, 32, 32)",
+    "pcc7": 0.9999583233106235,
+    "out_sha": "a509cc5f2d8633d4ce40a1fbc5097ccdcab82b8eba5a04ea433163eddd9fe4a1"
+   },
+   {
+    "tag": "libero_spatial/t9/i3/call12/step70",
+    "inputs_equal": true,
+    "preset": "(2, 32, 32)",
+    "pcc7": 0.9999939866276688,
+    "out_sha": "4d9cc8cb25fb97fa4ad2f0ad2df9bad0167acf557d7b9c1ddb0f96c19e310c09"
+   }
+  ],
+  "n": 8,
+  "all_inputs_equal": true,
+  "pcc7_mean": 0.9999812644249046,
+  "pcc7_min": 0.9999583233106235
+ },
+ "bitid": {
+  "c1": {
+   "cameras": 1,
+   "H": 10,
+   "N": 10,
+   "n_tokens": 20,
+   "preset": [
+    1,
+    32,
+    32
+   ],
+   "kv_dram": false,
+   "device_ops_per_call": 3,
+   "shape": [
+    1,
+    10,
+    32
+   ],
+   "sha": "2e91855b9fa71da136e9b5d7413dc948b573a5df2839adddb4c06d3b29981b96",
+   "replay_identical": true,
+   "finite": true,
+   "call_ms_median": 48.06617047870532,
+   "build_s": 83.95607113838196,
+   "head": [
+    0.00038,
+    -0.00885,
+    -0.02087,
+    0.01807,
+    -0.0304,
+    0.01917
+   ]
+  },
+  "c2": {
+   "cameras": 2,
+   "H": 50,
+   "N": 10,
+   "n_tokens": 150,
+   "preset": [
+    2,
+    224,
+    64
+   ],
+   "kv_dram": false,
+   "device_ops_per_call": 3,
+   "shape": [
+    1,
+    50,
+    32
+   ],
+   "sha": "63d5c2b66833644d901307623d5056ff90e7ba01430a785f1d2724b127f91ab0",
+   "replay_identical": true,
+   "finite": true,
+   "call_ms_median": 85.091705492232,
+   "build_s": 79.31726336479187,
+   "head": [
+    0.00124,
+    -0.01807,
+    -0.00333,
+    0.06494,
+    -0.00424,
+    0.02112
+   ]
+  },
+  "c3": {
+   "cameras": 3,
+   "H": 32,
+   "N": 5,
+   "n_tokens": 50,
+   "preset": [
+    3,
+    64,
+    32
+   ],
+   "kv_dram": false,
+   "device_ops_per_call": 4,
+   "shape": [
+    1,
+    32,
+    32
+   ],
+   "sha": "d9f8d48c5ecdf0394b95c5866853fc52d6585066d96fc8182ed04c3ce5cb6ac4",
+   "replay_identical": true,
+   "finite": true,
+   "call_ms_median": 75.84390399279073,
+   "build_s": 70.37580895423889,
+   "head": [
+    0.00264,
+    -0.01154,
+    -0.00677,
+    0.02625,
+    -0.00372,
+    0.02026
+   ]
+  },
+  "c4": {
+   "cameras": 4,
+   "H": 64,
+   "N": 10,
+   "n_tokens": 100,
+   "preset": [
+    4,
+    128,
+    64
+   ],
+   "kv_dram": true,
+   "device_ops_per_call": 4,
+   "shape": [
+    1,
+    64,
+    32
+   ],
+   "sha": "c561a0b0b72864a1a43215f44f20bd06195db45b1d614428593ce481c36a5f75",
+   "replay_identical": true,
+   "finite": true,
+   "call_ms_median": 99.44766649277881,
+   "build_s": 83.6142110824585,
+   "head": [
+    -0.00041,
+    -0.01233,
+    0.00467,
+    0.04126,
+    0.00168,
+    0.02344
+   ]
+  },
+  "c2n16": {
+   "cameras": 2,
+   "H": 10,
+   "N": 16,
+   "n_tokens": 20,
+   "preset": [
+    2,
+    32,
+    32
+   ],
+   "kv_dram": false,
+   "device_ops_per_call": 3,
+   "shape": [
+    1,
+    10,
+    32
+   ],
+   "sha": "ec2d7351114ed99ddaf3e27f11960278d1f2b08c706741e43ea1b5ce24e9410f",
+   "replay_identical": true,
+   "finite": true,
+   "call_ms_median": 72.85107800271362,
+   "build_s": 97.04308581352234,
+   "head": [
+    0.00458,
+    -0.01953,
+    -0.03369,
+    0.01013,
+    -0.05151,
+    0.02209
+   ]
+  }
+ },
+ "refuse": {
+  "H=65 at construction": {
+   "raised": true,
+   "type": "RuntimeError",
+   "msg": "pi0.5 megakernel refused: action_horizon=65 (the megakernel serves 1..64 action rows)",
+   "ok": true
+  },
+  "N=17 at construction": {
+   "raised": true,
+   "type": "RuntimeError",
+   "msg": "pi0.5 megakernel refused: num_denoising_steps=17 (the megakernel runs 1..16 denoising steps)",
+   "ok": true
+  },
+  "cameras=5 at construction": {
+   "raised": true,
+   "type": "RuntimeError",
+   "msg": "pi0.5 megakernel refused: cameras = 5 (compiled: 1, 2, 3, 4)",
+   "ok": true
+  },
+  "masked camera": {
+   "raised": true,
+   "type": "RuntimeError",
+   "msg": "pi0.5 megakernel: every camera must be valid (img_masks all True); drop the masked image slots and pass only the real cameras (a model built with num_cameras = that count): openpi's masked slots are padding keys that do not advance the positions, so this is the same computation",
+   "ok": true
+  },
+  "1 image on a 2-camera model": {
+   "raised": true,
+   "type": "RuntimeError",
+   "msg": "pi0.5 megakernel serves 2 cameras (got 1)",
+   "ok": true
+  },
+  "40 tokens in prompt_bucket 32": {
+   "raised": true,
+   "type": "RuntimeError",
+   "msg": "pi0.5 megakernel: prompt_bucket=32 cannot hold 40 real tokens",
+   "ok": true
+  },
+  "prompt_bucket 48": {
+   "raised": true,
+   "type": "RuntimeError",
+   "msg": "pi0.5 megakernel: prompt_bucket=48 (compiled: 32 / 64 / 128 / 224)",
+   "ok": true
+  },
+  "batch 2": {
+   "raised": true,
+   "type": "RuntimeError",
+   "msg": "pi0.5 megakernel serves batch 1 (got batch 2)",
+   "ok": true
+  },
+  "second live model on the device": {
+   "raised": true,
+   "type": "RuntimeError",
+   "msg": "pi0.5 megakernel: 1 other model(s) on this device still hold device memory (2 cameras / 32 action rows (90,624 B of L1 per core)); close() them or build them in a `with` block before building another",
+   "ok": true
+  },
+  "model still serves after the refusals": {
+   "ok": true,
+   "shape": [
+    1,
+    10,
+    32
+   ]
+  }
+ },
+ "refuse_all_ok": true
+}

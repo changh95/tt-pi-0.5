@@ -1,0 +1,68 @@
+=== [21:53:15] non-scalable: tt-model serve --profile non-scalable
+✓ weights lerobot/pi05_base@b211f3d4  
+  ✓ host ready  docker 28.5.2 (rootless) · tt devices · hugepages
+  ✓ image tt-model/pi05-base-p150:fe6ecd0b4e86
+  ✓ container started
+  ✓ server process started  6.1s
+  ✓ pipeline warmed up  2m 33s
+  ✓
+info {"name": "non-scalable", "dispatch": "eth", "grid": [12, 10]} {'kernel_digest': '26f0c46b7f1721c1', 'cameras': 2, 'action_horizon': 50, 'num_steps': 10, 'device_ops_per_call': 3} source 33528a82f4dc524a00336b6552041b76dac9448e
+PASS pi05 actions=(50,32) max|a|=0.260 std=0.070 repeat_maxdiff=0.0000 change_maxdiff=0.8413 inference_ms=65.93/59.49 tokens=143/224 truncated=False
+=== [21:56:12] non-scalable: img_check2 in the image (golden, c1-c4 + c2 N16 outputs, refusals)
+PHASE open (watchdog 900 s)
+DEVICE grid [12, 10] profile {'name': 'non-scalable', 'dispatch': 'eth', 'grid': [12, 10]}
+PHASE golden (watchdog 900 s)
+GOLDEN {'backend': 'tt-p150a:models.experimental.pi0.tt.ttnn_pi05_model.PI05MegakernelTTNN[profile=non-scalable,dispatch=eth,grid=12x10,cameras=2,H=10,num_steps=10,kv_dram=False,digest=26f0c46b7f1721c1]', 'n': 8, 'all_inputs_equal
+PHASE bitid (watchdog 900 s)
+BITID c1 {'cameras': 1, 'H': 10, 'N': 10, 'n_tokens': 20, 'preset': [1, 32, 32], 'kv_dram': False, 'device_ops_per_call': 3, 'shape': [1, 10, 32], 'sha': '2e91855b9fa71da136e9b5d7413dc948b573a5df2839adddb4c06d3b29981b96', 'replay_
+BITID c2 {'cameras': 2, 'H': 50, 'N': 10, 'n_tokens': 150, 'preset': [2, 224, 64], 'kv_dram': False, 'device_ops_per_call': 3, 'shape': [1, 50, 32], 'sha': '63d5c2b66833644d901307623d5056ff90e7ba01430a785f1d2724b127f91ab0', 'repla
+BITID c3 {'cameras': 3, 'H': 32, 'N': 5, 'n_tokens': 50, 'preset': [3, 64, 32], 'kv_dram': False, 'device_ops_per_call': 4, 'shape': [1, 32, 32], 'sha': 'd9f8d48c5ecdf0394b95c5866853fc52d6585066d96fc8182ed04c3ce5cb6ac4', 'replay_i
+BITID c4 {'cameras': 4, 'H': 64, 'N': 10, 'n_tokens': 100, 'preset': [4, 128, 64], 'kv_dram': True, 'device_ops_per_call': 4, 'shape': [1, 64, 32], 'sha': 'c561a0b0b72864a1a43215f44f20bd06195db45b1d614428593ce481c36a5f75', 'replay
+BITID c2n16 {'cameras': 2, 'H': 10, 'N': 16, 'n_tokens': 20, 'preset': [2, 32, 32], 'kv_dram': False, 'device_ops_per_call': 3, 'shape': [1, 10, 32], 'sha': 'ec2d7351114ed99ddaf3e27f11960278d1f2b08c706741e43ea1b5ce24e9410f', 'repl
+PHASE refuse (watchdog 900 s)
+DONE {"kernel_digest": "26f0c46b7f1721c1", "refuse_all_ok": true}
+=== [22:07:45] non-scalable: the card's env commands (3 cameras, H 10, N 5) and N 16
+info {"name": "non-scalable", "dispatch": "eth", "grid": [12, 10]} {'kernel_digest': '26f0c46b7f1721c1', 'cameras': 3, 'action_horizon': 10, 'num_steps': 5, 'device_ops_per_call': 4} source 33528a82f4dc524a00336b6552041b76dac9448e
+PASS pi05 actions=(10,32) max|a|=0.160 std=0.047 repeat_maxdiff=0.0000 change_maxdiff=0.7256 inference_ms=82.54/64.98 tokens=143/224 truncated=False
+info {"name": "non-scalable", "dispatch": "eth", "grid": [12, 10]} {'kernel_digest': '26f0c46b7f1721c1', 'cameras': 2, 'action_horizon': 50, 'num_steps': 16, 'device_ops_per_call': 3} source 33528a82f4dc524a00336b6552041b76dac9448e
+PASS pi05 actions=(50,32) max|a|=0.266 std=0.071 repeat_maxdiff=0.0000 change_maxdiff=0.8735 inference_ms=76.06/67.73 tokens=143/224 truncated=False
+=== [22:12:48] non-scalable: refusals at start (PI05_NUM_IMAGES=5, PI05_NUM_STEPS=17)
+exit 3: refused at startup: pi0.5 megakernel refused: cameras = 5 (compiled: 1, 2, 3, 4) [PI05_NUM_IMAGES=5, PI05_ACTION_HORIZON=50, PI05_NUM_STEPS=10]
+exit 3: refused at startup: pi0.5 megakernel refused: num_denoising_steps=17 (the megakernel runs 1..16 denoising steps) [PI05_NUM_IMAGES=2, PI05_ACTION_HORIZON=50, PI05_NUM_STEPS=17]
+=== [22:13:27] scalable: tt-model serve --profile scalable
+✓ weights lerobot/pi05_base@b211f3d4  
+  ✓ host ready  docker 28.5.2 (rootless) · tt devices · hugepages
+  ✓ image tt-model/pi05-base-p150:fe6ecd0b4e86
+  ✓ container started
+  ✓ server process started  6.1s
+  ✓ pipeline warmed up  2m 38s
+  ✓
+info {"name": "scalable", "dispatch": "tensix", "grid": [11, 10]} {'kernel_digest': '26f0c46b7f1721c1', 'cameras': 2, 'action_horizon': 50, 'num_steps': 10, 'device_ops_per_call': 3} source 33528a82f4dc524a00336b6552041b76dac9448e
+PASS pi05 actions=(50,32) max|a|=0.260 std=0.070 repeat_maxdiff=0.0000 change_maxdiff=0.8413 inference_ms=58.7/60.74 tokens=143/224 truncated=False
+=== [22:16:30] scalable: img_check2 in the image (golden, c1-c4 + c2 N16 outputs, refusals)
+PHASE open (watchdog 900 s)
+DEVICE grid [11, 10] profile {'name': 'scalable', 'dispatch': 'tensix', 'grid': [11, 10]}
+PHASE golden (watchdog 900 s)
+GOLDEN {'backend': 'tt-p150a:models.experimental.pi0.tt.ttnn_pi05_model.PI05MegakernelTTNN[profile=scalable,dispatch=tensix,grid=11x10,cameras=2,H=10,num_steps=10,kv_dram=False,digest=26f0c46b7f1721c1]', 'n': 8, 'all_inputs_equal'
+PHASE bitid (watchdog 900 s)
+BITID c1 {'cameras': 1, 'H': 10, 'N': 10, 'n_tokens': 20, 'preset': [1, 32, 32], 'kv_dram': False, 'device_ops_per_call': 3, 'shape': [1, 10, 32], 'sha': '2e91855b9fa71da136e9b5d7413dc948b573a5df2839adddb4c06d3b29981b96', 'replay_
+BITID c2 {'cameras': 2, 'H': 50, 'N': 10, 'n_tokens': 150, 'preset': [2, 224, 64], 'kv_dram': False, 'device_ops_per_call': 3, 'shape': [1, 50, 32], 'sha': '63d5c2b66833644d901307623d5056ff90e7ba01430a785f1d2724b127f91ab0', 'repla
+BITID c3 {'cameras': 3, 'H': 32, 'N': 5, 'n_tokens': 50, 'preset': [3, 64, 32], 'kv_dram': False, 'device_ops_per_call': 4, 'shape': [1, 32, 32], 'sha': 'd9f8d48c5ecdf0394b95c5866853fc52d6585066d96fc8182ed04c3ce5cb6ac4', 'replay_i
+BITID c4 {'cameras': 4, 'H': 64, 'N': 10, 'n_tokens': 100, 'preset': [4, 128, 64], 'kv_dram': True, 'device_ops_per_call': 4, 'shape': [1, 64, 32], 'sha': 'c561a0b0b72864a1a43215f44f20bd06195db45b1d614428593ce481c36a5f75', 'replay
+BITID c2n16 {'cameras': 2, 'H': 10, 'N': 16, 'n_tokens': 20, 'preset': [2, 32, 32], 'kv_dram': False, 'device_ops_per_call': 3, 'shape': [1, 10, 32], 'sha': 'ec2d7351114ed99ddaf3e27f11960278d1f2b08c706741e43ea1b5ce24e9410f', 'repl
+PHASE refuse (watchdog 900 s)
+DONE {"kernel_digest": "26f0c46b7f1721c1", "refuse_all_ok": true}
+=== [22:27:44] scalable: the card's env commands (3 cameras, H 10, N 5) and N 16
+info {"name": "scalable", "dispatch": "tensix", "grid": [11, 10]} {'kernel_digest': '26f0c46b7f1721c1', 'cameras': 3, 'action_horizon': 10, 'num_steps': 5, 'device_ops_per_call': 4} source 33528a82f4dc524a00336b6552041b76dac9448e
+PASS pi05 actions=(10,32) max|a|=0.160 std=0.047 repeat_maxdiff=0.0000 change_maxdiff=0.7256 inference_ms=71.29/66.17 tokens=143/224 truncated=False
+info {"name": "scalable", "dispatch": "tensix", "grid": [11, 10]} {'kernel_digest': '26f0c46b7f1721c1', 'cameras': 2, 'action_horizon': 50, 'num_steps': 16, 'device_ops_per_call': 3} source 33528a82f4dc524a00336b6552041b76dac9448e
+PASS pi05 actions=(50,32) max|a|=0.266 std=0.071 repeat_maxdiff=0.0000 change_maxdiff=0.8735 inference_ms=70.0/68.94 tokens=143/224 truncated=False
+=== [22:32:37] scalable: refusals at start (PI05_NUM_IMAGES=5, PI05_NUM_STEPS=17)
+exit 3: refused at startup: pi0.5 megakernel refused: cameras = 5 (compiled: 1, 2, 3, 4) [PI05_NUM_IMAGES=5, PI05_ACTION_HORIZON=50, PI05_NUM_STEPS=10]
+exit 3: refused at startup: pi0.5 megakernel refused: num_denoising_steps=17 (the megakernel runs 1..16 denoising steps) [PI05_NUM_IMAGES=2, PI05_ACTION_HORIZON=50, PI05_NUM_STEPS=17]
+[22:33:13] done RC=0
+[trap] device users: []
+2026-10-04_22:33:14 [device-guard pid=3807578] RESET AFTER JOB (WITH_DEVICE_RESET_AFTER=1, rc=0): timeout --signal=TERM --kill-after=60 5400 /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/pubmc/n16/val16.sh
+2026-10-04_22:33:14 [device-guard pid=3807578] RESET: tt-smi -r 0 (probe hung/failed with no other device users)
+2026-10-04_22:33:56 [device-guard pid=3807578] reset exit=0
+rc=0

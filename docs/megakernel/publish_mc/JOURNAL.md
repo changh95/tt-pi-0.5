@@ -302,3 +302,37 @@ build/pi05-base-p150 (= the 36f651704bf1 package), scripts + results in docs/meg
   (vs gpu_matrix/c2_n<N>; GPU final: N1/5/10/16 = 99/99/100/100). Demo: tt_dispatch_matrix/demo/ (non-scalable, c2,
   N10). Updated LIBERO server tt_dispatch_matrix/package/serve_pi05_libero.py (--dispatch eth|tensix, N 1..16,
   open_pi05_device): take it only after its golden control passes (path + sha256 to follow). Runtime eth16 c718b5df9b9.
+
+## 2026-10-04 15:11:18 KST -- N16 release: code ported (branch n16-2profiles-2026-10-04, not committed yet)
+- Vendored tt-metal-pr dd9431fa10f models/experimental/pi0 (git archive, 71 files; kernel digest 26f0c46b7f1721c1,
+  the same under both profiles). Server: mc_backend.open_device -> open_pi05_device (profile dispatch cores + the
+  worker-L1 cut), /info megakernel.profile {name, dispatch, grid}; N 1..16 through the model's own refusal; docs.
+  CPU: 112 passed under PI05_DISPATCH=eth and 112 under tensix (overlay on tt-metal-main, no device).
+- Staging tt-model.yaml (non-card part): tt_metal -> gr00t/publish/tt-metal-eth16-c718b5df9b9; profiles non-scalable
+  (default, PI05_DISPATCH=eth) / scalable (tensix); verify: digest 26f0c46b7f1721c1, both profiles import with their
+  grids and a bad PI05_DISPATCH is refused, N 16 accepted / 17 refused, dev_mem_map.h has the 40 KiB IERISC budget.
+  The old image's libtt_metal.so has 0 copies of the fetch-queue TT_FATAL text ("exceeds max command size") and of
+  the core_descriptor string ("harvested ethernet"); the new image must have them (checked after the build).
+- The build waits for pi05-libero-gpu-base's updated serve_pi05_libero.py (the one in code/ uses ttnn.open_device
+  with PI05_DEVICE_PARAMS, which fails under the eth default).
+
+## 2026-10-04 22:34:37 KST -- N16 image built and validated (both profiles)
+- Code commit 33528a82f4dc524a00336b6552041b76dac9448e (branch n16-2profiles-2026-10-04, local): pi0 from tt-metal-pr
+  dd9431fa10f + server (open_pi05_device, /info profile, N 1..16) + serve_pi05_libero.py sha256 85e3567a... (the file
+  pi05-libero-gpu-base golden-controlled on both profiles).
+- Package: the first build failed in my own new verify line (subprocess env without LD_LIBRARY_PATH -> empty output);
+  fixed (env={**os.environ, ...}), all 32 lines dry-run on a fake /opt, rebuilt from the cache (21:36-21:41).
+  Image tt-model/pi05-base-p150:fe6ecd0b4e86 (sha256:fe6ecd0b4e862c883ebfcd2ade494b73447d7e0db743f7f7b44064d06b309ca2);
+  code_sha256 0a542bdf5a9d3af8; built.tt_metal c718b5df9b9 dirty=false describe v0.80.0-dev20261001-19; profiles
+  non-scalable (default) / scalable. Patches in the image: dev_mem_map.h 40 KiB IERISC budget; libtt_metal.so holds the
+  fetch-queue TT_FATAL text (1; the f856a38a image 0); the core_descriptor skip is log_debug (compiled out) -> checked by
+  the real ETH boot below.
+- Validation hold 21:53-22:33 (reset exit 0; results/n16/val/), each step under timeout, in-image checks with a
+  faulthandler watchdog, during the LIBERO matrix (latencies there are not benchmarks):
+  - non-scalable: /info profile non-scalable / eth / grid 12x10, digest 26f0c46b7f1721c1, source 33528a8; smoke PASS.
+  - scalable: /info scalable / tensix / 11x10; smoke PASS.
+  - both: golden PCC7 (8 records, shipped LIBERO server class) mean 0.999981 min 0.999958, inputs torch.equal; c1/c2/c3/c4
+    and c2 N16 outputs, replays identical, IDENTICAL across the two profiles (and the 8 golden outputs too); c1-c3
+    equal the previous release's (fae9cd0) outputs, c4 differs (R: wide attention chunks); 10/10 refusals incl. N=17;
+    the card's env commands 3 cameras / H10 / N5 (/info 3/10/5/4 ops, smoke PASS) and 2 / H50 / N16 (/info N 16,
+    smoke PASS); PI05_NUM_IMAGES=5 and PI05_NUM_STEPS=17 refused at start (exit 3, the model's messages).

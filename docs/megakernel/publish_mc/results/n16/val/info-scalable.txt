@@ -1,0 +1,1 @@
+info {"name": "scalable", "dispatch": "tensix", "grid": [11, 10]} {'kernel_digest': '26f0c46b7f1721c1', 'cameras': 2, 'action_horizon': 50, 'num_steps': 10, 'device_ops_per_call': 3} source 33528a82f4dc524a00336b6552041b76dac9448e
