@@ -1,0 +1,149 @@
+2026-10-04T16:34:27.596498442Z INFO:     Started server process [1]
+2026-10-04T16:34:27.596544740Z INFO:     Waiting for application startup.
+2026-10-04T16:34:29.704273454Z 2026-10-04 16:34:29.704 | DEBUG    | ttnn:<module>:45 - Initial ttnn.CONFIG:
+2026-10-04T16:34:29.704298892Z Config{cache_path=/home/tt/.cache/ttnn,model_cache_path=/home/tt/.cache/ttnn/models,tmp_dir=/tmp/ttnn,enable_model_cache=false,enable_fast_runtime_mode=true,validate_program_args=false,throw_exception_on_fallback=false,enable_logging=false,enable_graph_report=false,enable_graph_python_stack_traces=false,enable_detailed_buffer_report=false,enable_detailed_tensor_report=false,enable_comparison_mode=false,comparison_mode_should_raise_exception=false,comparison_mode_pcc=0.9999,root_report_path=generated/ttnn/reports,report_name=std::nullopt,std::nullopt}
+2026-10-04T16:34:30.234662095Z 2026-10-04 16:34:30,234 INFO pi05.server: config: {'weights_repo': 'lerobot/pi05_base', 'weights_revision': 'b211f3d44c36b6acfcf7ae94a64e8e96f75a64ba', 'weights_dir': None, 'tokenizer_repo': 'google/paligemma-3b-pt-224', 'tokenizer_dir': None, 'tokenizer_required': True, 'device_id': 0, 'l1_small_size': 24576, 'token_len': 224, 'num_images': 2, 'num_steps': 10, 'seed': 42, 'warmup_runs': 2, 'free_host_weights': True, 'batch_sizes': (1,), 'batch_window_ms': 4.0, 'layout': 'mesh', 'dp_group': 2, 'profile': 'single-robot', 'prefix_chips': 2, 'pipeline_margin_ms': 4.0, 'backend': 'mc', 'action_horizon': 50} mesh=1x1
+2026-10-04T16:34:30.454186587Z 2026-10-04 16:34:30,454 INFO pi05.server: Loading weights: lerobot/pi05_base @ b211f3d44c36b6acfcf7ae94a64e8e96f75a64ba (model.safetensors, config.json)
+2026-10-04T16:34:30.492167782Z 2026-10-04 16:34:30,492 INFO pi05.server: Loading weights done: 812 tensors in 0.0 s
+2026-10-04T16:34:34.029658475Z 2026-10-04 16:34:34,029 INFO pi05.server: Loading tokenizer google/paligemma-3b-pt-224
+2026-10-04T16:34:35.874711116Z 2026-10-04 16:34:35.874 | info     |          Device | Opening user mode device driver (tt_cluster.cpp:223)
+2026-10-04T16:34:35.875469692Z 2026-10-04 16:34:35.874 | info     |             UMD | Cluster constructor started. (cluster.cpp:405)
+2026-10-04T16:34:35.875475533Z 2026-10-04 16:34:35.875 | info     |             UMD | Creating TopologyDiscovery for architecture: blackhole (topology_discovery.cpp:131)
+2026-10-04T16:34:35.875477988Z 2026-10-04 16:34:35.875 | info     |             UMD | Starting topology discovery. (topology_discovery.cpp:150)
+2026-10-04T16:34:35.879600931Z 2026-10-04 16:34:35.879 | info     |             UMD | Established firmware bundle version: 19.12.0 (topology_discovery.cpp:654)
+2026-10-04T16:34:35.879613224Z 2026-10-04 16:34:35.879 | info     |             UMD | Completed topology discovery. (topology_discovery.cpp:154)
+2026-10-04T16:34:36.132721458Z 2026-10-04 16:34:36.132 | warning  |             UMD | hwloc_set_area_membind(): failed for physical_device_id: 0 on NodeSet: [0] with errno: Operation not permitted (pid: 1 tid: 136019731572544) (cpuset_lib.cpp:440)
+2026-10-04T16:34:36.132749881Z 2026-10-04 16:34:36.132 | warning  |             UMD | ---- ttSiliconDevice::init_hugepage: bind_area_to_memory_nodeset() failed (physical_device_id: 0 ch: 0). Hugepage allocation is not on NumaNode matching TT Device. Side-Effect is decreased Device->Host perf (Issue #893). (silicon_sysmem_manager.cpp:303)
+2026-10-04T16:34:36.133160583Z 2026-10-04 16:34:36.133 | info     |             UMD | Opening local chip ids/PCIe ids: {0}/[0] and remote chip ids {} (cluster.cpp:172)
+2026-10-04T16:34:36.133177756Z 2026-10-04 16:34:36.133 | info     |             UMD | IOMMU: disabled (cluster.cpp:146)
+2026-10-04T16:34:36.133179890Z 2026-10-04 16:34:36.133 | info     |             UMD | KMD version: 2.11.0 (cluster.cpp:149)
+2026-10-04T16:34:36.133181212Z 2026-10-04 16:34:36.133 | info     |             UMD | Cluster constructor completed. (cluster.cpp:719)
+2026-10-04T16:34:36.135405896Z 2026-10-04 16:34:36.135 | info     |             UMD | Starting devices in cluster (cluster.cpp:1305)
+2026-10-04T16:34:36.229230313Z 2026-10-04 16:34:36.229 | info     |             UMD | Starting devices in cluster completed. (cluster.cpp:1314)
+2026-10-04T16:34:36.525602335Z 2026-10-04 16:34:36.525 | info     |     Distributed | Using auto discovery to generate mesh graph. (metal_env.cpp:421)
+2026-10-04T16:34:36.525624987Z 2026-10-04 16:34:36.525 | info     |     Distributed | Constructing control plane using auto-discovery (no mesh graph descriptor). (metal_env.cpp:483)
+2026-10-04T16:34:36.529058564Z 2026-10-04 16:34:36.529 | warning  |          Always | Unknown motherboard 'ProArt X870E-CREATOR WIFI' for chip_id=0 (bus_id=0x3) — falling back to bus_id as tray_id. Add this motherboard and its bus IDs to mobo_to_bus_ids in physical_system_discovery.cpp. (physical_system_discovery.cpp:119)
+2026-10-04T16:34:36.535270937Z 2026-10-04 16:34:36.535 | warning  |          Fabric | No Physical Grouping Descriptor file found; mapping without a PGD. Searched:
+2026-10-04T16:34:36.535277319Z   - /opt/tt-metal/tests/tt_metal/tt_fabric/physical_groupings/default_physical_grouping_descriptor.textproto
+2026-10-04T16:34:36.535279022Z TT_CLUSTER_NAME not set
+2026-10-04T16:34:36.535280354Z  (physical_grouping_descriptor_core.cpp:910)
+2026-10-04T16:34:36.536223207Z 2026-10-04 16:34:36.536 | info     |          Fabric | Physical groupings: Mesh graph descriptor 'M0': MGD placement fallback M0 (MESH) embeds on PSD (physical_grouping_descriptor_matching.cpp:1848)
+2026-10-04T16:34:36.717724563Z 2026-10-04 16:34:36,717 INFO pi05.server: Opening device {'device_id': 0, 'l1_small_size': '24576', 'worker_l1_size': '1395712', 'trace_region_size': '10000000', 'dispatch_core_type': 'DispatchCoreType.ETH', 'profile': 'non-scalable', 'dispatch': 'eth'} (multi-config megakernel)
+2026-10-04T16:34:36.717745121Z 2026-10-04 16:34:36,717 INFO pi05.server: Loading pipeline: converting 812 tensors to device (PI05MegakernelTTNN: 2 camera(s), H=50, 10 steps) ...
+2026-10-04T16:35:09.175786156Z 2026-10-04 16:35:09,175 INFO pi05.server: Model built in 32.5 s
+2026-10-04T16:35:09.760795894Z 2026-10-04 16:35:09,760 INFO pi05.server: Released the fp32 host copy of the checkpoint
+2026-10-04T16:35:09.760818957Z 2026-10-04 16:35:09,760 INFO pi05.server: Warming up: compiling and capturing the 32 / 64 / 128 / 224-token prompt buckets ...
+2026-10-04T16:35:10.232979009Z 2026-10-04 16:35:10.232 | warning  |           Metal | Allocating device buffers is potentially unsafe due to the existence of an active trace. These buffers may be corrupted once a trace is executed if they are not released before then. Use the trace allocation tracker to verify. (allocator.cpp:140)
+2026-10-04T16:35:10.350775797Z 2026-10-04 16:35:10,350 INFO pi05.server: Warmup traces captured in 0.6 s
+2026-10-04T16:35:10.426915712Z 2026-10-04 16:35:10,426 INFO pi05.server: Warmup 1/2: 68.9 ms
+2026-10-04T16:35:10.482199098Z 2026-10-04 16:35:10,482 INFO pi05.server: Warmup 2/2: 55.2 ms
+2026-10-04T16:35:10.482267256Z 2026-10-04 16:35:10,482 INFO pi05.server: Warmup complete (first 68.9 ms, steady 55.2 ms) -- 3 device ops per call, one trace per prompt bucket
+2026-10-04T16:35:10.482383545Z INFO:     Application startup complete.
+2026-10-04T16:35:10.482611624Z INFO:     Uvicorn running on http://0.0.0.0:20000 (Press CTRL+C to quit)
+2026-10-04T16:35:10.603354712Z INFO:     172.17.0.1:58272 - "GET /info HTTP/1.1" 200 OK
+2026-10-04T16:35:10.684004838Z INFO:     172.17.0.1:58278 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:10.742527516Z INFO:     172.17.0.1:58280 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:10.800557687Z INFO:     172.17.0.1:58284 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:10.858496837Z INFO:     172.17.0.1:58292 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:10.917179175Z INFO:     172.17.0.1:58296 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:10.975402379Z INFO:     172.17.0.1:58312 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:11.033601027Z INFO:     172.17.0.1:58322 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:11.093424270Z INFO:     172.17.0.1:58326 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:11.153051995Z INFO:     172.17.0.1:58334 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:11.213857956Z INFO:     172.17.0.1:58342 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:11.272721765Z INFO:     172.17.0.1:58354 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:11.331025671Z INFO:     172.17.0.1:58370 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:11.390093453Z INFO:     172.17.0.1:58378 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:11.448907178Z INFO:     172.17.0.1:58384 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:11.507544160Z INFO:     172.17.0.1:58400 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:11.566061637Z INFO:     172.17.0.1:58410 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:11.624799860Z INFO:     172.17.0.1:58414 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:11.682491395Z INFO:     172.17.0.1:58424 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:11.740350594Z INFO:     172.17.0.1:58440 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:11.798048400Z INFO:     172.17.0.1:58442 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:11.856063233Z INFO:     172.17.0.1:58458 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:11.914666651Z INFO:     172.17.0.1:58462 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:11.972609919Z INFO:     172.17.0.1:58470 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:12.030263141Z INFO:     172.17.0.1:58480 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:12.089042571Z INFO:     172.17.0.1:58482 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:12.146994956Z INFO:     172.17.0.1:58496 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:12.206517002Z INFO:     172.17.0.1:58510 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:12.264885670Z INFO:     172.17.0.1:58514 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:12.322733839Z INFO:     172.17.0.1:58524 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:12.380531452Z INFO:     172.17.0.1:58532 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:12.439840859Z INFO:     172.17.0.1:58540 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:12.497743249Z INFO:     172.17.0.1:58546 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:12.556472044Z INFO:     172.17.0.1:58558 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:12.614344499Z INFO:     172.17.0.1:58566 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:12.674780944Z INFO:     172.17.0.1:58574 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:12.733206519Z INFO:     172.17.0.1:58588 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:12.791349933Z INFO:     172.17.0.1:58600 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:12.849410821Z INFO:     172.17.0.1:58612 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:12.908609089Z INFO:     172.17.0.1:58628 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:12.966479780Z INFO:     172.17.0.1:58640 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:13.024408410Z INFO:     172.17.0.1:58648 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:13.081924935Z INFO:     172.17.0.1:58662 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:13.140329680Z INFO:     172.17.0.1:58676 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:13.198131302Z INFO:     172.17.0.1:58678 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:13.256102491Z INFO:     172.17.0.1:58690 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:13.315738552Z INFO:     172.17.0.1:58698 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:13.373814319Z INFO:     172.17.0.1:58714 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:13.432293273Z INFO:     172.17.0.1:58728 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:13.490216172Z INFO:     172.17.0.1:58730 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:13.548609617Z INFO:     172.17.0.1:58746 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:13.608484376Z INFO:     172.17.0.1:58754 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:13.666843706Z INFO:     172.17.0.1:58760 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:13.725104731Z INFO:     172.17.0.1:58770 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:13.783516008Z INFO:     172.17.0.1:58782 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:13.841739493Z INFO:     172.17.0.1:58786 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:13.899578113Z INFO:     172.17.0.1:58788 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:13.958106992Z INFO:     172.17.0.1:58796 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:14.015820467Z INFO:     172.17.0.1:58808 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:14.073831582Z INFO:     172.17.0.1:58814 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:14.131594691Z INFO:     172.17.0.1:58824 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:14.190614082Z INFO:     172.17.0.1:58836 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:14.248496595Z INFO:     172.17.0.1:58844 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:14.306981220Z INFO:     172.17.0.1:58850 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:14.366188654Z INFO:     172.17.0.1:58866 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:14.425129427Z INFO:     172.17.0.1:58868 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:14.483284052Z INFO:     172.17.0.1:58882 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:14.542283736Z INFO:     172.17.0.1:58884 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:14.601009995Z INFO:     172.17.0.1:58886 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:14.659192964Z INFO:     172.17.0.1:58890 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:14.716881923Z INFO:     172.17.0.1:58904 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:14.774701608Z INFO:     172.17.0.1:58918 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:14.832498159Z INFO:     172.17.0.1:58920 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:14.891136634Z INFO:     172.17.0.1:58922 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:14.949114526Z INFO:     172.17.0.1:58934 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:15.007149776Z INFO:     172.17.0.1:58950 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:15.064936840Z INFO:     172.17.0.1:58956 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:15.122517976Z INFO:     172.17.0.1:58972 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:15.181244566Z INFO:     172.17.0.1:58982 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:15.238865437Z INFO:     172.17.0.1:58994 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:15.296558063Z INFO:     172.17.0.1:58998 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:15.354377537Z INFO:     172.17.0.1:59002 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:15.413580853Z INFO:     172.17.0.1:59010 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:15.471709760Z INFO:     172.17.0.1:59012 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:15.530420179Z INFO:     172.17.0.1:59024 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:15.589400717Z INFO:     172.17.0.1:59038 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:15.648084437Z INFO:     172.17.0.1:59052 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:15.705634855Z INFO:     172.17.0.1:59064 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:15.763735037Z INFO:     172.17.0.1:59078 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:15.822710756Z INFO:     172.17.0.1:59090 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:15.881843991Z INFO:     172.17.0.1:59100 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:15.940409899Z INFO:     172.17.0.1:59104 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:16.012128479Z INFO:     172.17.0.1:59114 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:16.070283294Z INFO:     172.17.0.1:59116 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:16.129018079Z INFO:     172.17.0.1:59118 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:16.186911683Z INFO:     172.17.0.1:59120 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:16.244752137Z INFO:     172.17.0.1:59126 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:16.304140882Z INFO:     172.17.0.1:59132 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:16.363428958Z INFO:     172.17.0.1:59142 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:16.422601606Z INFO:     172.17.0.1:59144 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:16.482414940Z INFO:     172.17.0.1:59156 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:16.540812080Z INFO:     172.17.0.1:59168 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:16.599359854Z INFO:     172.17.0.1:59182 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:16.657021351Z INFO:     172.17.0.1:59196 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:16.714957835Z INFO:     172.17.0.1:59212 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:16.772570831Z INFO:     172.17.0.1:59224 - "POST /predict HTTP/1.1" 200 OK
+2026-10-04T16:35:16.773697590Z INFO:     172.17.0.1:59232 - "GET /info HTTP/1.1" 200 OK
