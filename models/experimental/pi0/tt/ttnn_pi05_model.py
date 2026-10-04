@@ -22,13 +22,17 @@ model's presets need. Per request the host writes the inputs into those fixed bu
 VLM key mask, the expert key row and RoPE rows, the noise) and replays the preset's trace. The first call of a preset
 compiles its programs (or loads them from the kernel cache), runs them once eagerly and captures the trace.
 
-Supported: batch 1, 1 or 2 cameras of 224 x 224 (``config.num_cameras``), 1..10 denoising steps
+Supported: batch 1, 1 to 4 cameras of 224 x 224 (``config.num_cameras``), 1..16 denoising steps
 (``num_denoising_steps``), an action horizon of 1..64 (suffix buckets of 32 / 64 rows) and right-padded prompts in a
 token buffer of any length with up to 224 real tokens: a request runs in the smallest prompt bucket (32 / 64 / 128 /
 224 tokens) that holds its real tokens (``prompt_bucket=`` overrides it).
 
-The device must be opened with ``PI05_DEVICE_PARAMS`` (the 64 KiB worker-L1 cut leaves each program its 136,192 B
-kernel-config ring).
+The device profile is megakernel/profile.py's (``PI05_DISPATCH``: ``eth``, the default, ethernet dispatch on 12 x 10
+workers; ``tensix``, Tensix dispatch on 11 x 10). Open the device with ``open_pi05_device()`` (scripts) or with
+``PI05_DEVICE_PARAMS`` as the tt-metal pytest ``device_params`` (the fixture builds the dispatch-core config): the
+profile's dispatch cores and the 64 KiB worker-L1 cut, which leaves each program its 136,192 B kernel-config ring.
+``ttnn.open_device(**PI05_DEVICE_PARAMS)`` is NOT equivalent: under ethernet dispatch the params carry
+``dispatch_core_type``, which ``ttnn.open_device`` rejects.
 """
 
 import weakref
@@ -52,6 +56,7 @@ from models.experimental.pi0.common.weight_loader import PI0WeightLoader
 from .megakernel import geometry as G
 from .megakernel import pe_geometry as P
 from .megakernel import presets as PS
+from .megakernel import profile as PROFILE
 from .megakernel.host_model import expert_params
 from .megakernel.pe_host import prefix_params, vlm_key_mask
 from .megakernel.pe_program import PREFIX_OPS, VISION_OPS, PrefixEngineProgram, PrefixTensors, kernel_digest
@@ -60,11 +65,38 @@ from .ttnn_gemma import precompute_freqs_cis_meta_format
 
 # The megakernel needs the 64 KiB worker-L1 cut: without it a program misses the kernel-config ring (136,192 B).
 MEGAKERNEL_WORKER_L1_SIZE = 1_395_712
+# ``device_params`` of the profile (megakernel/profile.py) for the tt-metal pytest device fixture, which turns
+# ``dispatch_core_type`` into the ``DispatchCoreConfig``. Scripts call ``open_pi05_device()``: ``ttnn.open_device``
+# takes a ``dispatch_core_config``, not ``dispatch_core_type``. The config object is not built
+# here: constructing a ``DispatchCoreConfig`` opens the cluster, and importing this module must not.
 PI05_DEVICE_PARAMS = {
     "l1_small_size": 24576,
     "worker_l1_size": MEGAKERNEL_WORKER_L1_SIZE,
     "trace_region_size": 10_000_000,
 }
+if P.NCOL == 12:  # the non-scalable profile (PI05_DISPATCH=eth): ethernet dispatch, 12 x 10 workers
+    PI05_DEVICE_PARAMS["dispatch_core_type"] = ttnn.DispatchCoreType.ETH
+
+
+def open_pi05_device(device_id: int = 0):
+    """``ttnn.open_device`` with ``PI05_DEVICE_PARAMS`` (the profile's dispatch cores, the 64 KiB worker-L1 cut). Under
+    the non-scalable profile (ethernet dispatch, the default) a runtime that cannot open Blackhole ethernet dispatch
+    raises a RuntimeError naming the cause and the fix (``PI05_DISPATCH=tensix``)."""
+    kw = dict(PI05_DEVICE_PARAMS)
+    core_type = kw.pop("dispatch_core_type", None)
+    if core_type is None:
+        return ttnn.open_device(device_id=device_id, **kw)
+    kw["dispatch_core_config"] = ttnn.DispatchCoreConfig(core_type)
+    try:
+        return ttnn.open_device(device_id=device_id, **kw)
+    except RuntimeError as e:
+        raise RuntimeError(
+            f"pi0.5 megakernel: the {PROFILE.NAME} profile (PI05_DISPATCH={PROFILE.DISPATCH}, the default) opens the "
+            "device with ethernet dispatch, and this tt-metal runtime could not open it "
+            f"({str(e).strip().splitlines()[0][:200] if str(e).strip() else type(e).__name__}). Ethernet dispatch on "
+            "Blackhole needs a runtime with the harvested-ETH descriptor fix and the idle-ERISC kernel budget "
+            "(tt-metal PR #57142); on another runtime set PI05_DISPATCH=tensix (the scalable profile, 11 x 10 workers)."
+        ) from e
 
 PATCH_FEATURES = 608  # 14 * 14 * 3 = 588 im2col features, tile-padded
 
@@ -277,8 +309,12 @@ class PI05MegakernelTTNN:
         if not ttnn.device.is_blackhole(device):
             return "Blackhole only"
         grid = device.compute_with_storage_grid_size()
-        if grid.x < G.GRID[0] or grid.y < G.GRID[1]:
-            return f"the programs run on an {G.GRID[0]} x {G.GRID[1]} core grid; the device has {grid.x} x {grid.y}"
+        if (grid.x, grid.y) != P.PE_GRID:
+            return (
+                f"the {PROFILE.NAME} profile (PI05_DISPATCH={PROFILE.DISPATCH}) runs on a {P.PE_GRID[0]} x {P.PE_GRID[1]} "
+                f"worker grid; the device has {grid.x} x {grid.y} (open it with open_pi05_device(), or choose the "
+                f"profile that matches the device with PI05_DISPATCH=eth (12 x 10) / tensix (11 x 10))"
+            )
         worker = sum(
             int(ttnn.get_memory_view(device, bt).total_bytes_per_bank)
             for bt in (ttnn.BufferType.L1, ttnn.BufferType.L1_SMALL)
@@ -287,7 +323,7 @@ class PI05MegakernelTTNN:
             return (
                 f"the device was opened without the 64 KiB worker-L1 cut (worker L1 {worker} B per bank > "
                 f"{MEGAKERNEL_WORKER_L1_SIZE}); open it with worker_l1_size={MEGAKERNEL_WORKER_L1_SIZE} "
-                "(PI05_DEVICE_PARAMS)"
+                "(open_pi05_device())"
             )
         return None
 

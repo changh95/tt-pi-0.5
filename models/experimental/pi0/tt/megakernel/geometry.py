@@ -36,6 +36,18 @@ H1 = (10, 8)
 KL = (8, 4)
 N_BANKS = 8
 
+# Key tiles per attention unit (MULTICONFIG expert re-partition R, 2026-10-04). A unit's scores and its in-place exp
+# run in DST passes of <= 7 / 8 tiles (mk_trisc.cpp unit_attention), so a chunk may hold up to 2 x 7 key tiles. Wider
+# chunks only change the presets that would otherwise need the row loop (c = 4 at 64 action rows: NCH 6 x RT 2 > 10
+# grid rows), which get NCH 5 x CHT 8 / 9 and the one-row-per-unit map of every other preset.
+# Measured (quiet ABAB, 10 steps): -5.1 to -5.9 ms per call on those presets on both profiles, A2 / A4 gates passed.
+# PI05_EXPERT_SUBCHUNK: "auto" (default) = chunks up to 14 tiles; "0" = at most 7 (the row-loop path, the A / B arm).
+SUBCHUNK_MODE = os.environ.get("PI05_EXPERT_SUBCHUNK", "auto")
+if SUBCHUNK_MODE not in ("0", "auto"):
+    raise ValueError(f"PI05_EXPERT_SUBCHUNK={SUBCHUNK_MODE!r}: expected 0 or auto")
+DST_PASS_TILES = 7  # score tiles per DST pass (+ the mask temporary in DST 7)
+MAX_CHT = 2 * DST_PASS_TILES if SUBCHUNK_MODE == "auto" else DST_PASS_TILES
+
 
 def parse_defs(path: str = DEFS_PATH) -> Dict[str, int]:
     """``constexpr uint32_t NAME = <int>;`` lines of mk_defs.hpp -> {NAME: value}."""
@@ -66,6 +78,9 @@ class Shape:
     prefix_len: int  # P (valid + pad prefix rows)
     suffix_rows: int  # S (tile-padded action rows)
     chunk_tiles: int  # key tiles per attention unit
+    # weight-ring depth in layers (CB_W8 / CB_W16 hold ring_layers x W8_PAGES / W16_PAGES pages): 2 lets a core's
+    # NCRISC request the next layer's pages while this layer is still being consumed (presets.RING_LAYERS)
+    ring_layers: int = 1
 
     @property
     def rt(self) -> int:
@@ -106,8 +121,8 @@ class Shape:
             raise ValueError(f"{self.name}: {self.nkt} key tiles do not split into chunks of {self.chunk_tiles}")
         if self.nu > GRID[1]:
             raise ValueError(f"{self.name}: {self.nu} units per head column exceed the {GRID[1]} grid rows")
-        if self.chunk_tiles > 7:
-            raise ValueError("a chunk's scores + one temporary must fit the 8 fp32 DST tiles")
+        if self.chunk_tiles > MAX_CHT:
+            raise ValueError(f"a chunk is at most {MAX_CHT} key tiles (DST passes of {DST_PASS_TILES} + a temporary)")
         if self.nch > 6:
             # merge() (mk_trisc.cpp) holds M / L in DST 0, the NCH weights in DST 1..NCH and a temporary in DST 7
             raise ValueError("the merge keeps NCH weights in DST 1..NCH + temporaries in DST 0 and 7: NCH <= 6")
@@ -116,6 +131,10 @@ class Shape:
         # the last chunk must contain every suffix key tile (the KL round feeds only the last-chunk units)
         if (self.nch - 1) * self.chunk_tiles > self.pt:
             raise ValueError("suffix key tiles fall outside the last chunk")
+        # the TRISC waits for 8-page (qkv, o_proj) / 2-page chunks and H0 for 16-page steps that start at ring page 0:
+        # every ring capacity is a multiple of those, so no chunk straddles the ring's end
+        if self.ring_layers not in (1, 2):
+            raise ValueError("ring_layers must be 1 or 2")
 
 
 SHAPES: Dict[str, Shape] = {
@@ -128,12 +147,12 @@ for _s in SHAPES.values():
 
 def chunking(prefix_tiles: int, suffix_rows: int) -> Tuple[int, int]:  # noqa: C901
     """(key tiles per attention unit CHT, chunks NCH) for ``prefix_tiles`` prefix key tiles and ``suffix_rows`` action
-    rows: CHT <= 7 (a chunk's scores + one temporary in the 8 DST tiles), NCH <= 6 (merge DST), NCH x RT <= 10 grid
+    rows: CHT <= MAX_CHT (DST passes of 7 scores + one temporary), NCH <= 6 (merge DST), NCH x RT <= 10 grid
     rows, NCH x CHT >= prefix + suffix tiles (the prefix is padded up to NCH x CHT - RT masked key tiles). The smallest
     CHT (per-unit key work), then the least padding."""
     rt = suffix_rows // TILE
     need = prefix_tiles + rt
-    for cht in range(max(1, rt), 8):
+    for cht in range(max(1, rt), MAX_CHT + 1):
         for nch in range(1, 7):
             if nch * rt <= GRID[1] and nch * cht >= need:
                 return cht, nch
@@ -263,8 +282,8 @@ def cb_table(shape: Shape) -> List[CBSpec]:
     b16, b8, f32 = TILE_BYTES["bf16"], TILE_BYTES["bfp8"], TILE_BYTES["fp32"]
     t = [
         CBSpec(CB_IN0, "in0", "bf16", 64 * rt, b16),
-        CBSpec(CB_W8, "w8", "bfp8", W8_PAGES * PAGE_TILES, b8),
-        CBSpec(CB_W16, "w16", "bf16", W16_PAGES * PAGE_TILES, b16),
+        CBSpec(CB_W8, "w8", "bfp8", shape.ring_layers * W8_PAGES * PAGE_TILES, b8),
+        CBSpec(CB_W16, "w16", "bf16", shape.ring_layers * W16_PAGES * PAGE_TILES, b16),
         CBSpec(CB_WC, "wc", "bf16", WC_PAGES * PAGE_TILES, b16),
         CBSpec(CB_RTOK, "rtok", "bf16", 1, 32),
         CBSpec(CB_QKVO, "qkvo", "bf16", 2 * rt, b16),

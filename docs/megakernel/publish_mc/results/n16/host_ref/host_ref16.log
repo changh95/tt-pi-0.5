@@ -1,0 +1,29 @@
+=== [22:50:38] host reference PI05_DISPATCH=eth
+PHASE open (watchdog 900 s)
+DEVICE grid [12, 10] profile {'name': 'non-scalable', 'dispatch': 'eth', 'grid': [12, 10]}
+PHASE golden (watchdog 900 s)
+GOLDEN {'backend': 'tt-p150a:models.experimental.pi0.tt.ttnn_pi05_model.PI05MegakernelTTNN[profile=non-scalable,dispatch=eth,grid=12x10,cameras=2,H=10,num_steps=10,kv_dram=False,digest=26f0c46b7f1721c
+PHASE bitid (watchdog 900 s)
+BITID c1 {'cameras': 1, 'H': 10, 'N': 10, 'n_tokens': 20, 'preset': [1, 32, 32], 'kv_dram': False, 'device_ops_per_call': 3, 'shape': [1, 10, 32], 'sha': '2e91855b9fa71da136e9b5d7413dc948b573a5df2839a
+BITID c2 {'cameras': 2, 'H': 50, 'N': 10, 'n_tokens': 150, 'preset': [2, 224, 64], 'kv_dram': False, 'device_ops_per_call': 3, 'shape': [1, 50, 32], 'sha': '63d5c2b66833644d901307623d5056ff90e7ba01430
+BITID c3 {'cameras': 3, 'H': 32, 'N': 5, 'n_tokens': 50, 'preset': [3, 64, 32], 'kv_dram': False, 'device_ops_per_call': 4, 'shape': [1, 32, 32], 'sha': 'd9f8d48c5ecdf0394b95c5866853fc52d6585066d96fc8
+BITID c4 {'cameras': 4, 'H': 64, 'N': 10, 'n_tokens': 100, 'preset': [4, 128, 64], 'kv_dram': True, 'device_ops_per_call': 4, 'shape': [1, 64, 32], 'sha': 'c561a0b0b72864a1a43215f44f20bd06195db45b1d61
+BITID c2n16 {'cameras': 2, 'H': 10, 'N': 16, 'n_tokens': 20, 'preset': [2, 32, 32], 'kv_dram': False, 'device_ops_per_call': 3, 'shape': [1, 10, 32], 'sha': 'ec2d7351114ed99ddaf3e27f11960278d1f2b08c70
+DONE {"kernel_digest": "26f0c46b7f1721c1", "refuse_all_ok": null}
+=== [23:01:52] host reference PI05_DISPATCH=tensix
+PHASE open (watchdog 900 s)
+DEVICE grid [11, 10] profile {'name': 'scalable', 'dispatch': 'tensix', 'grid': [11, 10]}
+PHASE golden (watchdog 900 s)
+GOLDEN {'backend': 'tt-p150a:models.experimental.pi0.tt.ttnn_pi05_model.PI05MegakernelTTNN[profile=scalable,dispatch=tensix,grid=11x10,cameras=2,H=10,num_steps=10,kv_dram=False,digest=26f0c46b7f1721c1
+PHASE bitid (watchdog 900 s)
+BITID c1 {'cameras': 1, 'H': 10, 'N': 10, 'n_tokens': 20, 'preset': [1, 32, 32], 'kv_dram': False, 'device_ops_per_call': 3, 'shape': [1, 10, 32], 'sha': '2e91855b9fa71da136e9b5d7413dc948b573a5df2839a
+BITID c2 {'cameras': 2, 'H': 50, 'N': 10, 'n_tokens': 150, 'preset': [2, 224, 64], 'kv_dram': False, 'device_ops_per_call': 3, 'shape': [1, 50, 32], 'sha': '63d5c2b66833644d901307623d5056ff90e7ba01430
+BITID c3 {'cameras': 3, 'H': 32, 'N': 5, 'n_tokens': 50, 'preset': [3, 64, 32], 'kv_dram': False, 'device_ops_per_call': 4, 'shape': [1, 32, 32], 'sha': 'd9f8d48c5ecdf0394b95c5866853fc52d6585066d96fc8
+BITID c4 {'cameras': 4, 'H': 64, 'N': 10, 'n_tokens': 100, 'preset': [4, 128, 64], 'kv_dram': True, 'device_ops_per_call': 4, 'shape': [1, 64, 32], 'sha': 'c561a0b0b72864a1a43215f44f20bd06195db45b1d61
+BITID c2n16 {'cameras': 2, 'H': 10, 'N': 16, 'n_tokens': 20, 'preset': [2, 32, 32], 'kv_dram': False, 'device_ops_per_call': 3, 'shape': [1, 10, 32], 'sha': 'ec2d7351114ed99ddaf3e27f11960278d1f2b08c70
+DONE {"kernel_digest": "26f0c46b7f1721c1", "refuse_all_ok": null}
+[23:14:24] done RC=0
+2026-10-04_23:14:24 [device-guard pid=3858441] RESET AFTER JOB (WITH_DEVICE_RESET_AFTER=1, rc=0): timeout --signal=TERM --kill-after=60 5000 /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/pubmc/n16/host_ref16.sh
+2026-10-04_23:14:24 [device-guard pid=3858441] RESET: tt-smi -r 0 (probe hung/failed with no other device users)
+2026-10-04_23:15:07 [device-guard pid=3858441] reset exit=0
+rc=0

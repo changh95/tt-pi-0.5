@@ -1,0 +1,24 @@
+=== [01:34:22] non-scalable: serve
+✓ weights lerobot/pi05_base@b211f3d4  
+  ✓ host ready  docker 28.5.2 (rootless) · tt devices · hugepages
+  ✓ image tt-model/pi05-base-p150:fe6ecd0b4e86
+  ✓ container started
+  ✓ server process started  2.6s
+  ✓ pipeline warmed up  40.2s
+[01:35:10] bench non-scalable
+BENCH {"preprocess": {"median": 1.27, "p10": 1.19, "p90": 1.61, "min": 1.14, "max": 1.87}, "inference": {"median": 55.21, "p10": 55.05, "p90": 55.48, "min": 54.97, "max": 56.18}, "total": {"median": 56.53, "p10": 56.26, "p90": 57.03, "min": 56.18, "max": 57.97}, "client_wall": {"median": 58.25, "p10": 57.67, "p90": 59.2, "min": 57.5, "max": 71.59}} profile {'name': 'non-scalable', 'dispatch': 'eth', 'grid': [12, 10]} load ['3.26', '2.79', '3.59'] ['3.08', '2.76', '3.58']
+=== [01:35:18] scalable: serve
+✓ weights lerobot/pi05_base@b211f3d4  
+  ✓ host ready  docker 28.5.2 (rootless) · tt devices · hugepages
+  ✓ image tt-model/pi05-base-p150:fe6ecd0b4e86
+  ✓ container started
+  ✓ server process started  1.8s
+  ✓ pipeline warmed up  39.0s
+[01:36:02] bench scalable
+BENCH {"preprocess": {"median": 1.25, "p10": 1.13, "p90": 1.57, "min": 1.08, "max": 3.54}, "inference": {"median": 56.5, "p10": 56.32, "p90": 56.71, "min": 56.18, "max": 57.01}, "total": {"median": 57.71, "p10": 57.47, "p90": 58.28, "min": 57.34, "max": 60.33}, "client_wall": {"median": 59.38, "p10": 58.87, "p90": 60.31, "min": 58.72, "max": 62.04}} profile {'name': 'scalable', 'dispatch': 'tensix', 'grid': [11, 10]} load ['3.33', '2.82', '3.55'] ['3.14', '2.79', '3.53']
+[01:36:10] done RC=0
+[trap] device users: []
+2026-10-05_01:36:10 [device-guard pid=3949543] RESET AFTER JOB (WITH_DEVICE_RESET_AFTER=1, rc=0): timeout --signal=TERM --kill-after=60 1500 /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/pubmc/n16/bench16.sh
+2026-10-05_01:36:10 [device-guard pid=3949543] RESET: tt-smi -r 0 (probe hung/failed with no other device users)
+2026-10-05_01:36:51 [device-guard pid=3949543] reset exit=0
+rc=0

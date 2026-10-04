@@ -430,6 +430,26 @@ void compute_gen(uint32_t g) {
     }
 }
 
+// ---------------------------------------------------------------- phase stamps (MK_STAMPS, test-only diagnostic)
+// The hubs record the wall clock (1350 MHz cycles, low word) at their per-generation phase boundaries into their idle
+// CB_KV (no hub is an attention unit) and write them to the debug output tensor at the end (instead of the residual
+// dump): H0 pages 0 / 1 = x_mid gathered / x gathered, H1 page 2 = ctx gathered, KL page 3 = suffix K / V gathered.
+#ifdef MK_STAMPS
+FORCE_INLINE void stamp(uint32_t slot, uint32_t g) {
+    reinterpret_cast<volatile tt_l1_ptr uint32_t*>(cb_base(CB_KV) + slot * 2048)[g] = reg_read(RISCV_DEBUG_REG_WALL_CLOCK_L);
+}
+void stamps_out(uint32_t slot0, uint32_t n) {
+    const auto dbg = TensorAccessor(acc_dbg, ct_arg(C_DBGOUT));
+    for (uint32_t i = 0; i < n; ++i) {
+        noc_async_write_page(slot0 + i, dbg, cb_base(CB_KV) + i * 2048);
+    }
+    noc_async_write_barrier();
+}
+#define STAMP(slot, g) stamp(slot, g)
+#else
+#define STAMP(slot, g)
+#endif
+
 // ---------------------------------------------------------------- hubs
 void h0_gather(uint32_t word, uint32_t target) {
     WAYPOINT("HGRS");
@@ -447,6 +467,7 @@ void run_h0() {
         if (l == 0) {
             if (g > 0) {
                 h0_gather(S_X_ARR, 32 * g);  // x_final of the previous step -> TRISC tail + in-proj
+                STAMP(1, g - 1);
             }
             // TRISC in-proj: x_new row 0 in CB_PART, row 1 in CB_HG (every CB has ONE producer RISC and ONE consumer
             // RISC: the TRISC packer / unpacker keep local copies of the CB counters)
@@ -484,6 +505,7 @@ void run_h0() {
             cb_pop_front(CB_ROUT, RT);
         } else {
             h0_gather(S_X_ARR, 32 * g);
+            STAMP(1, g - 1);
             WAIT_GE(S_X_RDY, me.n_xrdy * (g + 1), "H0XR");
             mcast_round(me.rx, in0, in0, X_TILES * T16, S_SRC0 + 0, S_X_FLAG, g + 1);
             WAYPOINT("H0RI");
@@ -494,6 +516,7 @@ void run_h0() {
         }
         dbg_mark(g, 21);
         h0_gather(S_XM_ARR, 32 * (g + 1));
+        STAMP(0, g);
         WAIT_GE(S_XM_RDY, 64 * (g + 1), "H0MR");
         mcast_round(me.rm, in0, in0, X_TILES * T16, S_SRC0 + 2, S_XM_FLAG, g + 1);
         WAYPOINT("H0RP");
@@ -505,6 +528,10 @@ void run_h0() {
     // the residual after the last generation: debug dump of x, then the TRISC's x_t (the output)
     dbg_mark(me.ngen, 22);
     h0_gather(S_X_ARR, 32 * me.ngen);
+#ifdef MK_STAMPS
+    STAMP(1, me.ngen - 1);
+    stamps_out(0, 2);
+#else
     {
         const auto dbg = TensorAccessor(acc_dbg, ct_arg(C_DBGOUT));
         for (uint32_t t = 0; t < X_TILES; ++t) {
@@ -512,6 +539,7 @@ void run_h0() {
         }
         noc_async_write_barrier();
     }
+#endif
     WAYPOINT("H0OT");
     cb_wait_front(CB_ROUT, RT);
     const auto out = TensorAccessor(acc_out, ct_arg(C_OUT));
@@ -527,10 +555,14 @@ void run_h1() {
     for (uint32_t g = 0; g < me.ngen; ++g) {
         dbg_mark(g, 30);
         WAIT_GE(S_CTX_ARR, NH * RT * (g + 1), "H1AR");
+        STAMP(0, g);
         WAIT_GE(S_CTX_RDY, 32 * (g + 1), "H1RD");
         mcast_round(me.ro, in0, in0, IN0_PAGES * T16, S_SRC0 + 0, S_CTX_FLAG, g + 1);
         noc_async_write_barrier();
     }
+#ifdef MK_STAMPS
+    stamps_out(2, 1);
+#endif
 }
 
 void run_kl() {
@@ -538,11 +570,15 @@ void run_kl() {
     for (uint32_t g = 0; g < me.ngen; ++g) {
         dbg_mark(g, 40);
         WAIT_GE(S_KV_ARR, 8 * (g + 1), "KLAR");
+        STAMP(0, g);
         WAIT_GE(S_KV_QDONE, NH * (g + 1), "KLQD");
         WAIT_GE(S_KV_RDY, 8 * NRU * (g + 1), "KLRD");
         mcast_round(me.rk, ksv, ksv, 2 * DH_T * RT * T16, S_SRC0 + 0, S_KV_FLAG, g + 1);
         noc_async_write_barrier();
     }
+#ifdef MK_STAMPS
+    stamps_out(3, 1);
+#endif
 }
 
 }  // namespace

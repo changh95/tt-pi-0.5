@@ -25,7 +25,7 @@ import torch.nn.functional as F
 
 WIDTH = 1024
 N_LAYERS = 18
-N_STEPS = 10
+N_STEPS = 16
 DH = 256
 NH = 8
 MLP = 4096
@@ -57,6 +57,13 @@ class ExpertParams:
     dts: Tuple[float, ...] = ()
 
 
+def euler_times(num_steps: int) -> List[float]:
+    """openpi's Euler times t_i = 1 - i / N (float64); the steps' dt_i = t_(i+1) - t_i round to ONE fp32 value, -1 / N,
+    for every N <= N_STEPS (the kernel takes one dt, program.py), unlike fp32 linspace (several values differing by
+    <= 7e-8 at N <= 16)."""
+    return [1.0 - i / num_steps for i in range(num_steps + 1)]
+
+
 def expert_params(
     expert: Dict[str, torch.Tensor], proj: Dict[str, torch.Tensor], eps: float = 1e-6, num_steps: int = N_STEPS
 ) -> ExpertParams:
@@ -78,7 +85,7 @@ def expert_params(
         wo.append(f(p + "self_attn.o_proj.weight").T.contiguous())
         wug.append(torch.cat([f(p + "mlp.up_proj.weight"), f(p + "mlp.gate_proj.weight")], dim=0).T.contiguous())
         wd.append(f(p + "mlp.down_proj.weight").T.contiguous())
-    ts = [1.0 - i / num_steps for i in range(num_steps + 1)]
+    ts = euler_times(num_steps)
     dts = tuple(ts[i + 1] - ts[i] for i in range(num_steps))
     mods, final = [], []
     for s in range(num_steps):

@@ -14,6 +14,8 @@ refused by name.
 
 from __future__ import annotations
 
+import dataclasses
+import os
 from dataclasses import dataclass
 from typing import Dict, List, Tuple
 
@@ -100,7 +102,7 @@ def alloc_pshape(presets: List[Preset]) -> P.PShape:
 L1_PER_CORE = 1_371_136  # allocatable L1 per core with the 64 KiB worker-L1 cut (memory view `per_bank`)
 L1_OTHER = 12_288  # the persistent L1 besides the caches: noise, the RoPE tables, out (memory view, WP4)
 L1_MIN_FREE = 16_384  # every program keeps >= 16 KB of L1 free (MULTICONFIG gate)
-L1_BANKS = 110  # L1-interleaved buffers spread their pages over the worker cores
+L1_BANKS = P.NCORES  # L1-interleaved buffers spread their pages over every worker core of the device (110 / 120)
 
 
 def kv_l1_bytes(cache_rows: int) -> int:
@@ -135,7 +137,47 @@ def l1_free(presets: List[Preset], kv_in_l1: bool) -> Dict[Tuple[int, int, int],
     return {p.key: L1_PER_CORE - persistent - max(program_cb_bytes(p).values()) for p in presets}
 
 
+# Expert weight-ring depth (MULTICONFIG expert re-partition, 2026-10-04): the 32-row presets with prompts up to 128
+# tokens are weight-streaming-exposed (MK_NO_DRAM gap 0.17-0.44 ms per step; every L224 preset < 0.04), so where the L1
+# allows they get two-layer rings: -0.6 to -4.1 ms per 10-step call on both profiles, outputs bit-identical.
+# PI05_EXPERT_RINGS: "auto" (default) = two layers on the RING2_CLASS presets that keep >= L1_MIN_FREE of L1 with the
+# model's K / V placement; "1" = one-layer rings everywhere (the earlier path, the A / B arm).
+RING_MODE = os.environ.get("PI05_EXPERT_RINGS", "auto")
+if RING_MODE not in ("1", "auto"):
+    raise ValueError(f"PI05_EXPERT_RINGS={RING_MODE!r}: expected 1 or auto")
+# the class boundary: prompt buckets <= RING2_MAX_L (PI05_EXPERT_RING2_MAX_L, 64 or 128; measured: L128 is
+# streaming-exposed (0.23-0.44 ms per step), L224 is not)
+RING2_MAX_L = int(os.environ.get("PI05_EXPERT_RING2_MAX_L", "128"))
+if RING2_MAX_L not in (64, 128):
+    raise ValueError(f"PI05_EXPERT_RING2_MAX_L={RING2_MAX_L}: expected 64 or 128")
+RING2_CLASS = {"prompt_len": tuple(l for l in (32, 64, 128) if l <= RING2_MAX_L), "suffix_rows": (32,)}
+
+
+def _with_rings(p: Preset, layers: int) -> Preset:
+    return dataclasses.replace(p, shape=dataclasses.replace(p.shape, ring_layers=layers))
+
+
+def _choose_rings() -> None:
+    """Upgrade the RING2_CLASS presets to two-layer rings where every program keeps >= L1_MIN_FREE of L1 under the
+    K / V placement their model already has (the upgrade never moves a model's caches to DRAM)."""
+    for c in CAMERAS:
+        for s in SUFFIX_BUCKETS:
+            group = presets_for(c, s)
+            kv_l1 = not kv_in_dram(group)
+            for p in group:
+                if p.prompt_len not in RING2_CLASS["prompt_len"] or s not in RING2_CLASS["suffix_rows"]:
+                    continue
+                trial = [_with_rings(q, 2) if q.key == p.key else q for q in group]
+                if l1_free(trial, kv_l1)[p.key] >= L1_MIN_FREE:
+                    PRESETS[p.key] = _with_rings(p, 2)
+                    group = trial
+
+
 def kv_in_dram(presets: List[Preset]) -> bool:
     """User decision Q3 (K / V in L1 as far as possible) with the lead's fallback (WP4): DRAM caches (+ the row
     multicast) only when some program of the model's presets would keep < 16 KB of L1 free with the caches in L1."""
     return min(l1_free(presets, kv_in_l1=True).values()) < L1_MIN_FREE
+
+
+if RING_MODE == "auto":
+    _choose_rings()

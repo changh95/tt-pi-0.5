@@ -16,26 +16,40 @@ from dataclasses import dataclass
 from typing import Dict, List
 
 from . import geometry as G
+from . import profile
 
 KDIR2 = os.path.join(os.path.dirname(os.path.abspath(__file__)), "kernels_p2")
 PE_DEFS_PATH = os.path.join(KDIR2, "pe_defs.hpp")
 
 
-def parse_pe_defs(path: str = PE_DEFS_PATH) -> Dict[str, int]:
+def parse_pe_defs(path: str = PE_DEFS_PATH, ncol: int = profile.PE_NCOL) -> Dict[str, int]:
+    """Every ``constexpr uint32_t NAME = <int>;`` and grid-dependent ``NAME = NCOL == 11 ? <int> : <int>;`` line, the
+    latter evaluated for an ``ncol``-column grid (NCOL itself is the PE_NCOL define)."""
+    if ncol not in (11, 12):
+        raise ValueError(f"the prefix engine runs on 11 or 12 columns, not {ncol}")
     out: Dict[str, int] = {}
-    pat = re.compile(r"^\s*constexpr\s+uint32_t\s+([A-Z_0-9]+)\s*=\s*([0-9]+)\s*;")
+    lit = re.compile(r"^\s*constexpr\s+uint32_t\s+([A-Z_0-9]+)\s*=\s*([0-9]+)\s*;")
+    tern = re.compile(r"^\s*constexpr\s+uint32_t\s+([A-Z_0-9]+)\s*=\s*NCOL\s*==\s*11\s*\?\s*([0-9]+)\s*:\s*([0-9]+)\s*;")
     with open(path) as f:
         for line in f:
-            m = pat.match(line)
-            if m:
-                if m.group(1) in out:
-                    raise ValueError(f"pe_defs.hpp defines {m.group(1)} twice")
-                out[m.group(1)] = int(m.group(2))
+            m, t = lit.match(line), tern.match(line)
+            if re.match(r"^\s*constexpr\s+uint32_t\s+NCOL\s*=\s*PE_NCOL\s*;", line):
+                name, val = "NCOL", ncol
+            elif m:
+                name, val = m.group(1), int(m.group(2))
+            elif t:
+                name, val = t.group(1), int(t.group(2) if ncol == 11 else t.group(3))
+            else:
+                continue
+            if name in out:
+                raise ValueError(f"pe_defs.hpp defines {name} twice")
+            out[name] = val
     return out
 
 
 PD = parse_pe_defs()
 globals().update(PD)
+PE_GRID = (NCOL, GRID_Y)  # noqa: F821 (parsed)
 
 T16, T8, T32 = 2048, 1088, 4096
 SV_LN1W, SV_LN1B, SV_BQKV, SV_BO, SV_LN2W, SV_LN2B, SV_BFC1, SV_BFC2, SV_N = 0, 36, 72, 216, 252, 288, 324, 460, 496
@@ -69,7 +83,7 @@ class PShape:
         12 (NCG_S, NCG_V) when two rounds are possible, so a row's items stay on one core group."""
         if self.nnorm:
             return self.nnorm
-        return NCORES if self.mt * self.ncg <= NCORES and self.s_m * NCG_S <= NCORES else NCORES // 12 * 12
+        return NCORES if self.mt * self.ncg <= NCORES and self.s_m * NCG_S <= NCORES else (NCORES - 1) // 12 * 12
 
     @property
     def merge_spill(self) -> bool:

@@ -1,0 +1,18 @@
+[2026. 10. 04. (일) 21:36:19 KST] package start (2, verify fix)
+reading the manifest…
+✓ reading the manifest  pi05-base-p150 · tt-dit-server  4.6s
+  • tt-metal c718b5df9 (HEAD) · local source
+  • 2 code path(s) → code/
+  → watch from another terminal:  tail -f
+  /home/deepgadget/.cache/tt-model/build/pi05-base-p150.log
+exporting the image as an OCI layout…
+✓ exporting the image as an OCI layout  23.3s
+  • image/ 3.1 GB as content-addressed blobs
+  ✓ packaged pi05-base-p150 →
+  /home/deepgadget/experiments/tt-models/build/pi05-base-p150
+  → serve it locally:  tt-model serve
+  /home/deepgadget/experiments/tt-models/build/pi05-base-p150/tt_kernel_manife
+  st.json
+  → publish it:        tt-model push
+  /home/deepgadget/experiments/tt-models/build/pi05-base-p150
+[2026. 10. 04. (일) 21:41:57 KST] package rc=0

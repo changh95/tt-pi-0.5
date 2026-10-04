@@ -17,8 +17,8 @@ constexpr uint32_t GRID_ROWS = 10;  // worker grid rows (geometry.GRID[1]): a he
 constexpr uint32_t DH_T = 8;     // head_dim 256 in tiles
 constexpr uint32_t MLP_T = 128;  // mlp_dim 4096 in tiles
 constexpr uint32_t N_LAYERS = 18;
-constexpr uint32_t N_STEPS = 10;  // the most denoising steps (per-step arena slots); a model runs N <= N_STEPS
-constexpr uint32_t N_GEN = 180;   // N_STEPS * N_LAYERS
+constexpr uint32_t N_STEPS = 16;  // the most denoising steps (per-step arena slots); a model runs N <= N_STEPS
+constexpr uint32_t N_GEN = 288;   // N_STEPS * N_LAYERS
 
 // ---------------------------------------------------------------- circular buffers (ids)
 // Every CB exists on every core of the program with the same size, so a CB's base address is identical on every
@@ -214,13 +214,13 @@ constexpr uint32_t C_NOISE = 34;
 constexpr uint32_t C_OUT = 35;
 constexpr uint32_t C_CONSTS = 36;
 constexpr uint32_t C_DEBUG = 37;     // generations run: 18 N for N denoising steps (fewer = debug stop)
-constexpr uint32_t C_W8_ADDR = 38;   // 38..47: per-step w8 arena tensors (the first N used)
-constexpr uint32_t C_W16_ADDR = 48;  // 48..57: per-step w16 arena tensors (also hold the WC streams)
-constexpr uint32_t C_K_ADDR = 58;    // 58..75: per-layer K caches
-constexpr uint32_t C_V_ADDR = 76;    // 76..93: per-layer V caches
-constexpr uint32_t C_DBGOUT = 94;    // debug output: the residual x [S, 1024] after the last generation
-constexpr uint32_t C_DT_BITS = 95;   // Euler dt (-1 / N) as fp32 bits
-constexpr uint32_t N_COMMON_ARGS = 96;
+constexpr uint32_t C_W8_ADDR = 38;    // 38..53: per-step w8 arena tensors (the first N used)
+constexpr uint32_t C_W16_ADDR = 54;   // 54..69: per-step w16 arena tensors (also hold the WC streams)
+constexpr uint32_t C_K_ADDR = 70;     // 70..87: per-layer K caches
+constexpr uint32_t C_V_ADDR = 88;     // 88..105: per-layer V caches
+constexpr uint32_t C_DBGOUT = 106;    // debug output: the residual x [S, 1024] after the last generation
+constexpr uint32_t C_DT_BITS = 107;   // Euler dt (-1 / N) as fp32 bits
+constexpr uint32_t N_COMMON_ARGS = 108;
 
 // ---------------------------------------------------------------- compile-time args (same list on every kernel)
 constexpr uint32_t CT_RT = 0;        // suffix row tiles (2 base / 1 LIBERO)

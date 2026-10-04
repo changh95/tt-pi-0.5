@@ -126,7 +126,7 @@ How the loop computes each step:
 * **Row loop.** With 4 cameras, 64 action rows and >= 64 prompt tokens, one query row per unit would need more than
   the grid's 10 rows of units. A unit is then (head, key chunk) and runs both query rows; its merger takes one row's
   parts at a time and tells the column's units when the next row's slots are free.
-* **Euler step.** The step `x_t += dt * v` runs in fp32 on H0. N (1..10, `num_denoising_steps`) is fixed per model:
+* **Euler step.** The step `x_t += dt * v` runs in fp32 on H0. N (1..16, `num_denoising_steps`) is fixed per model:
   the host folds the adaRMS weights for `t_i = 1 - i / N`, uploads N per-step arenas and passes `ngen = 18 N` and dt
   as runtime args, so every N runs the same binaries.
 

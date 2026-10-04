@@ -351,9 +351,9 @@ import torch, ttnn
 from models.experimental.pi0.common.configs import PI0ModelConfig
 from models.experimental.pi0.common.weight_loader import PI0WeightLoader
 from models.experimental.pi0.tt.ttnn_pi0_model import PI0ModelTTNN
-from models.experimental.pi0.tt.ttnn_pi05_model import PI05_DEVICE_PARAMS
+from models.experimental.pi0.tt.ttnn_pi05_model import open_pi05_device
 
-device = ttnn.open_device(device_id=0, **PI05_DEVICE_PARAMS)  # the 64 KiB worker-L1 cut is required
+device = open_pi05_device(0)  # the profile's dispatch cores and the 64 KiB worker-L1 cut (PI05_DEVICE_PARAMS)
 model = PI0ModelTTNN(PI0ModelConfig(action_horizon=50, pi05=True), PI0WeightLoader("lerobot/pi05_base"), device)
 actions = model.sample_actions(
     images,      # 2 x [1, 3, 224, 224] in [-1, 1]
@@ -369,11 +369,14 @@ The first call compiles the kernels and captures the trace (a few seconds); late
 
 **Supported:**
 
-* batch 1, 1-4 cameras of 224 x 224 (`num_cameras`), 1..10 denoising steps (`num_denoising_steps`);
+* batch 1, 1-4 cameras of 224 x 224 (`num_cameras`), 1..16 denoising steps (`num_denoising_steps`);
 * an action horizon of 1..64 and a right-padded prompt of up to 224 real tokens (each request runs in the smallest of
   the 32 / 64 / 128 / 224-token prompt buckets that holds it; `prompt_bucket=` overrides it);
 * masked cameras are refused: pass only the real cameras (a model built for that count);
-* a single Blackhole chip (11 x 10 worker grid), opened with `PI05_DEVICE_PARAMS`.
+* a single Blackhole chip, opened with `open_pi05_device()` (in pytest: `PI05_DEVICE_PARAMS` as the `device_params` of
+  the device fixture), in one of two profiles chosen with `PI05_DISPATCH`: `eth` (default, "non-scalable": ethernet
+  dispatch, 12 x 10 workers; needs a tt-metal runtime with Blackhole ethernet dispatch, PR #57142) or `tensix`
+  ("scalable": Tensix dispatch, 11 x 10 workers, any runtime).
 
 Anything else (another batch size, camera count, horizon, prompt length or step count, a device without the
 worker-L1 cut, a mesh) raises an error that names the reason.

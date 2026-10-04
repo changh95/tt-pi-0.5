@@ -1,0 +1,746 @@
+{
+ "n": 100,
+ "warmup": 5,
+ "request": {
+  "prompt": "pick up the cube",
+  "state": [
+   0.1,
+   -0.2,
+   0.3,
+   0,
+   0,
+   0,
+   0.5,
+   -0.5
+  ],
+  "images": "media/sample_base.png, media/sample_wrist.png"
+ },
+ "stats": {
+  "preprocess": {
+   "median": 1.25,
+   "p10": 1.13,
+   "p90": 1.57,
+   "min": 1.08,
+   "max": 3.54
+  },
+  "inference": {
+   "median": 56.5,
+   "p10": 56.32,
+   "p90": 56.71,
+   "min": 56.18,
+   "max": 57.01
+  },
+  "total": {
+   "median": 57.71,
+   "p10": 57.47,
+   "p90": 58.28,
+   "min": 57.34,
+   "max": 60.33
+  },
+  "client_wall": {
+   "median": 59.38,
+   "p10": 58.87,
+   "p90": 60.31,
+   "min": 58.72,
+   "max": 62.04
+  }
+ },
+ "identical_actions_all": true,
+ "first_response": {
+  "action_horizon": 50,
+  "action_dim": 32,
+  "normalized": true,
+  "denoising_steps": 10,
+  "prompt": "Task: pick up the cube, State: 140 102 166 128 128 128 192 64 128 128 128 128 128 128 128 128 128 128 128 128 128 128 128 128 128 128 128 128 128 128 128 128;\nAction: ",
+  "num_tokens": 142,
+  "token_len": 224,
+  "prompt_bucket": 224,
+  "prompt_truncated": false,
+  "images_used": 2,
+  "images_padded": 0,
+  "original_sizes": [
+   [
+    224,
+    224
+   ],
+   [
+    224,
+    224
+   ]
+  ],
+  "image_size": [
+   224,
+   224
+  ],
+  "seed": null,
+  "batched_as": 1,
+  "timing_ms": {
+   "preprocess": 16.86,
+   "inference": 57.59,
+   "total": 74.45
+  },
+  "actions_head": [
+   [
+    -0.064,
+    -0.1553,
+    0.2969,
+    0.0991,
+    -0.043,
+    0.0879,
+    0.4102,
+    -0.4961
+   ]
+  ]
+ },
+ "rows": [
+  {
+   "preprocess": 1.15,
+   "inference": 56.39,
+   "total": 57.54,
+   "client_wall": 59.266327996738255
+  },
+  {
+   "preprocess": 1.98,
+   "inference": 57.01,
+   "total": 58.99,
+   "client_wall": 60.82844594493508
+  },
+  {
+   "preprocess": 1.47,
+   "inference": 56.51,
+   "total": 57.98,
+   "client_wall": 59.944472974166274
+  },
+  {
+   "preprocess": 1.27,
+   "inference": 56.41,
+   "total": 57.68,
+   "client_wall": 59.26737003028393
+  },
+  {
+   "preprocess": 1.16,
+   "inference": 56.27,
+   "total": 57.42,
+   "client_wall": 58.816462056711316
+  },
+  {
+   "preprocess": 1.12,
+   "inference": 56.35,
+   "total": 57.46,
+   "client_wall": 58.75384493265301
+  },
+  {
+   "preprocess": 1.17,
+   "inference": 56.45,
+   "total": 57.62,
+   "client_wall": 59.16951596736908
+  },
+  {
+   "preprocess": 1.09,
+   "inference": 56.4,
+   "total": 57.49,
+   "client_wall": 58.831159956753254
+  },
+  {
+   "preprocess": 1.19,
+   "inference": 56.59,
+   "total": 57.78,
+   "client_wall": 59.20724698808044
+  },
+  {
+   "preprocess": 1.12,
+   "inference": 56.32,
+   "total": 57.44,
+   "client_wall": 58.83874499704689
+  },
+  {
+   "preprocess": 1.09,
+   "inference": 56.64,
+   "total": 57.74,
+   "client_wall": 59.03472192585468
+  },
+  {
+   "preprocess": 1.16,
+   "inference": 56.55,
+   "total": 57.71,
+   "client_wall": 59.02588600292802
+  },
+  {
+   "preprocess": 1.13,
+   "inference": 56.52,
+   "total": 57.65,
+   "client_wall": 58.83617897052318
+  },
+  {
+   "preprocess": 1.16,
+   "inference": 56.56,
+   "total": 57.71,
+   "client_wall": 58.90480906236917
+  },
+  {
+   "preprocess": 1.25,
+   "inference": 56.61,
+   "total": 57.85,
+   "client_wall": 59.81436907313764
+  },
+  {
+   "preprocess": 1.5,
+   "inference": 56.79,
+   "total": 58.29,
+   "client_wall": 60.39215496275574
+  },
+  {
+   "preprocess": 1.43,
+   "inference": 56.61,
+   "total": 58.04,
+   "client_wall": 59.88306796643883
+  },
+  {
+   "preprocess": 1.59,
+   "inference": 56.69,
+   "total": 58.28,
+   "client_wall": 60.04442099947482
+  },
+  {
+   "preprocess": 1.78,
+   "inference": 56.49,
+   "total": 58.27,
+   "client_wall": 59.71930001396686
+  },
+  {
+   "preprocess": 1.35,
+   "inference": 56.65,
+   "total": 57.99,
+   "client_wall": 60.01075799576938
+  },
+  {
+   "preprocess": 1.59,
+   "inference": 56.51,
+   "total": 58.1,
+   "client_wall": 60.267401044256985
+  },
+  {
+   "preprocess": 1.28,
+   "inference": 56.97,
+   "total": 58.25,
+   "client_wall": 60.30624406412244
+  },
+  {
+   "preprocess": 1.72,
+   "inference": 56.68,
+   "total": 58.4,
+   "client_wall": 60.197749990038574
+  },
+  {
+   "preprocess": 1.41,
+   "inference": 56.32,
+   "total": 57.73,
+   "client_wall": 59.1974490089342
+  },
+  {
+   "preprocess": 1.21,
+   "inference": 56.46,
+   "total": 57.67,
+   "client_wall": 59.243395924568176
+  },
+  {
+   "preprocess": 1.16,
+   "inference": 56.36,
+   "total": 57.52,
+   "client_wall": 58.95457195583731
+  },
+  {
+   "preprocess": 1.2,
+   "inference": 56.43,
+   "total": 57.63,
+   "client_wall": 59.1974490089342
+  },
+  {
+   "preprocess": 1.19,
+   "inference": 56.38,
+   "total": 57.56,
+   "client_wall": 59.82336506713182
+  },
+  {
+   "preprocess": 1.24,
+   "inference": 56.33,
+   "total": 57.57,
+   "client_wall": 58.96983097773045
+  },
+  {
+   "preprocess": 1.17,
+   "inference": 56.48,
+   "total": 57.65,
+   "client_wall": 59.08757192082703
+  },
+  {
+   "preprocess": 1.13,
+   "inference": 56.35,
+   "total": 57.48,
+   "client_wall": 58.87489207088947
+  },
+  {
+   "preprocess": 1.23,
+   "inference": 56.48,
+   "total": 57.71,
+   "client_wall": 59.32705197483301
+  },
+  {
+   "preprocess": 1.24,
+   "inference": 56.47,
+   "total": 57.71,
+   "client_wall": 59.27491409238428
+  },
+  {
+   "preprocess": 1.24,
+   "inference": 56.48,
+   "total": 57.71,
+   "client_wall": 59.28760801907629
+  },
+  {
+   "preprocess": 1.2,
+   "inference": 56.34,
+   "total": 57.54,
+   "client_wall": 58.94980300217867
+  },
+  {
+   "preprocess": 1.19,
+   "inference": 56.68,
+   "total": 57.87,
+   "client_wall": 59.69217896927148
+  },
+  {
+   "preprocess": 1.15,
+   "inference": 56.38,
+   "total": 57.53,
+   "client_wall": 59.04954008292407
+  },
+  {
+   "preprocess": 1.22,
+   "inference": 56.42,
+   "total": 57.64,
+   "client_wall": 59.77213999722153
+  },
+  {
+   "preprocess": 1.19,
+   "inference": 56.28,
+   "total": 57.47,
+   "client_wall": 59.04845905024558
+  },
+  {
+   "preprocess": 1.15,
+   "inference": 56.33,
+   "total": 57.48,
+   "client_wall": 59.9656020058319
+  },
+  {
+   "preprocess": 1.16,
+   "inference": 56.5,
+   "total": 57.65,
+   "client_wall": 59.120333986356854
+  },
+  {
+   "preprocess": 1.16,
+   "inference": 56.23,
+   "total": 57.39,
+   "client_wall": 58.72498999815434
+  },
+  {
+   "preprocess": 1.16,
+   "inference": 56.31,
+   "total": 57.47,
+   "client_wall": 59.80009201448411
+  },
+  {
+   "preprocess": 1.14,
+   "inference": 56.23,
+   "total": 57.37,
+   "client_wall": 58.963399031199515
+  },
+  {
+   "preprocess": 1.12,
+   "inference": 56.25,
+   "total": 57.38,
+   "client_wall": 58.80899797193706
+  },
+  {
+   "preprocess": 1.09,
+   "inference": 56.58,
+   "total": 57.66,
+   "client_wall": 59.531707083806396
+  },
+  {
+   "preprocess": 1.65,
+   "inference": 56.68,
+   "total": 58.33,
+   "client_wall": 60.16926595475525
+  },
+  {
+   "preprocess": 1.42,
+   "inference": 56.57,
+   "total": 57.99,
+   "client_wall": 59.64121303986758
+  },
+  {
+   "preprocess": 1.34,
+   "inference": 56.61,
+   "total": 57.95,
+   "client_wall": 61.795384041033685
+  },
+  {
+   "preprocess": 1.59,
+   "inference": 56.83,
+   "total": 58.42,
+   "client_wall": 60.970060992985964
+  },
+  {
+   "preprocess": 1.26,
+   "inference": 56.59,
+   "total": 57.85,
+   "client_wall": 59.69623604323715
+  },
+  {
+   "preprocess": 1.22,
+   "inference": 56.57,
+   "total": 57.78,
+   "client_wall": 59.78723801672459
+  },
+  {
+   "preprocess": 1.49,
+   "inference": 56.51,
+   "total": 58.0,
+   "client_wall": 59.266579104587436
+  },
+  {
+   "preprocess": 1.34,
+   "inference": 56.45,
+   "total": 57.79,
+   "client_wall": 59.244897100143135
+  },
+  {
+   "preprocess": 1.25,
+   "inference": 56.43,
+   "total": 57.68,
+   "client_wall": 59.052395983599126
+  },
+  {
+   "preprocess": 1.25,
+   "inference": 56.38,
+   "total": 57.64,
+   "client_wall": 59.06086205504835
+  },
+  {
+   "preprocess": 1.21,
+   "inference": 56.43,
+   "total": 57.64,
+   "client_wall": 59.065982000902295
+  },
+  {
+   "preprocess": 1.24,
+   "inference": 56.76,
+   "total": 58.01,
+   "client_wall": 59.631625073961914
+  },
+  {
+   "preprocess": 1.62,
+   "inference": 56.77,
+   "total": 58.4,
+   "client_wall": 60.4263300774619
+  },
+  {
+   "preprocess": 1.51,
+   "inference": 56.75,
+   "total": 58.26,
+   "client_wall": 60.222917003557086
+  },
+  {
+   "preprocess": 1.57,
+   "inference": 56.71,
+   "total": 58.28,
+   "client_wall": 60.137816006317735
+  },
+  {
+   "preprocess": 1.55,
+   "inference": 56.63,
+   "total": 58.18,
+   "client_wall": 59.81049104593694
+  },
+  {
+   "preprocess": 1.25,
+   "inference": 56.51,
+   "total": 57.76,
+   "client_wall": 59.19889104552567
+  },
+  {
+   "preprocess": 1.39,
+   "inference": 56.68,
+   "total": 58.08,
+   "client_wall": 59.705383027903736
+  },
+  {
+   "preprocess": 1.56,
+   "inference": 56.87,
+   "total": 58.43,
+   "client_wall": 60.35460392013192
+  },
+  {
+   "preprocess": 1.57,
+   "inference": 56.59,
+   "total": 58.16,
+   "client_wall": 59.863940929062665
+  },
+  {
+   "preprocess": 1.34,
+   "inference": 56.62,
+   "total": 57.96,
+   "client_wall": 60.25187100749463
+  },
+  {
+   "preprocess": 1.56,
+   "inference": 56.64,
+   "total": 58.2,
+   "client_wall": 60.03377109300345
+  },
+  {
+   "preprocess": 1.36,
+   "inference": 56.52,
+   "total": 57.88,
+   "client_wall": 59.39062207471579
+  },
+  {
+   "preprocess": 1.3,
+   "inference": 56.44,
+   "total": 57.73,
+   "client_wall": 59.259615954943
+  },
+  {
+   "preprocess": 1.22,
+   "inference": 56.42,
+   "total": 57.64,
+   "client_wall": 59.39032102469355
+  },
+  {
+   "preprocess": 1.35,
+   "inference": 56.57,
+   "total": 57.92,
+   "client_wall": 60.28786802198738
+  },
+  {
+   "preprocess": 1.19,
+   "inference": 56.4,
+   "total": 57.59,
+   "client_wall": 59.14973805192858
+  },
+  {
+   "preprocess": 1.33,
+   "inference": 56.42,
+   "total": 57.75,
+   "client_wall": 59.369462076574564
+  },
+  {
+   "preprocess": 1.19,
+   "inference": 56.4,
+   "total": 57.6,
+   "client_wall": 59.238084009848535
+  },
+  {
+   "preprocess": 1.26,
+   "inference": 56.36,
+   "total": 57.62,
+   "client_wall": 59.28988195955753
+  },
+  {
+   "preprocess": 1.13,
+   "inference": 56.27,
+   "total": 57.41,
+   "client_wall": 58.89327696058899
+  },
+  {
+   "preprocess": 1.16,
+   "inference": 56.18,
+   "total": 57.34,
+   "client_wall": 60.0157369626686
+  },
+  {
+   "preprocess": 1.13,
+   "inference": 56.36,
+   "total": 57.49,
+   "client_wall": 58.85559506714344
+  },
+  {
+   "preprocess": 1.08,
+   "inference": 56.35,
+   "total": 57.44,
+   "client_wall": 58.928401907905936
+  },
+  {
+   "preprocess": 1.16,
+   "inference": 56.35,
+   "total": 57.51,
+   "client_wall": 59.1906460467726
+  },
+  {
+   "preprocess": 1.4,
+   "inference": 56.5,
+   "total": 57.9,
+   "client_wall": 59.529191930778325
+  },
+  {
+   "preprocess": 1.18,
+   "inference": 56.42,
+   "total": 57.59,
+   "client_wall": 59.95225801598281
+  },
+  {
+   "preprocess": 1.24,
+   "inference": 56.44,
+   "total": 57.68,
+   "client_wall": 59.263853006996214
+  },
+  {
+   "preprocess": 1.53,
+   "inference": 56.52,
+   "total": 58.06,
+   "client_wall": 59.80056198313832
+  },
+  {
+   "preprocess": 1.19,
+   "inference": 56.49,
+   "total": 57.68,
+   "client_wall": 59.45027293637395
+  },
+  {
+   "preprocess": 1.27,
+   "inference": 56.35,
+   "total": 57.61,
+   "client_wall": 59.070570045150816
+  },
+  {
+   "preprocess": 1.25,
+   "inference": 56.43,
+   "total": 57.68,
+   "client_wall": 59.23549993894994
+  },
+  {
+   "preprocess": 1.33,
+   "inference": 56.61,
+   "total": 57.95,
+   "client_wall": 59.50186098925769
+  },
+  {
+   "preprocess": 3.54,
+   "inference": 56.79,
+   "total": 60.33,
+   "client_wall": 62.038209987804294
+  },
+  {
+   "preprocess": 1.28,
+   "inference": 56.36,
+   "total": 57.64,
+   "client_wall": 59.31208305992186
+  },
+  {
+   "preprocess": 1.15,
+   "inference": 56.56,
+   "total": 57.71,
+   "client_wall": 59.39176399260759
+  },
+  {
+   "preprocess": 1.42,
+   "inference": 56.52,
+   "total": 57.94,
+   "client_wall": 60.3936369298026
+  },
+  {
+   "preprocess": 1.15,
+   "inference": 56.45,
+   "total": 57.6,
+   "client_wall": 58.77064599189907
+  },
+  {
+   "preprocess": 1.18,
+   "inference": 56.5,
+   "total": 57.68,
+   "client_wall": 59.208038030192256
+  },
+  {
+   "preprocess": 1.35,
+   "inference": 56.56,
+   "total": 57.91,
+   "client_wall": 59.86067501362413
+  },
+  {
+   "preprocess": 1.69,
+   "inference": 56.75,
+   "total": 58.43,
+   "client_wall": 60.410187928937376
+  },
+  {
+   "preprocess": 1.31,
+   "inference": 56.59,
+   "total": 57.9,
+   "client_wall": 61.82451802305877
+  },
+  {
+   "preprocess": 1.54,
+   "inference": 56.67,
+   "total": 58.21,
+   "client_wall": 59.98044100124389
+  },
+  {
+   "preprocess": 1.38,
+   "inference": 56.66,
+   "total": 58.04,
+   "client_wall": 59.85080695245415
+  }
+ ],
+ "time": "2026-10-05 01:36:08",
+ "info_profile": {
+  "name": "scalable",
+  "dispatch": "tensix",
+  "grid": [
+   11,
+   10
+  ]
+ },
+ "host_load": {
+  "before": {
+   "loadavg": [
+    "3.33",
+    "2.82",
+    "3.55"
+   ],
+   "ncpu": 32,
+   "time": "01:36:02",
+   "top_cpu": [
+    " 536      43 python          python -m uvicorn --host 0.0.0.0 --port 20000 --lifespan on models.experimental.pi0_5.server.app:app",
+    " 4.4  275457 claude          claude --dangerously-skip-permissions",
+    " 2.0  128430 Isolated Web Co /snap/firefox/8995/usr/lib/firefox/firefox -contentproc -isForBrowser -prefsHandle 0:52264 -prefMapHandle 1:296804 -jsInitHandle 2:",
+    " 0.5  275470 gnome-terminal- /usr/libexec/gnome-terminal-server",
+    " 0.4  275479 Xorg            /usr/lib/xorg/Xorg vt2 -displayfd 3 -auth /run/user/1000/gdm/Xauthority -nolisten tcp -background none -noreset -keeptty -novtswitc",
+    " 0.3  128447 firefox         /snap/firefox/8995/usr/lib/firefox/firefox",
+    " 0.2  626885 kcompactd0      [kcompactd0]",
+    " 0.2  626852 teamviewerd     /opt/teamviewer/tv_bin/teamviewerd -d"
+   ]
+  },
+  "after": {
+   "loadavg": [
+    "3.14",
+    "2.79",
+    "3.53"
+   ],
+   "ncpu": 32,
+   "time": "01:36:08",
+   "top_cpu": [
+    " 489      50 python          python -m uvicorn --host 0.0.0.0 --port 20000 --lifespan on models.experimental.pi0_5.server.app:app",
+    " 4.4  275464 claude          claude --dangerously-skip-permissions",
+    " 2.0  128437 Isolated Web Co /snap/firefox/8995/usr/lib/firefox/firefox -contentproc -isForBrowser -prefsHandle 0:52264 -prefMapHandle 1:296804 -jsInitHandle 2:",
+    " 1.1       7 python3         /usr/bin/python3 /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/pubmc/n16/benc",
+    " 0.5  275477 gnome-terminal- /usr/libexec/gnome-terminal-server",
+    " 0.4  275486 Xorg            /usr/lib/xorg/Xorg vt2 -displayfd 3 -auth /run/user/1000/gdm/Xauthority -nolisten tcp -background none -noreset -keeptty -novtswitc",
+    " 0.3  128454 firefox         /snap/firefox/8995/usr/lib/firefox/firefox",
+    " 0.2  626892 kcompactd0      [kcompactd0]"
+   ]
+  }
+ }
+}

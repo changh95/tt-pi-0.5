@@ -129,13 +129,17 @@ def test_shape_contract_and_step_refusal(expect_error):
     assert G.shape_for(736, 64).name == "base" and G.shape_for(544, 32).name == "libero"
     with expect_error(RuntimeError, "no program for prefix 768"):
         G.shape_for(768, 64)
-    assert G.N_STEPS == 10
-    for n in range(1, 11):
+    assert G.N_STEPS == 16
+    for n in range(1, 17):
         assert G.megakernel_refusal(n) is None
-    for n in (0, 11, 20):
-        assert "runs 1..10 denoising steps" in G.megakernel_refusal(n)
+    for n in (0, 17, 20):
+        assert "runs 1..16 denoising steps" in G.megakernel_refusal(n)
     for h in (1, 10, 32, 33, 50, 64):
         assert G.megakernel_refusal(10, h) is None
+    # one Euler dt per schedule (program.py refuses more): openpi's float64 times round every step to fp32(-1 / N)
+    for n in range(1, G.N_STEPS + 1):
+        ts = hm.euler_times(n)
+        assert {G.f32_bits(ts[i + 1] - ts[i]) for i in range(n)} == {G.f32_bits(-1.0 / n)}, n
     for h in (0, 65, 100):
         assert "1..64 action rows" in G.megakernel_refusal(10, h)
 
@@ -181,7 +185,7 @@ def _synthetic_expert_params(seed: int = 0, n_steps: int = hm.N_STEPS) -> hm.Exp
     )
 
 
-@pytest.mark.parametrize("name, n_steps", [("base", 10), ("libero", 10), ("base", 1), ("libero", 5)])
+@pytest.mark.parametrize("name, n_steps", [("base", 10), ("libero", 10), ("base", 1), ("libero", 5), ("libero", 16)])
 def test_expert_decomposition_equals_reference_loop(name, n_steps):
     """host_model.loop_decomposed (the kernel's folds, chunked flash parts + diag merge, 2-D MLP, K-split reduce)
     equals loop_reference (plain fp32 formulas) over the whole N x 18 loop, with a padded prompt. Positive control:
@@ -610,9 +614,12 @@ def test_preset_prefix_ops(key):
     assert ps.mt // ps.rv == {1: 2, 2: 3, 3: 4, 4: 5}[p.cameras]
     # the VLM attention merge spills its weights only at 7 parts (c4 L224: ptv 39)
     assert ps.merge_spill == (ps.v_np == 7) == (p.key[:2] == (4, 224))
-    # the expert row loop exactly where one query row per unit cannot fit the grid's rows (c4 S64, L >= 64)
-    assert p.shape.row_loop == (p.cameras == 4 and p.suffix_rows == 64 and p.prompt_len >= 64)
-    assert p.shape.nu <= G.GRID[1] and p.shape.nch <= 6 and p.shape.chunk_tiles <= 7
+    # the expert row loop exactly where one query row per unit cannot fit the grid's rows with chunks of <= 7 key tiles
+    # (c4 S64, L >= 64); PI05_EXPERT_SUBCHUNK=auto gives those presets two-pass chunks of 8 / 9 tiles instead
+    c4_s64 = p.cameras == 4 and p.suffix_rows == 64 and p.prompt_len >= 64
+    assert p.shape.row_loop == (c4_s64 and G.SUBCHUNK_MODE == "0")
+    assert p.shape.nu <= G.GRID[1] and p.shape.nch <= 6
+    assert p.shape.chunk_tiles <= (G.MAX_CHT if c4_s64 else 7)
     G.check_roles(p.shape)
 
 
@@ -764,8 +771,10 @@ def test_extra_defines_override_production():
 
     vis = prog(PP.VISION_OPS, [])
     cg = [("PE_NO_EXPERT", "1"), ("PE_ATT_FLAT", "2")]
-    assert vis.defines(7) == [("PE_CT0", "7"), ("MK_FID8_HIFI2", "1")] + cg + [("PE_MM_FID", "3"), ("PE_ATT_FID", "3")]
-    assert prog(PP.PREFIX_OPS, []).defines(7) == [("PE_CT0", "7"), ("MK_FID8_HIFI2", "1")] + cg + [("PE_ATT_FID", "3")]
+    grid = [("PE_NCOL", "12")] if P.NCOL == 12 else []  # the 11-column build keeps its exact define list
+    head = [("PE_CT0", "7"), ("MK_FID8_HIFI2", "1")] + cg
+    assert vis.defines(7) == head + [("PE_MM_FID", "3"), ("PE_ATT_FID", "3")] + grid
+    assert prog(PP.PREFIX_OPS, []).defines(7) == head + [("PE_ATT_FID", "3")] + grid
     d = prog(PP.VISION_OPS, [("PE_MM_FID", "2"), ("PE_ATT_FID", "2")]).defines(7)
     names = [k for k, _ in d]
     assert len(names) == len(set(names)) and dict(d)["PE_MM_FID"] == "2" and dict(d)["PE_ATT_FID"] == "2"
@@ -783,7 +792,7 @@ def test_device_refusals(monkeypatch):
     from models.experimental.pi0.tt import ttnn_pi05_model as TM
 
     class FakeDevice:
-        def __init__(self, n=1, grid=(11, 10)):
+        def __init__(self, n=1, grid=P.PE_GRID):
             self.n, self.grid = n, grid
 
         def get_num_devices(self):
@@ -803,11 +812,273 @@ def test_device_refusals(monkeypatch):
     monkeypatch.setattr(TM.ttnn, "get_memory_view", memory_view(cut))
     assert TM.PI05MegakernelTTNN.device_refusal(FakeDevice()) is None
     assert "single chip" in TM.PI05MegakernelTTNN.device_refusal(FakeDevice(n=4))
-    assert "core grid" in TM.PI05MegakernelTTNN.device_refusal(FakeDevice(grid=(8, 8)))
+    assert "worker grid" in TM.PI05MegakernelTTNN.device_refusal(FakeDevice(grid=(8, 8)))
+    other = (12, 10) if P.PE_GRID == (11, 10) else (11, 10)  # the other profile's grid is refused by name
+    assert "PI05_DISPATCH" in TM.PI05MegakernelTTNN.device_refusal(FakeDevice(grid=other))
     monkeypatch.setattr(TM.ttnn, "get_memory_view", memory_view(cut + 65_536))
     assert "worker-L1 cut" in TM.PI05MegakernelTTNN.device_refusal(FakeDevice())
     monkeypatch.setattr(TM.ttnn.device, "is_blackhole", lambda _d: False)
     assert "Blackhole only" in TM.PI05MegakernelTTNN.device_refusal(FakeDevice())
+
+
+_PROFILE_PROBE = """
+import json
+from models.experimental.pi0.tt.megakernel import pe_geometry as P, presets as PS, profile
+for p in PS.PRESETS.values():
+    P.check_ops(p.pshape)
+print(json.dumps({"name": profile.NAME, "grid": P.PE_GRID, "ncores": P.NCORES, "hub": [P.HUB_X, P.HUB_Y],
+                  "kvf": P.KVF_X0, "src_kv": P.PS_SRC_KV, "kv_val0": P.PS_KV_VAL0, "words": P.PS_WORDS,
+                  "nocx_end": P.PA_NOCX0 + P.NCOL, "brisc_n": P.PA_BRISC_N, "pa_n": P.PA_N, "banks": PS.L1_BANKS,
+                  "norm": sorted({p.pshape.norm_cores for p in PS.PRESETS.values()})}))
+"""
+
+
+@pytest.mark.parametrize("dispatch", ["tensix", "eth"])
+def test_profile_grid_constants(dispatch):
+    """The two device profiles (PI05_DISPATCH, megakernel/profile.py) in a fresh interpreter each: the prefix engine's
+    grid constants (pe_defs.hpp `NCOL == 11 ? a : b` lines), the sync-word / common-arg layouts without overlaps, the
+    L1 banks, the norm core counts (a multiple of 12 below NCORES for two rounds) and every preset's op checks."""
+    import json
+    import subprocess
+    import sys
+
+    env = dict(os.environ, PI05_DISPATCH=dispatch)
+    r = subprocess.run([sys.executable, "-c", _PROFILE_PROBE], env=env, capture_output=True, text=True, timeout=600)
+    assert r.returncode == 0, r.stderr[-2000:]
+    d = json.loads(r.stdout.strip().splitlines()[-1])
+    if dispatch == "tensix":  # the scalable profile keeps the 11 x 10 layout of every earlier release
+        assert d == {"name": "scalable", "grid": [11, 10], "ncores": 110, "hub": [10, 9], "kvf": 7, "src_kv": 35,
+                     "kv_val0": 36, "words": 73, "nocx_end": 153, "brisc_n": 153, "pa_n": 216, "banks": 110,
+                     "norm": [108, 110]}
+    else:
+        assert d["name"] == "non-scalable" and d["grid"] == [12, 10] and d["ncores"] == 120 and d["hub"] == [11, 9]
+        assert d["kvf"] == 8 and d["banks"] == 120 and set(d["norm"]) <= {108, 120}
+        # 12 in0 credit words 24..35, then the K / V words past PS_KVX (72): no overlap, all zeroed at boot
+        assert d["src_kv"] == 73 and d["kv_val0"] == 74 and d["words"] == 78
+        assert d["nocx_end"] == d["brisc_n"] == 154 and d["pa_n"] == 217
+
+
+_RINGS_PROBE = """
+import json
+from models.experimental.pi0.tt.megakernel import geometry as G, presets as PS
+out = {}
+for c in PS.CAMERAS:
+    for s in PS.SUFFIX_BUCKETS:
+        g = PS.presets_for(c, s)
+        kd = PS.kv_in_dram(g)
+        fr = PS.l1_free(g, not kd)
+        for p in g:
+            w = {cb.cb_id: cb.pages for cb in G.cb_table(p.shape)}
+            out["%d,%d,%d" % p.key] = [p.shape.ring_layers, kd, fr[p.key], w[G.CB_W8], w[G.CB_W16]]
+print(json.dumps(out))
+"""
+
+
+def test_expert_ring_depth_choice():
+    """PI05_EXPERT_RINGS (presets.py): '1' keeps one-layer weight rings everywhere (the earlier path); 'auto' (default)
+    gives the 32-row presets with prompts <= 128 tokens two-layer rings where every program keeps >= 16 KB of L1, never
+    moving a model's K / V caches to DRAM; ring capacities stay multiples of the 8-page / 16-page chunks the TRISC
+    waits for."""
+    import json
+    import subprocess
+    import sys
+
+    def probe(mode):
+        env = dict(os.environ, PI05_EXPERT_RINGS=mode)
+        r = subprocess.run([sys.executable, "-c", _RINGS_PROBE], env=env, capture_output=True, text=True, timeout=600)
+        assert r.returncode == 0, r.stderr[-2000:]
+        return json.loads(r.stdout.strip().splitlines()[-1])
+
+    one, auto = probe("1"), probe("auto")
+    assert all(v[0] == 1 and v[3] == 128 and v[4] == 64 for v in one.values())
+    two = sorted(k for k, v in auto.items() if v[0] == 2)
+    assert two == sorted(f"{c},{l},32" for c in (1, 2, 3, 4) for l in (32, 64, 128)), two
+    for k, v in auto.items():
+        assert v[1] == one[k][1], k  # the K / V placement of every model is unchanged
+        assert v[2] >= PS.L1_MIN_FREE, k
+        assert v[3] == 128 * v[0] and v[4] == 64 * v[0] and v[3] % 64 == 0 and v[4] % 64 == 0, k
+
+
+_SUBCHUNK_PROBE = """
+import json
+from models.experimental.pi0.tt.megakernel import geometry as G, presets as PS
+out = {}
+for c in PS.CAMERAS:
+    for s in PS.SUFFIX_BUCKETS:
+        g = PS.presets_for(c, s)
+        kd = PS.kv_in_dram(g)
+        fr = PS.l1_free(g, not kd)
+        for p in g:
+            sh = p.shape
+            out["%d,%d,%d" % p.key] = [sh.chunk_tiles, sh.nch, sh.pt, sh.row_loop, sh.nu, kd, fr[p.key], p.cache_rows]
+print(json.dumps(out))
+"""
+
+
+def test_expert_subchunk_choice():
+    """PI05_EXPERT_SUBCHUNK (geometry.py): '0' keeps chunks <= 7 key tiles (the row loop at c = 4, 64 rows); 'auto'
+    lets a unit hold up to 14 (two DST passes), which changes exactly the three row-loop presets to NCH 5 x one row
+    per unit, with the model's K / V placement and L1 free unchanged and the caches sized for the wider chunking."""
+    import json
+    import subprocess
+    import sys
+
+    def probe(mode):
+        env = dict(os.environ, PI05_EXPERT_SUBCHUNK=mode)
+        r = subprocess.run([sys.executable, "-c", _SUBCHUNK_PROBE], env=env, capture_output=True, text=True, timeout=600)
+        assert r.returncode == 0, r.stderr[-2000:]
+        return json.loads(r.stdout.strip().splitlines()[-1])
+
+    off, auto = probe("0"), probe("auto")
+    rl = sorted(k for k, v in off.items() if v[3])
+    assert rl == ["4,128,64", "4,224,64", "4,64,64"], rl
+    assert sorted(k for k in off if off[k] != auto[k]) == rl
+    assert {k: auto[k][:5] for k in rl} == {
+        "4,64,64": [8, 5, 38, False, 10],
+        "4,128,64": [8, 5, 38, False, 10],
+        "4,224,64": [9, 5, 43, False, 10],
+    }
+    for k in rl:
+        assert auto[k][5:7] == off[k][5:7], k  # K / V placement and L1 free
+        assert auto[k][7] >= (auto[k][2] + 2) * 32, k  # the caches hold every (padded) key row the expert reads
+
+
+def test_wide_chunk_keys_are_exact():
+    """The c = 4, L224, 64-row chunking under PI05_EXPERT_SUBCHUNK=auto (CHT 9 x NCH 5, 43 padded prefix key tiles over
+    finite junk rows) equals the unpadded reference loop."""
+    p = PS.PRESETS[(4, 224, 64)]
+    cht, prefix_keys = 9, 43 * 32
+    S, Hn = p.suffix_rows, 50
+    params = _synthetic_expert_params(n_steps=2)
+    g = torch.Generator().manual_seed(5)
+    n = p.prefix_len
+    kv = [(torch.randn(n, hm.DH, generator=g), torch.randn(n, hm.DH, generator=g)) for _ in range(hm.N_LAYERS)]
+    junk = [(torch.randn(prefix_keys - n, hm.DH, generator=g) * 3,) * 2 for _ in range(hm.N_LAYERS)]
+    kvp = [(torch.cat([k, j[0]]), torch.cat([v, j[1]])) for (k, v), j in zip(kv, junk)]
+    valid = torch.ones(1, n, dtype=torch.bool)
+    valid[0, n - 40 :] = False
+    rope = torch.ones(4096, 256) * 0.5
+    att = ph.attention_inputs(valid, ph.kv_cache_plan(n, Hn), rope, rope, 1.0 / 16, prefix_keys=prefix_keys)
+    att0 = ph.attention_inputs(valid, ph.kv_cache_plan(n, Hn), rope, rope, 1.0 / 16)
+    noise = torch.zeros(S, 32)
+    noise[:Hn] = torch.randn(Hn, 32, generator=g)
+    ref = hm.loop_reference(params, kv, hm.attn_inputs_from(att0), noise)[:Hn]
+    dec = hm.loop_decomposed(params, kvp, hm.attn_inputs_from(att), noise, cht)[:Hn]
+    assert (n + S) // 32 + (prefix_keys - n) // 32 == 9 * 5
+    assert hm.pcc(ref, dec) > 0.999999 and float((ref - dec).abs().max() / ref.abs().max()) < 1e-4
+
+
+_OPEN_PROBE = """
+import json, re
+import ttnn
+accepted = set(re.findall(r"(\\w+):", ttnn.open_device.__doc__.strip().splitlines()[0]))  # the nanobind signature
+calls = []
+
+
+class FakeDispatchCoreConfig:  # the real one opens the cluster: never on a host test
+    def __init__(self, core_type):
+        self.core_type = core_type
+
+
+def fake_open_device(**kw):
+    bad = sorted(set(kw) - accepted)
+    if bad:
+        raise TypeError("open_device(): incompatible function arguments: " + ", ".join(bad))
+    calls.append(sorted(kw))
+    return "device"
+
+
+ttnn.DispatchCoreConfig, ttnn.open_device = FakeDispatchCoreConfig, fake_open_device
+from models.experimental.pi0.tt import ttnn_pi05_model as TM
+
+assert TM.open_pi05_device(0) == "device"
+try:
+    ttnn.open_device(device_id=0, **TM.PI05_DEVICE_PARAMS)
+    raw = "ok"
+except TypeError:
+    raw = "TypeError"
+print(json.dumps({"accepted": sorted(accepted), "documented": calls[0], "raw": raw, "params": sorted(TM.PI05_DEVICE_PARAMS)}))
+"""
+
+
+@pytest.mark.parametrize("dispatch", ["tensix", "eth"])
+def test_documented_device_open(dispatch):
+    """The README's device call (open_pi05_device) passes only keywords ttnn.open_device accepts (its nanobind
+    signature) on both profiles; the raw ttnn.open_device(**PI05_DEVICE_PARAMS) works only on the scalable profile (the
+    ethernet params carry the fixture's dispatch_core_type), so the README must not document it."""
+    import json
+    import re
+    import subprocess
+    import sys
+
+    env = dict(os.environ, PI05_DISPATCH=dispatch)
+    r = subprocess.run([sys.executable, "-c", _OPEN_PROBE], env=env, capture_output=True, text=True, timeout=600)
+    assert r.returncode == 0, r.stderr[-2000:]
+    out = json.loads(r.stdout.strip().splitlines()[-1])
+    assert {"device_id", "l1_small_size", "worker_l1_size", "dispatch_core_config"} <= set(out["accepted"])
+    assert set(out["documented"]) <= set(out["accepted"])
+    assert ("dispatch_core_config" in out["documented"]) == (dispatch == "eth")
+    assert ("dispatch_core_type" in out["params"]) == (dispatch == "eth")  # the pytest fixture's key
+    assert out["raw"] == ("TypeError" if dispatch == "eth" else "ok")
+    readme = open(os.path.join(os.path.dirname(__file__), "..", "..", "README.md")).read()
+    code = "\n".join(re.findall(r"```python\n(.*?)```", readme, flags=re.S))
+    assert "open_pi05_device(" in code and not re.search(r"open_device\([^)]*\*\*PI05_DEVICE_PARAMS", code)
+
+
+_ETH_OPEN_PROBE = """
+import json
+import ttnn
+
+STOCK = "No core coordinate found at location: (0, 12, ETH, LOGICAL)"  # a stock runtime opening Blackhole ETH dispatch
+
+
+class FakeDispatchCoreConfig:  # the real one opens the cluster: never on a host test
+    def __init__(self, core_type):
+        self.core_type = core_type
+
+
+def stock_open_device(**kw):
+    if "dispatch_core_config" in kw:
+        raise RuntimeError(STOCK)
+    return "device"
+
+
+ttnn.DispatchCoreConfig, ttnn.open_device = FakeDispatchCoreConfig, stock_open_device
+from models.experimental.pi0.tt import ttnn_pi05_model as TM
+from models.experimental.pi0.tt.megakernel import profile
+
+try:
+    out = {"opened": TM.open_pi05_device(0) == "device", "error": None}
+except RuntimeError as e:
+    out = {"opened": False, "error": str(e), "cause": str(e.__cause__) if e.__cause__ else None}
+out["dispatch"], out["name"] = profile.DISPATCH, profile.NAME
+print(json.dumps(out))
+"""
+
+
+@pytest.mark.parametrize("dispatch", [None, "eth", "tensix"])
+def test_default_profile_and_eth_open_refusal(dispatch):
+    """The non-scalable profile (ethernet dispatch) is the default; on a runtime that cannot open Blackhole ethernet
+    dispatch (stock tt-metal: the phantom logical ETH core), open_pi05_device raises a RuntimeError that keeps the
+    runtime's error and names the fix, PI05_DISPATCH=tensix; the scalable profile does not use ethernet dispatch."""
+    import json
+    import subprocess
+    import sys
+
+    env = dict(os.environ)
+    env.pop("PI05_DISPATCH", None)
+    if dispatch is not None:
+        env["PI05_DISPATCH"] = dispatch
+    r = subprocess.run([sys.executable, "-c", _ETH_OPEN_PROBE], env=env, capture_output=True, text=True, timeout=600)
+    assert r.returncode == 0, r.stderr[-2000:]
+    out = json.loads(r.stdout.strip().splitlines()[-1])
+    assert out["dispatch"] == (dispatch or "eth")
+    if out["dispatch"] == "tensix":
+        assert out["name"] == "scalable" and out["opened"] and out["error"] is None
+    else:
+        assert out["name"] == "non-scalable" and not out["opened"]
+        assert "set PI05_DISPATCH=tensix" in out["error"] and "PR #57142" in out["error"]
+        assert "No core coordinate found" in out["error"] and "No core coordinate found" in out["cause"]
 
 
 # ============================================================================ real weights

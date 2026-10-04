@@ -249,3 +249,108 @@ build/pi05-base-p150 (= the 36f651704bf1 package), scripts + results in docs/meg
   test with the tt-models venv python, which has no PIL: a harness fault, rerun with /usr/bin/python3.) Golden PCC7 /
   bit-identity ran on the same image id before the upload (val_new.log).
 - Local image tt-model/pi05-base-p150:36f651704bf1 removed after the pull of 4dd06e9d6fd3 was verified.
+
+## 2026-10-03 19:44:34 KST -- the user's README edit on HF is the source of truth for the card
+- The user edited README.md on HF: commit 873bf8d86548ba596c78a8520e5a89191ac3a3c8 ("Update README.md",
+  2026-10-03 10:43:30 UTC), parent 10b36ea0; README only (249 files, the rest unchanged). The edit rewrites the intro
+  (configuration list, implementation note), moves the Demo up, and adds "Implementation implications".
+- From now on that HF README is the card. The generator output (card_mc.py / card_ste.py / readme_ste.py and the
+  card: block of tt-model.yaml) is SUPERSEDED: do not regenerate README.md from it and do not overwrite the HF README.
+  Any later HF commit must take README.md from the Hub head. The card: block in the staged / published tt-model.yaml
+  still holds the generated text (tt-model renders the card from it at package time); it is not edited here.
+- Copies: hf_card/README.md (this repo) and the staging dir models/pi05-base-p150-mc/README.md (sha256 4cb4d8c1c049cf70,
+  = the Hub file); the staging manifest's README entry and hf_head now name 873bf8d8. The generated 10b36ea0 card is kept
+  only in the history (and scratchpad rev/README_generated_10b36ea0.md).
+- Nothing changed on HF or GitHub.
+
+## 2026-10-03 19:46:25 KST -- HF 7a6cc0e0 (typo fix by the lead); card: block sync deferred
+- The lead pushed a typo-only fix on top of the user's card: HF 7a6cc0e0c6c4c3fe64d0ca926ae1ec94c7d13839 (parent
+  873bf8d8, README.md only; 6 lines: "image in", "closed-loop", "Blackhole", "are the LIBERO fine-tuned ... points to",
+  "Assumes", "change", "configuration"). Pulled into the staging dir and hf_card/README.md (sha256 e509471016c3e342...,
+  = the Hub file); the staging manifest names 7a6cc0e0.
+- The user's card (now 7a6cc0e0) is the REFERENCE for all future cards.
+- Agreed with the user: the card: block of tt-model.yaml (still the generated 10b36ea0 text) is synced to the user's card
+  at the NEXT repackage, not now. Until then, a repackage must not publish its rendered README over the Hub card.
+- Nothing pushed or uploaded.
+
+## 2026-10-04 14:37:15 KST -- next release (N16, 2 profiles, rings, R): packaging prep started (offline)
+- Lead (user-approved path to HF): two serve profiles non-scalable (default, PI05_DISPATCH=eth, 12x10 vision+prefix) /
+  scalable (PI05_DISPATCH=tensix, 11x10); N 1..16; expert two-layer rings (auto); c4 S64 row loop removed (R, auto).
+  Image tt-metal = the eth16 tree: ~/experiments/tt-metal-eth16 branch eth16 c718b5df9b9 = f856a38a361 + a69a83df5ad
+  (PR #57142 squashed) + c718b5df9b9 (fetch_queue TT_FATAL in Release). Plan: clean local clone at c718b5df9b9 as
+  source.tt_metal; provenance names the base + both patch commits; check the patches in the image.
+- Card base: HF head 061677cfd1d1458b5a9f22e125e0d2a5ee6a32e5 (user edit 2026-10-03 17:22 UTC on top of 7a6cc0e0:
+  "+ Total 32 presets are available."). Keep the user's structure; sync the yaml card: block to the final README.
+- Waiting for: impl's final commit / digest / RELEASE_TABLE / WP-V summary / eth runtime notes / watchdog;
+  pi05-libero-gpu-base's LIBERO 2 profiles x N 1/5/10/16 and the new demo. Quiet-host window: no clone / build until
+  the lead says so.
+
+## 2026-10-04 14:39:46 KST -- eth16 clean clone; build cache prune (A, approved)
+- Clean clone gr00t/publish/tt-metal-eth16-c718b5df9b9 (local clone of ~/experiments/tt-metal-eth16): detached at
+  c718b5df9b9589f8920e2f960af56145e4bf91dc, porcelain empty, submodules at the recorded commits, describe
+  v0.80.0-dev20261001-19-gc718b5df9b9; origin = the local eth16 repo (built.tt_metal will say pushed=false).
+  Patch vs f856a38a361: core_descriptor.cpp (skip ETH dispatch cores on harvested channels), system_memory_manager.cpp
+  (fetch-queue TT_FATAL in Release), blackhole dev_mem_map.h (MEM_IERISC_KERNEL_SIZE 40 KiB) + 2 test files.
+- Disk 24 GB free -> lead approved (A): `docker builder prune -a -f --max-used-space 12GB` (14:39): reclaimed 15.5 GB,
+  build cache 28.31 -> 16.32 GB (93 records), disk 35 GB free. Listings: results/n16/buildcache_{before,after}.tsv.
+- Build waits for impl's final commit. Serving-latency benchmarks only in a quiet slot (not during WP-V scoring /
+  impl's final perf sweep), with the host load recorded. Every validation step of the pulled image runs under a
+  timeout with a stack dump on hang (lead: watchdog = validation harness only).
+
+## 2026-10-04 14:40:27 KST -- planned inputs from pi05-libero-gpu-base (not final)
+- LIBERO: gr00t/libero_eval/pi05/tt_dispatch_matrix/<nonscal|scal>_c2_n<1|5|10|16>_summary.json + paired_vs_gpu.json
+  (vs gpu_matrix/c2_n<N>; GPU final: N1/5/10/16 = 99/99/100/100). Demo: tt_dispatch_matrix/demo/ (non-scalable, c2,
+  N10). Updated LIBERO server tt_dispatch_matrix/package/serve_pi05_libero.py (--dispatch eth|tensix, N 1..16,
+  open_pi05_device): take it only after its golden control passes (path + sha256 to follow). Runtime eth16 c718b5df9b9.
+
+## 2026-10-04 15:11:18 KST -- N16 release: code ported (branch n16-2profiles-2026-10-04, not committed yet)
+- Vendored tt-metal-pr dd9431fa10f models/experimental/pi0 (git archive, 71 files; kernel digest 26f0c46b7f1721c1,
+  the same under both profiles). Server: mc_backend.open_device -> open_pi05_device (profile dispatch cores + the
+  worker-L1 cut), /info megakernel.profile {name, dispatch, grid}; N 1..16 through the model's own refusal; docs.
+  CPU: 112 passed under PI05_DISPATCH=eth and 112 under tensix (overlay on tt-metal-main, no device).
+- Staging tt-model.yaml (non-card part): tt_metal -> gr00t/publish/tt-metal-eth16-c718b5df9b9; profiles non-scalable
+  (default, PI05_DISPATCH=eth) / scalable (tensix); verify: digest 26f0c46b7f1721c1, both profiles import with their
+  grids and a bad PI05_DISPATCH is refused, N 16 accepted / 17 refused, dev_mem_map.h has the 40 KiB IERISC budget.
+  The old image's libtt_metal.so has 0 copies of the fetch-queue TT_FATAL text ("exceeds max command size") and of
+  the core_descriptor string ("harvested ethernet"); the new image must have them (checked after the build).
+- The build waits for pi05-libero-gpu-base's updated serve_pi05_libero.py (the one in code/ uses ttnn.open_device
+  with PI05_DEVICE_PARAMS, which fails under the eth default).
+
+## 2026-10-04 22:34:37 KST -- N16 image built and validated (both profiles)
+- Code commit 33528a82f4dc524a00336b6552041b76dac9448e (branch n16-2profiles-2026-10-04, local): pi0 from tt-metal-pr
+  dd9431fa10f + server (open_pi05_device, /info profile, N 1..16) + serve_pi05_libero.py sha256 85e3567a... (the file
+  pi05-libero-gpu-base golden-controlled on both profiles).
+- Package: the first build failed in my own new verify line (subprocess env without LD_LIBRARY_PATH -> empty output);
+  fixed (env={**os.environ, ...}), all 32 lines dry-run on a fake /opt, rebuilt from the cache (21:36-21:41).
+  Image tt-model/pi05-base-p150:fe6ecd0b4e86 (sha256:fe6ecd0b4e862c883ebfcd2ade494b73447d7e0db743f7f7b44064d06b309ca2);
+  code_sha256 0a542bdf5a9d3af8; built.tt_metal c718b5df9b9 dirty=false describe v0.80.0-dev20261001-19; profiles
+  non-scalable (default) / scalable. Patches in the image: dev_mem_map.h 40 KiB IERISC budget; libtt_metal.so holds the
+  fetch-queue TT_FATAL text (1; the f856a38a image 0); the core_descriptor skip is log_debug (compiled out) -> checked by
+  the real ETH boot below.
+- Validation hold 21:53-22:33 (reset exit 0; results/n16/val/), each step under timeout, in-image checks with a
+  faulthandler watchdog, during the LIBERO matrix (latencies there are not benchmarks):
+  - non-scalable: /info profile non-scalable / eth / grid 12x10, digest 26f0c46b7f1721c1, source 33528a8; smoke PASS.
+  - scalable: /info scalable / tensix / 11x10; smoke PASS.
+  - both: golden PCC7 (8 records, shipped LIBERO server class) mean 0.999981 min 0.999958, inputs torch.equal; c1/c2/c3/c4
+    and c2 N16 outputs, replays identical, IDENTICAL across the two profiles (and the 8 golden outputs too); c1-c3
+    equal the previous release's (fae9cd0) outputs, c4 differs (R: wide attention chunks); 10/10 refusals incl. N=17;
+    the card's env commands 3 cameras / H10 / N5 (/info 3/10/5/4 ops, smoke PASS) and 2 / H50 / N16 (/info N 16,
+    smoke PASS); PI05_NUM_IMAGES=5 and PI05_NUM_STEPS=17 refused at start (exit 3, the model's messages).
+
+## 2026-10-05 01:40:31 KST -- N16: host reference, served bench, card final
+- Bit-identity reference (lead 10-04: a host run of dd9431f on the eth16 runtime, not the fae9cd0 outputs): ref16 =
+  git archive dd9431f, ttnn from tt-metal-eth16, both profiles, 22:50-23:14, rc 0 (results/n16/host_ref/). c1/c2/c3/c4/
+  c2n16 full sha256 host == image on eth/non-scalable and tensix/scalable, eth == tensix on the host; golden host ==
+  image (mean 0.9999812644, min 0.9999583233, inputs equal). The hold queued behind the LIBERO matrix; a deadline guard
+  (stop at 23:40) protected libero-gpu-base's per-config timeout and was not needed.
+- Served bench in the quiet slot after impl's sweep and the demo, 2026-10-05 01:34-01:36, rc 0 (results/n16/bench/): image
+  fe6ecd0b4e86 by manifest, 100 warm requests per profile (the card's curl request, actions identical, /info profile
+  checked). Inference median non-scalable 55.21 ms (p10 55.05 / p90 55.48), scalable 56.50 (56.32 / 56.71); the sweep's
+  device replay 54.92 / 55.93. Host load in the JSON (1-min <= 3.3, the server container's own; no foreign process).
+- Card (card_n16/card_n16.py from the HF head 061677cf; --final, 0 PENDING): profiles, N 1..16, open_pi05_device(0),
+  line refs re-read on 33528a8; Accuracy from impl's WP-V summary (1,024 sets) with the A2 limitation table asserted
+  from wpv/summary.json + the GPU incumbent bf16 arm and the per-seed files (other 5 prompts >= 0.998: both files);
+  Benchmarks from impl's sweep.json, asserted cell by cell against RELEASE_TABLE.md; LIBERO 8 rows from the matrix
+  summaries (latency column dropped: loaded host); demo 99/100, quiet median 49.3 ms; served 55.2 / 56.5 ms; the user's
+  "143 token-long prompt" -> 142 (measured num_tokens; lead approved). tt-model.yaml card: block synced to this README
+  (sync_card_block.py, validates against ContainerManifest; the card is not in the image or the manifest).
