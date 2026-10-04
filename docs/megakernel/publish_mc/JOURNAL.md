@@ -296,3 +296,9 @@ build/pi05-base-p150 (= the 36f651704bf1 package), scripts + results in docs/meg
 - Build waits for impl's final commit. Serving-latency benchmarks only in a quiet slot (not during WP-V scoring /
   impl's final perf sweep), with the host load recorded. Every validation step of the pulled image runs under a
   timeout with a stack dump on hang (lead: watchdog = validation harness only).
+
+## 2026-10-04 14:40:27 KST -- planned inputs from pi05-libero-gpu-base (not final)
+- LIBERO: gr00t/libero_eval/pi05/tt_dispatch_matrix/<nonscal|scal>_c2_n<1|5|10|16>_summary.json + paired_vs_gpu.json
+  (vs gpu_matrix/c2_n<N>; GPU final: N1/5/10/16 = 99/99/100/100). Demo: tt_dispatch_matrix/demo/ (non-scalable, c2,
+  N10). Updated LIBERO server tt_dispatch_matrix/package/serve_pi05_libero.py (--dispatch eth|tensix, N 1..16,
+  open_pi05_device): take it only after its golden control passes (path + sha256 to follow). Runtime eth16 c718b5df9b9.
