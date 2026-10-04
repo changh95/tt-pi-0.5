@@ -292,6 +292,7 @@ Test conditions:
 | `scalable` | 2 | 16 | **100 / 100** | 100 / 100 | 0 / 0 |
 
 - The paired difference is not significant in any row (exact McNemar p = 1).
+- Both device profiles produce identical closed-loop trajectories (per-call hash-identical replays). Three single-episode step-count differences in the 800-episode matrix did not reproduce: they are run-to-run variation, not a profile difference.
 - [`GPU_COMPARISON.md`](GPU_COMPARISON.md) has these results, the A2 input that both devices fail, and the earlier GPU comparisons.
 
 
@@ -346,6 +347,11 @@ Test conditions:
   - Open risk: a blocked call uses twice the DST tiles. Some matmuls may need a new DST split.
 - **Expert fidelity per preset**
   - HiFi4 on the expert fixes the two A4 cells at H = 1, but its speed changes with the preset (-2.5 to +1.6 ms). Choose the fidelity per preset class.
+- **Use the 12th column fully (non-scalable)**
+  - The non-scalable profile has 120 worker cores against 110, an ideal of about 8%. At 2 cameras and N = 10 it is only 1.8-3.6% faster than scalable (L64 S32: 47.66 vs 48.72 ms).
+  - VISION and PREFIX gain about 3.4-4.0% at 2 cameras (less than half of ideal). Their work splits were parameterized for 12 columns, not re-tuned. Uneven 12-column splits and fixed per-op sync latency are the likely causes, not yet measured.
+  - EXPERT does not use the 12th column: its core map is fixed by the model (8 heads, 8 × 8 MLP), and 19-35 cores are already idle on 11 × 10. Using more cores needs a re-partition (see the blocked-matmul item).
+  - Plan: per-phase timing of VISION / PREFIX on 12 × 10, then re-tune the splits. Upper bound: about 1.8 ms per call at 2 cameras (the gap of VISION + PREFIX to the ideal 11 / 12 time).
 
 ### License
 

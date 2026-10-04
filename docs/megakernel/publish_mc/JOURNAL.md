@@ -369,3 +369,12 @@ build/pi05-base-p150 (= the 36f651704bf1 package), scripts + results in docs/meg
     incumbent table N5-16); no GPU latency claims; the older sections stay as history.
 - Card: three links (Quickstart -> SERVING, Benchmarks -> PERF_PRESETS, LIBERO -> GPU_COMPARISON); "scalable runs on
   any runtime" -> "does not need these patches". Demo README: libero-gpu-base's HF version with 4 spellings made US.
+
+## 2026-10-05 02:06:26 KST -- N16 card: 12th-column TODO item, LIBERO profile-identity sentence
+- TODO "Use the 12th column fully (non-scalable)" (user request via the lead), numbers asserted: sweep.json N10 at 2
+  cameras 1.8-3.6% faster (L64 S32 47.66 vs 48.72 ms); E1a spans (e1a/out_time/timeprof.jsonl, 4 runs per profile) VISION
+  3.9-4.0% / PREFIX 3.4% at 2 cameras; gap of VISION + PREFIX to the ideal 11/12 time 1.7-1.8 ms; idle expert cores
+  19-35 on 11 x 10 (repart/DESIGN_NOTE.md). The lead's draft said "about 1-2%" and "about 1.5 ms"; the data-derived
+  values are used (all N10 presets: 0.8-6.7%, 3 cameras 5.8-6.7%).
+- LIBERO: "Both device profiles produce identical closed-loop trajectories ..." asserted against
+  tt_dispatch_matrix/replay/analysis.txt (3 episodes, 12 identical pairwise comparisons, 10/10 per-call hashes each).

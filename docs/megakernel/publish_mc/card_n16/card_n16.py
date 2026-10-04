@@ -170,6 +170,9 @@ i = s.index("| Cameras | N | p150a successes |"); j = s.index("### Limitations")
 # GPU gpu_matrix/c2_n<N>_summary.json. Latencies were taken on a loaded host: not quoted (the column is dropped).
 LD = "/home/deepgadget/experiments/gr00t/libero_eval/pi05"; SRC["libero"] = f"{LD}/tt_dispatch_matrix"
 PV = json.load(open(f"{LD}/tt_dispatch_matrix/paired_vs_gpu.json"))
+_an = open(f"{LD}/tt_dispatch_matrix/replay/analysis.txt").read()
+assert _an.count("\n== N=") + _an.startswith("== N=") == 3 and _an.count("10/10 episodes identical across all four runs (obs+act hashes per call)") == 3
+assert _an.count("first divergence at call/t/kind = (None, None, 'identical', {})") == 12 and "differ" not in _an.replace("identical", "")
 lrows = []
 for prof, tag in (("non-scalable", "nonscal"), ("scalable", "scal")):
     for n in (10, 5, 1, 16):
@@ -183,6 +186,7 @@ for prof, tag in (("non-scalable", "nonscal"), ("scalable", "scal")):
 s = s[:i] + ("| Profile | Cameras | N | p150a successes | RTX 5090 successes | Discordant pairs (only TT / only GPU) |\n"
              "|---|---:|---:|---:|---:|---:|\n" + "\n".join(lrows) + "\n\n"
              "- The paired difference is not significant in any row (exact McNemar p = 1).\n"
+             "- Both device profiles produce identical closed-loop trajectories (per-call hash-identical replays). Three single-episode step-count differences in the 800-episode matrix did not reproduce: they are run-to-run variation, not a profile difference.\n"
              "- [`GPU_COMPARISON.md`](GPU_COMPARISON.md) has these results, the A2 input that both devices fail, and the earlier GPU comparisons.\n\n\n") + s[j:]
 rep("- The p150a latency is the time of one policy call on the server, with host input preparation, device time and readback.\n"
     "- This card does not give the GPU latency, because its measurement was different (openpi model time only, on a shared host with load).\n",
@@ -229,6 +233,38 @@ lim = ("- **Accuracy.**\n"
 rep("### Limitations\n\n", "### Limitations\n\n" + lim)
 # --- TODO section before License
 todo = open(TODO).read().strip()
+# TODO item (user request 10-05, via the lead): the 12th column of the non-scalable profile. Numbers: the release sweep
+# (sweep.json, mean of 2 builds), impl's E1a VISION / PREFIX spans (4 runs per profile), the repartition design note.
+import statistics as _st
+def _sweep(tag):
+    acc = {}
+    for b_ in json.load(open(f"{PERF}/out_{tag}/sweep.json"))["builds"]:
+        for L, v in b_["presets"].items():
+            acc.setdefault((b_["cams"], b_["S"], b_["N"], int(L[1:])), []).append(v["replay_ms_median"])
+    return {k: sum(v) / 2 for k, v in acc.items()}
+_e, _t = _sweep("eth"), _sweep("tensix")
+_g2 = [100 * (_t[k] - _e[k]) / _t[k] for k in _e if k[0] == 2 and k[2] == 10]
+_ex = (_e[(2, 32, 10, 64)], _t[(2, 32, 10, 64)])
+_rows = [json.loads(l) for l in open("/home/deepgadget/experiments/tt-metal-pr/.val/mc_impl/e1a/out_time/timeprof.jsonl")]
+_sp = {}
+for r in _rows:
+    _sp.setdefault((r["profile"], tuple(r["preset"])), []).append(r["spans_us"])
+_vg, _pg, _gap = [], [], []
+for pre in {k[1] for k in _sp if k[1][0] == 2}:
+    sv = _st.mean(x["vision"] for x in _sp[("scalable", pre)]); nv = _st.mean(x["vision"] for x in _sp[("non-scalable", pre)])
+    sq = _st.mean(x["prefix"] for x in _sp[("scalable", pre)]); nq = _st.mean(x["prefix"] for x in _sp[("non-scalable", pre)])
+    assert len(_sp[("scalable", pre)]) == len(_sp[("non-scalable", pre)]) == 4
+    _vg.append(100 * (sv - nv) / sv); _pg.append(100 * (sq - nq) / sq); _gap.append((nv + nq - (sv + sq) * 11 / 12) / 1000)
+_dn = open("/home/deepgadget/experiments/tt-metal-pr/.val/mc_impl/repart/DESIGN_NOTE.md").read()
+assert "19 (NU 10)\n  to 35 (NU <= 6) cores are IDLE on 11 x 10" in _dn and "8 x 8 MLP" in _dn
+assert abs(_ex[0] - 47.66) < 0.005 and abs(_ex[1] - 48.72) < 0.005
+lo_v, hi_v, lo_p, hi_p = min(_vg), max(_vg), min(_pg), max(_pg)
+assert 3.3 < lo_p and hi_v < 4.1 and 1.6 < min(_gap) and max(_gap) < 1.8, (_vg, _pg, _gap)
+todo += ("\n- **Use the 12th column fully (non-scalable)**\n"
+  f"  - The non-scalable profile has 120 worker cores against 110, an ideal of about 8%. At 2 cameras and N = 10 it is only {min(_g2):.1f}-{max(_g2):.1f}% faster than scalable (L64 S32: {_ex[0]:.2f} vs {_ex[1]:.2f} ms).\n"
+  f"  - VISION and PREFIX gain about {min(lo_v, lo_p):.1f}-{max(hi_v, hi_p):.1f}% at 2 cameras (less than half of ideal). Their work splits were parameterized for 12 columns, not re-tuned. Uneven 12-column splits and fixed per-op sync latency are the likely causes, not yet measured.\n"
+  "  - EXPERT does not use the 12th column: its core map is fixed by the model (8 heads, 8 × 8 MLP), and 19-35 cores are already idle on 11 × 10. Using more cores needs a re-partition (see the blocked-matmul item).\n"
+  f"  - Plan: per-phase timing of VISION / PREFIX on 12 × 10, then re-tune the splits. Upper bound: about {max(_gap):.1f} ms per call at 2 cameras (the gap of VISION + PREFIX to the ideal 11 / 12 time).")
 rep("### License", todo + "\n\n### License")
 # --- license / provenance
 rep("@ [`5edf139`](https://github.com/changh95/tt-pi-0.5/commit/5edf139d458e9acabd31eea641cd364079962677).",
