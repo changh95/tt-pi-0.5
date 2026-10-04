@@ -272,3 +272,15 @@ build/pi05-base-p150 (= the 36f651704bf1 package), scripts + results in docs/meg
 - Agreed with the user: the card: block of tt-model.yaml (still the generated 10b36ea0 text) is synced to the user's card
   at the NEXT repackage, not now. Until then, a repackage must not publish its rendered README over the Hub card.
 - Nothing pushed or uploaded.
+
+## 2026-10-04 14:37:15 KST -- next release (N16, 2 profiles, rings, R): packaging prep started (offline)
+- Lead (user-approved path to HF): two serve profiles non-scalable (default, PI05_DISPATCH=eth, 12x10 vision+prefix) /
+  scalable (PI05_DISPATCH=tensix, 11x10); N 1..16; expert two-layer rings (auto); c4 S64 row loop removed (R, auto).
+  Image tt-metal = the eth16 tree: ~/experiments/tt-metal-eth16 branch eth16 c718b5df9b9 = f856a38a361 + a69a83df5ad
+  (PR #57142 squashed) + c718b5df9b9 (fetch_queue TT_FATAL in Release). Plan: clean local clone at c718b5df9b9 as
+  source.tt_metal; provenance names the base + both patch commits; check the patches in the image.
+- Card base: HF head 061677cfd1d1458b5a9f22e125e0d2a5ee6a32e5 (user edit 2026-10-03 17:22 UTC on top of 7a6cc0e0:
+  "+ Total 32 presets are available."). Keep the user's structure; sync the yaml card: block to the final README.
+- Waiting for: impl's final commit / digest / RELEASE_TABLE / WP-V summary / eth runtime notes / watchdog;
+  pi05-libero-gpu-base's LIBERO 2 profiles x N 1/5/10/16 and the new demo. Quiet-host window: no clone / build until
+  the lead says so.
