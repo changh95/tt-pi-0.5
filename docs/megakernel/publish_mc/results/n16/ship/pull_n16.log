@@ -1,0 +1,5 @@
+docker load tt-model/pi05-base-p150:fe6ecd0b4e86…
+Loaded image: tt-model/pi05-base-p150:fe6ecd0b4e86
+✓ docker load tt-model/pi05-base-p150:fe6ecd0b4e86  39.9s
+  ✓ pulled changh95/pi05-base-p150
+  → next:  tt-model serve changh95/pi05-base-p150

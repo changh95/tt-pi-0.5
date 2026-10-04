@@ -1,0 +1,326 @@
+{
+ "n": 30,
+ "warmup": 5,
+ "request": {
+  "prompt": "pick up the cube",
+  "state": [
+   0.1,
+   -0.2,
+   0.3,
+   0,
+   0,
+   0,
+   0.5,
+   -0.5
+  ],
+  "images": "media/sample_base.png, media/sample_wrist.png"
+ },
+ "stats": {
+  "preprocess": {
+   "median": 1.15,
+   "p10": 1.12,
+   "p90": 1.24,
+   "min": 1.09,
+   "max": 1.63
+  },
+  "inference": {
+   "median": 56.36,
+   "p10": 56.22,
+   "p90": 56.57,
+   "min": 56.19,
+   "max": 56.93
+  },
+  "total": {
+   "median": 57.51,
+   "p10": 57.4,
+   "p90": 57.72,
+   "min": 57.34,
+   "max": 58.57
+  },
+  "client_wall": {
+   "median": 59.14,
+   "p10": 58.96,
+   "p90": 59.57,
+   "min": 58.87,
+   "max": 61.13
+  }
+ },
+ "identical_actions_all": true,
+ "first_response": {
+  "action_horizon": 50,
+  "action_dim": 32,
+  "normalized": true,
+  "denoising_steps": 10,
+  "prompt": "Task: pick up the cube, State: 140 102 166 128 128 128 192 64 128 128 128 128 128 128 128 128 128 128 128 128 128 128 128 128 128 128 128 128 128 128 128 128;\nAction: ",
+  "num_tokens": 142,
+  "token_len": 224,
+  "prompt_bucket": 224,
+  "prompt_truncated": false,
+  "images_used": 2,
+  "images_padded": 0,
+  "original_sizes": [
+   [
+    224,
+    224
+   ],
+   [
+    224,
+    224
+   ]
+  ],
+  "image_size": [
+   224,
+   224
+  ],
+  "seed": null,
+  "batched_as": 1,
+  "timing_ms": {
+   "preprocess": 1.52,
+   "inference": 56.48,
+   "total": 58.0
+  },
+  "actions_head": [
+   [
+    -0.064,
+    -0.1553,
+    0.2969,
+    0.0991,
+    -0.043,
+    0.0879,
+    0.4102,
+    -0.4961
+   ]
+  ]
+ },
+ "rows": [
+  {
+   "preprocess": 1.13,
+   "inference": 56.32,
+   "total": 57.45,
+   "client_wall": 58.98161500226706
+  },
+  {
+   "preprocess": 1.26,
+   "inference": 56.4,
+   "total": 57.66,
+   "client_wall": 59.22466202173382
+  },
+  {
+   "preprocess": 1.16,
+   "inference": 56.31,
+   "total": 57.47,
+   "client_wall": 59.43909497000277
+  },
+  {
+   "preprocess": 1.14,
+   "inference": 56.26,
+   "total": 57.4,
+   "client_wall": 59.19898301362991
+  },
+  {
+   "preprocess": 1.15,
+   "inference": 56.31,
+   "total": 57.46,
+   "client_wall": 60.16053108032793
+  },
+  {
+   "preprocess": 1.11,
+   "inference": 56.45,
+   "total": 57.56,
+   "client_wall": 59.18134097009897
+  },
+  {
+   "preprocess": 1.16,
+   "inference": 56.54,
+   "total": 57.7,
+   "client_wall": 59.21951204072684
+  },
+  {
+   "preprocess": 1.13,
+   "inference": 56.71,
+   "total": 57.84,
+   "client_wall": 59.125846019014716
+  },
+  {
+   "preprocess": 1.15,
+   "inference": 56.57,
+   "total": 57.72,
+   "client_wall": 59.14269795175642
+  },
+  {
+   "preprocess": 1.14,
+   "inference": 56.37,
+   "total": 57.51,
+   "client_wall": 59.56751597113907
+  },
+  {
+   "preprocess": 1.15,
+   "inference": 56.43,
+   "total": 57.58,
+   "client_wall": 59.090149006806314
+  },
+  {
+   "preprocess": 1.17,
+   "inference": 56.49,
+   "total": 57.66,
+   "client_wall": 59.05057396739721
+  },
+  {
+   "preprocess": 1.17,
+   "inference": 56.37,
+   "total": 57.54,
+   "client_wall": 59.17184194549918
+  },
+  {
+   "preprocess": 1.16,
+   "inference": 56.28,
+   "total": 57.44,
+   "client_wall": 59.002954978495836
+  },
+  {
+   "preprocess": 1.16,
+   "inference": 56.33,
+   "total": 57.5,
+   "client_wall": 58.86855209246278
+  },
+  {
+   "preprocess": 1.18,
+   "inference": 56.33,
+   "total": 57.51,
+   "client_wall": 59.05718693975359
+  },
+  {
+   "preprocess": 1.15,
+   "inference": 56.28,
+   "total": 57.43,
+   "client_wall": 59.05939999502152
+  },
+  {
+   "preprocess": 1.17,
+   "inference": 56.25,
+   "total": 57.42,
+   "client_wall": 59.32289699558169
+  },
+  {
+   "preprocess": 1.16,
+   "inference": 56.36,
+   "total": 57.51,
+   "client_wall": 59.17989800218493
+  },
+  {
+   "preprocess": 1.12,
+   "inference": 56.22,
+   "total": 57.34,
+   "client_wall": 58.96519392263144
+  },
+  {
+   "preprocess": 1.14,
+   "inference": 56.2,
+   "total": 57.34,
+   "client_wall": 58.96126595325768
+  },
+  {
+   "preprocess": 1.13,
+   "inference": 56.34,
+   "total": 57.47,
+   "client_wall": 59.1154060093686
+  },
+  {
+   "preprocess": 1.09,
+   "inference": 56.38,
+   "total": 57.47,
+   "client_wall": 58.95345099270344
+  },
+  {
+   "preprocess": 1.12,
+   "inference": 56.47,
+   "total": 57.59,
+   "client_wall": 59.291246929205954
+  },
+  {
+   "preprocess": 1.17,
+   "inference": 56.24,
+   "total": 57.41,
+   "client_wall": 59.14449004922062
+  },
+  {
+   "preprocess": 1.17,
+   "inference": 56.46,
+   "total": 57.63,
+   "client_wall": 59.36131894122809
+  },
+  {
+   "preprocess": 1.24,
+   "inference": 56.19,
+   "total": 57.43,
+   "client_wall": 58.95789002534002
+  },
+  {
+   "preprocess": 1.14,
+   "inference": 56.38,
+   "total": 57.52,
+   "client_wall": 59.00882510468364
+  },
+  {
+   "preprocess": 1.29,
+   "inference": 56.69,
+   "total": 57.98,
+   "client_wall": 61.13480404019356
+  },
+  {
+   "preprocess": 1.63,
+   "inference": 56.93,
+   "total": 58.57,
+   "client_wall": 60.39937003515661
+  }
+ ],
+ "time": "2026-10-05 02:11:54",
+ "info_profile": {
+  "name": "scalable",
+  "dispatch": "tensix",
+  "grid": [
+   11,
+   10
+  ]
+ },
+ "host_load": {
+  "before": {
+   "loadavg": [
+    "6.27",
+    "2.20",
+    "1.62"
+   ],
+   "ncpu": 32,
+   "time": "02:11:52",
+   "top_cpu": [
+    " 525      43 python          python -m uvicorn --host 0.0.0.0 --port 20000 --lifespan on models.experimental.pi0_5.server.app:app",
+    " 4.4  277608 claude          claude --dangerously-skip-permissions",
+    " 2.0  130581 Isolated Web Co /snap/firefox/8995/usr/lib/firefox/firefox -contentproc -isForBrowser -prefsHandle 0:52264 -prefMapHandle 1:296804 -jsInitHandle 2:",
+    " 0.5  277621 gnome-terminal- /usr/libexec/gnome-terminal-server",
+    " 0.4  277630 Xorg            /usr/lib/xorg/Xorg vt2 -displayfd 3 -auth /run/user/1000/gdm/Xauthority -nolisten tcp -background none -noreset -keeptty -novtswitc",
+    " 0.3  130598 firefox         /snap/firefox/8995/usr/lib/firefox/firefox",
+    " 0.2  629036 kcompactd0      [kcompactd0]",
+    " 0.2  629003 teamviewerd     /opt/teamviewer/tv_bin/teamviewerd -d"
+   ]
+  },
+  "after": {
+   "loadavg": [
+    "6.27",
+    "2.20",
+    "1.62"
+   ],
+   "ncpu": 32,
+   "time": "02:11:54",
+   "top_cpu": [
+    " 512      45 python          python -m uvicorn --host 0.0.0.0 --port 20000 --lifespan on models.experimental.pi0_5.server.app:app",
+    " 4.4  277610 claude          claude --dangerously-skip-permissions",
+    " 2.0  130583 Isolated Web Co /snap/firefox/8995/usr/lib/firefox/firefox -contentproc -isForBrowser -prefsHandle 0:52264 -prefMapHandle 1:296804 -jsInitHandle 2:",
+    " 2.0       2 python3         /usr/bin/python3 /tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/pubmc/n16/benc",
+    " 0.5  277623 gnome-terminal- /usr/libexec/gnome-terminal-server",
+    " 0.4  277632 Xorg            /usr/lib/xorg/Xorg vt2 -displayfd 3 -auth /run/user/1000/gdm/Xauthority -nolisten tcp -background none -noreset -keeptty -novtswitc",
+    " 0.3  130600 firefox         /snap/firefox/8995/usr/lib/firefox/firefox",
+    " 0.2  629038 kcompactd0      [kcompactd0]"
+   ]
+  }
+ }
+}

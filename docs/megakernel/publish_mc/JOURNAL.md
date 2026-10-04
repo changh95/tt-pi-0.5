@@ -378,3 +378,15 @@ build/pi05-base-p150 (= the 36f651704bf1 package), scripts + results in docs/meg
   values are used (all N10 presets: 0.8-6.7%, 3 cameras 5.8-6.7%).
 - LIBERO: "Both device profiles produce identical closed-loop trajectories ..." asserted against
   tt_dispatch_matrix/replay/analysis.txt (3 episodes, 12 identical pairwise comparisons, 10/10 per-call hashes each).
+
+## 2026-10-05 02:13:23 KST -- N16 SHIPPED: HF 3bec9278, verified after the pull
+- HF changh95/pi05-base-p150 commit 3bec9278ae1d78783ee29186a4ec2d481e379c69 (ONE create_commit, parent pinned to the
+  head 061677cf, re-pulled just before; scripts/hf_commit_n16.py --companions keep): 44 new (43 image blobs +
+  megakernel/profile.py), 37 changed, 43 old blobs deleted. GitHub PRs #6 99f1d123, #7 3ae07f7d, #8 bafa0710.
+- Tree (scripts/hf_verify_n16.py): 250 files = expected, 81 adds by content (LFS sha256 / git blob sha1), deletes gone,
+  parent 061677cf -> PASS.
+- Pull: local image removed, tt-model pull docker-loaded it (39.9 s); docker inspect Id = sha256:fe6ecd0b4e862c88...
+  (== digest). tt-model profiles: non-scalable (default), scalable.
+- Serve by repo id under the lock, 02:10-02:12, rc 0 (scripts/pulled16.sh, results/n16/ship/): both containers image
+  fe6ecd0b, /info digest 26f0c46b7f1721c1, source 33528a8, smoke PASS; non-scalable eth 12x10 ready 41.7 s, 30-request
+  median 55.13 ms (p90 55.28); scalable tensix 11x10 ready 42.2 s, 56.36 ms (p90 56.57).
