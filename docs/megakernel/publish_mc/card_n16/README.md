@@ -67,6 +67,7 @@ tt-model serve changh95/pi05-base-p150
 - `tt-model pull` downloads the weights [`lerobot/pi05_base`](https://huggingface.co/lerobot/pi05_base) into your HF cache. The image does not contain the weights.
 - The server uses port 20000. If that port is busy, the server uses the next free port.
 - The default serve profile is `non-scalable`. To use the other one: `tt-model serve changh95/pi05-base-p150 --profile scalable`.
+- [`SERVING.md`](SERVING.md) gives the request contract, the environment variables and the host validation procedure.
 
 
 ### Run with tt-cli
@@ -263,6 +264,7 @@ Device time of one trace replay in ms for each preset (the mean of 2 builds; eac
 | 2 | H 33-64 | 16 | 64.37 | 64.45 | 65.72 | 66.38 |
 
 - The host had no other workload during these measurements. The only load was the benchmark itself, while it built each model.
+- [`PERF_PRESETS.md`](PERF_PRESETS.md) gives the standard errors, p10 / p90 and the build logs of these measurements.
 - Served over HTTP with the default configuration (2 cameras, H = 50, N = 10), the median inference time was **55.21 ms** (non-scalable) and **56.50 ms** (scalable) for 100 warm requests. The only other load on the host was the model server itself (1-min load average 3.3 or less).
 
 
@@ -290,6 +292,7 @@ Test conditions:
 | `scalable` | 2 | 16 | **100 / 100** | 100 / 100 | 0 / 0 |
 
 - The paired difference is not significant in any row (exact McNemar p = 1).
+- [`GPU_COMPARISON.md`](GPU_COMPARISON.md) has these results, the A2 input that both devices fail, and the earlier GPU comparisons.
 
 
 ### Limitations
@@ -322,7 +325,7 @@ Test conditions:
   - H must be 64 or less, and N must be 16 or less.
   - The camera count, H and N stay the same until the server stops.
 - **One model for each device.** Only one model can use a device at a time. If a second model starts, the server refuses it until the first model closes.
-- **Profiles.** `non-scalable` (the default) uses Ethernet dispatch and a 12 × 10 grid for vision and prefix. It needs the tt-metal runtime of this image (PR #57142 patches). The chip cannot join a multi-chip fabric in this mode. `scalable` uses Tensix dispatch (11 × 10) and runs on any runtime.
+- **Profiles.** `non-scalable` (the default) uses Ethernet dispatch and a 12 × 10 grid for vision and prefix. It needs the tt-metal runtime of this image (PR #57142 patches). The chip cannot join a multi-chip fabric in this mode. `scalable` uses Tensix dispatch (11 × 10) and does not need these patches.
 - **Gated tokenizer.**
   - Accept the Gemma terms of `google/paligemma-3b-pt-224`. Then use `hf auth login` before `tt serve`.
   - The prompt tokenizer of this model is **gated** under the Gemma terms.

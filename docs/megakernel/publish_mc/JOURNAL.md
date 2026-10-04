@@ -354,3 +354,18 @@ build/pi05-base-p150 (= the 36f651704bf1 package), scripts + results in docs/meg
   summaries (latency column dropped: loaded host); demo 99/100, quiet median 49.3 ms; served 55.2 / 56.5 ms; the user's
   "143 token-long prompt" -> 142 (measured num_tokens; lead approved). tt-model.yaml card: block synced to this README
   (sync_card_block.py, validates against ContainerManifest; the card is not in the image or the manifest).
+
+## 2026-10-05 02:03:45 KST -- N16: companion docs updated (user decision (c)), card links
+- SERVING.md / PERF_PRESETS.md / GPU_COMPARISON.md from their HF head versions (061677cf; card_n16/*.hf_head_061677cf.md)
+  by card_n16/companions_n16.py, every edit matched once and every number asserted from its file:
+  - SERVING: two serve / device profiles, N 1..16, PI05_DISPATCH, open_pi05_device, the eth16 tree (c718b5df9b9 =
+    f856a38a361 + a69a83df5ad + c718b5df9b9), verify items, /info megakernel.profile, the tested env procedure on both
+    profiles (val16.log: 3 / H10 / N5 and 2 / H50 / N16, refusals cameras 5 and N 17), warm boot times from the
+    bench container logs (cold boot not timed), served latency of the default config on both profiles (bench JSONs).
+    Validation-hold smoke latencies are not quoted (the LIBERO matrix loaded the host).
+  - PERF_PRESETS: impl's RELEASE_TABLE.md sections copied verbatim (both profiles: N10 / N1-5-16 / p10-p90 tables,
+    build logs, the profile difference, the load footnote) under a short header.
+  - GPU_COMPARISON: a 2026-10-05 current-image section on top (p150a served latency, the LIBERO 8-row table, the A2
+    incumbent table N5-16); no GPU latency claims; the older sections stay as history.
+- Card: three links (Quickstart -> SERVING, Benchmarks -> PERF_PRESETS, LIBERO -> GPU_COMPARISON); "scalable runs on
+  any runtime" -> "does not need these patches". Demo README: libero-gpu-base's HF version with 4 spellings made US.

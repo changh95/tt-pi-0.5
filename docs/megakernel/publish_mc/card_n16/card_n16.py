@@ -60,7 +60,8 @@ rep("- The video shows the multi-config megakernel of this image in a LIBERO-Spa
 # --- quickstart
 rep("- The server uses port 20000. If that port is busy, the server uses the next free port.",
     "- The server uses port 20000. If that port is busy, the server uses the next free port.\n"
-    "- The default serve profile is `non-scalable`. To use the other one: `tt-model serve changh95/pi05-base-p150 --profile scalable`.")
+    "- The default serve profile is `non-scalable`. To use the other one: `tt-model serve changh95/pi05-base-p150 --profile scalable`.\n"
+    "- [`SERVING.md`](SERVING.md) gives the request contract, the environment variables and the host validation procedure.")
 # --- how to change the configuration
 rep("""- The `p150` profile
   - Assumes batch=1""", """- The `non-scalable` (default) and `scalable` profiles
@@ -157,7 +158,8 @@ def perf_tables(tag, title):
 pe1, pe2 = perf_tables("eth", "non-scalable"); pt1, pt2 = perf_tables("tensix", "scalable")
 bench_tables = ("Device time of one trace replay in ms for each preset (the mean of 2 builds; each build gives the median of 60 trace replays):\n\n"
   "#### `non-scalable` (default)\n\n" + pe1 + "\n\n" + pe2 + "\n\n#### `scalable`\n\n" + pt1 + "\n\n" + pt2 + "\n\n"
-  "- The host had no other workload during these measurements. The only load was the benchmark itself, while it built each model.\n")
+  "- The host had no other workload during these measurements. The only load was the benchmark itself, while it built each model.\n"
+  "- [`PERF_PRESETS.md`](PERF_PRESETS.md) gives the standard errors, p10 / p90 and the build logs of these measurements.\n")
 s = s[:i] + "### Benchmarks\n\n" + bench_tables + "- " \
     + "Served over HTTP with the default configuration (2 cameras, H = 50, N = 10), the median inference time was **" + f"{med['non-scalable']:.2f}" + " ms** (non-scalable) and **" \
     + f"{med['scalable']:.2f}" + " ms** (scalable) for 100 warm requests. The only other load on the host was the model server itself " \
@@ -180,7 +182,8 @@ for prof, tag in (("non-scalable", "nonscal"), ("scalable", "scal")):
         lrows.append(f"| `{prof}` | 2 | {n} | **{t['success']} / 100** | {g['success']} / 100 | {len(pv['tt_only'])} / {len(pv['gpu_only'])} |")
 s = s[:i] + ("| Profile | Cameras | N | p150a successes | RTX 5090 successes | Discordant pairs (only TT / only GPU) |\n"
              "|---|---:|---:|---:|---:|---:|\n" + "\n".join(lrows) + "\n\n"
-             "- The paired difference is not significant in any row (exact McNemar p = 1).\n\n\n") + s[j:]
+             "- The paired difference is not significant in any row (exact McNemar p = 1).\n"
+             "- [`GPU_COMPARISON.md`](GPU_COMPARISON.md) has these results, the A2 input that both devices fail, and the earlier GPU comparisons.\n\n\n") + s[j:]
 rep("- The p150a latency is the time of one policy call on the server, with host input preparation, device time and readback.\n"
     "- This card does not give the GPU latency, because its measurement was different (openpi model time only, on a shared host with load).\n",
     "- Both profiles ran the same 100 episodes.\n"
@@ -188,7 +191,7 @@ rep("- The p150a latency is the time of one policy call on the server, with host
 # --- limitations
 rep("  - H must be 64 or less, and N must be 10 or less.", "  - H must be 64 or less, and N must be 16 or less.")
 rep("- **Worker grid.** The worker grid is 11 × 10 (110 cores) with Tensix dispatch. A later release will use the 12 × 10 grid with Ethernet dispatch.",
-    "- **Profiles.** `non-scalable` (the default) uses Ethernet dispatch and a 12 × 10 grid for vision and prefix. It needs the tt-metal runtime of this image (PR #57142 patches). The chip cannot join a multi-chip fabric in this mode. `scalable` uses Tensix dispatch (11 × 10) and runs on any runtime.")
+    "- **Profiles.** `non-scalable` (the default) uses Ethernet dispatch and a 12 × 10 grid for vision and prefix. It needs the tt-metal runtime of this image (PR #57142 patches). The chip cannot join a multi-chip fabric in this mode. `scalable` uses Tensix dispatch (11 × 10) and does not need these patches.")
 # --- accuracy limitations (lead 10-05; values from WP-V summary.json + the GPU incumbent JSONs, bf16 arm, seed 5)
 WP6 = "/tmp/claude-1000/-home-deepgadget-experiments-gr00t/12fd0cff-5a02-45cf-ac15-0681e5ee81aa/scratchpad/wp6"
 gpu = {}
